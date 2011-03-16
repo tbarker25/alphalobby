@@ -1,0 +1,489 @@
+
+
+X(ACCEPTED, {
+	copyNextWord(gMyUser->name);
+	strcpy(gMyUser->alias, gMyUser->name);
+})
+
+
+X(ADDBOT, {
+// ADDBOT BATTLE_ID name owner battlestatus teamcolor {AIDLL}
+	char *battleID = getNextWord();
+	assert(atoi(battleID) == gMyBattle->id);
+	char *name = getNextWord();
+	User *owner = FindUser(getNextWord());
+	assert(owner);
+	uint32_t battleStatus = getNextInt();
+	uint32_t color = getNextInt();
+	AddBot(name, owner, battleStatus, color, command);
+})
+
+X(ADDUSER, {
+	char *name = getNextWord();
+	uint8_t country = 0;
+	for (int i=0; i < lengthof(countryCodes); ++i)
+		if (*((uint16_t *)command) == *((uint16_t *)countryCodes[i]))
+			country = i;
+	command += 3;
+	uint32_t cpu = getNextInt();
+	
+	User *u = NewUser(getNextInt(), name);
+	strcpy(u->name, name);
+	u->country = country;
+	u->cpu = cpu;
+
+	ChatWindow_AddUser(GetServerChat(), u);
+	if (gSettings.flags & (1<<DEST_SERVER))
+		Chat_Said(GetServerChat(), u->name, CHAT_SYSTEM, "has logged in");
+
+	if (!strcmp(u->name, relayHoster)) {
+		if (*relayCmd) {
+			SendToServer(relayCmd);
+			*relayCmd = '\0';
+		}
+		return;
+	}
+})
+
+X(ADDSTARTRECT, {
+	typeof(*gBattleOptions.startRects) *rect = &gBattleOptions.startRects[getNextInt()];
+	rect->left = getNextInt();
+	rect->top = getNextInt();
+	rect->right = getNextInt();
+	rect->bottom = getNextInt();
+	RedrawMinimapBoxes();
+})
+
+X(AGREEMENT, {
+	agreement = agreement ?: tmpfile();
+	fputs(command, agreement);
+})
+
+X(AGREEMENTEND, {
+	rewind(agreement);
+	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)CreateAgreementDlg, (LPARAM)agreement);
+	agreement = NULL;
+})
+
+X(BATTLEOPENED, {
+	Battle *b = NewBattle();
+
+	b->id = getNextInt();
+	b->type = getNextInt();
+	b->natType = getNextInt();
+
+	char founderName[MAX_NAME_LENGTH_NUL];
+	copyNextWord(founderName);
+	b->founder = FindUser(founderName);
+	assert(b->founder);
+	b->nbParticipants = 1;
+	b->founder->battle = b;
+
+	copyNextWord(b->ip);
+	b->port = getNextInt();
+	b->maxPlayers = getNextInt();
+	b->passworded = getNextInt();
+	b->rank = getNextInt();
+	b->mapHash = getNextInt();
+	copyNextSentence(b->mapName);
+	copyNextSentence(b->title);
+	copyNextSentence(b->modName);
+	
+	if (!strcmp(founderName, relayHoster))
+		JoinBattle(b->id, relayPassword);
+})
+
+X(BATTLECLOSED, {
+	Battle *b = FindBattle(getNextInt());
+	assert(b);
+	if (!b)
+		return;
+
+	if (b == gMyBattle) {
+		if (gMyBattle->founder != gMyUser)
+			MyMessageBox("Leaving Battle", "The battle was closed by the host.");
+		LeftBattle();
+	}
+
+	for (int i=0; i<b->nbParticipants; ++i)
+		b->users[i]->user.battle = NULL;
+
+	BattleList_CloseBattle(b);
+	DelBattle(b);
+})
+
+X(BROADCAST, {
+	SERVERMSGBOX();
+})
+
+X(CHANNEL, {
+	const char *channame = getNextWord();
+	const char *usercount = getNextWord();
+	const char *description = command;
+	ChannelList_AddChannel(channame, usercount, description);
+})
+
+X(CHANNELTOPIC, ({
+	const char *chanName = getNextWord();
+	/* const char *username =  */getNextWord();
+	/* const char *unixTime =  */getNextWord();
+	char *s;
+	while ((s = strstr(command, "\\n")))
+		*(uint16_t *)s = *(uint16_t *)(char [2]){'\r', '\n'};
+	Chat_Said(GetChannelChat(chanName), NULL, CHAT_TOPIC, command);
+}))
+
+X(CLIENTBATTLESTATUS, {
+	User *u = FindUser(getNextWord());
+	uint32_t bs = getNextInt();
+	UpdateBattleStatus((UserOrBot *)u, (bs & ~INTERNAL_MASK) | (u->battleStatus & INTERNAL_MASK), getNextInt());
+})
+
+X(CLIENTS, {
+	const char *chanName = getNextWord();
+	HWND window = GetChannelChat(chanName);
+	for (const char *userName; *(userName = getNextWord()); )
+		ChatWindow_AddUser(window, FindUser(userName));
+})
+
+X(CLIENTSTATUS, {
+	User *u = FindUser(getNextWord());
+	if (!u)
+		return;
+	uint8_t oldStatus = u->clientStatus;
+	u->clientStatus = getNextInt();
+	// UserList_AddUser(u);
+	UpdateUser(u);
+	if (!u->battle)
+		return;
+	if (u == gMyUser)
+		gLastClientStatus = (u->clientStatus & ~CS_INGAME_MASK) | (gLastClientStatus & CS_INGAME_MASK);
+	if (u == u->battle->founder && (oldStatus ^ u->clientStatus) & CS_INGAME_MASK)
+		BattleList_UpdateBattle(u->battle);
+
+	if (gMyBattle == u->battle
+			&& !(oldStatus & CS_INGAME_MASK)
+			&& u->clientStatus & CS_INGAME_MASK
+			&& u == u->battle->founder
+			&& u != gMyUser)
+		LaunchSpring();
+})
+
+X(DENIED, {
+	Disconnect();
+	MyMessageBox("Connection denied", command);
+})
+
+X(FORCEQUITBATTLE, {
+	static char buff[sizeof(" has kicked you from the current battle") + MAX_TITLE];
+	sprintf(buff, "%s has kicked you from the current battle.", gMyBattle->founder->name);
+	MyMessageBox("Leaving battle", buff);
+})
+
+X(JOIN, {
+	const char *chanName = getNextWord();
+	AddTab(GetChannelChat(chanName), 0);
+})
+
+X(JOINBATTLE, {
+	Battle *b = FindBattle(getNextInt());
+	JoinedBattle(b, getNextInt());
+})
+
+X(JOINBATTLEFAILED, {
+	BattleRoom_Hide();
+	MyMessageBox("Failed to join battle", command);
+})
+
+X(JOINED, {
+	const char *chanName = getNextWord();
+	const char *userName = getNextWord();
+	ChatWindow_AddUser(GetChannelChat(chanName), FindUser(userName));
+	if (gSettings.flags & (1<<DEST_CHANNEL))
+		Chat_Said(GetChannelChat(chanName), userName, CHAT_SYSTEM, "has joined the channel");
+})
+
+X(JOINEDBATTLE, {
+	Battle *b = FindBattle(getNextInt());
+	User *u = FindUser(getNextWord());
+	assert(u && b);
+	if (!u || !b)
+		return;
+	u->battle = b;
+	int i=1; //Start at 1 so founder is first
+	while (i<b->nbParticipants - b->nbBots && strcmpi(b->users[i]->name, u->name) < 0)
+		++i;
+	for (int j=b->nbParticipants; j>i; --j)
+		b->users[j] = b->users[j-1];
+	b->users[i] = (void *)u;
+	++b->nbParticipants;
+	u->battleStatus = 0;
+	BattleList_UpdateBattle(b);
+	UpdateUser(u);
+
+	if (b == gMyBattle) {
+		if (gSettings.flags & (1<<DEST_BATTLE))
+			Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has joined the battle");
+	}
+})
+
+X(JOINFAILED, {
+	HWND chanWindow = GetChannelChat(getNextWord());
+	if (chanWindow) {
+		SendMessage(chanWindow, WM_CLOSE, 0, 0);
+		MyMessageBox("Couldn't join channel", command);
+	}
+})
+
+X(LEFT, {
+	const char *chanName = getNextWord();
+	const char *userName = getNextWord();
+	if (gSettings.flags & (1<<DEST_CHANNEL))
+		Chat_Said(GetChannelChat(chanName), userName, CHAT_SYSTEM, "has left the channel");
+	ChatWindow_RemoveUser(GetChannelChat(chanName), FindUser(userName));
+})
+
+X(LEFTBATTLE, {
+	Battle *b = FindBattle(getNextInt()); //Battle Unused
+	User *u = FindUser(getNextWord());
+	assert(b && u && b == u->battle);
+	if (!u || !b)
+		return;
+	
+	u->battle = NULL;
+	int i=1; //Start at 1, we won't remove founder here
+	for (; i < b->nbParticipants; ++i)
+		if (&b->users[i]->user == u)
+			break;
+	assert(i < b->nbParticipants);
+	if (i >= b->nbParticipants)
+		return;
+	--b->nbParticipants;
+	for (;i < b->nbParticipants; ++i)
+		b->users[i] = b->users[i + 1];
+
+	if (u == gMyUser)
+		LeftBattle();
+
+	UpdateUser(u);
+	BattleList_UpdateBattle(b);
+
+	if (b == gMyBattle && gSettings.flags & (1<<DEST_BATTLE)) {
+		Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
+		BattleRoom_RemoveUser((void *)u);
+		*relayHoster = '\0';
+	}
+})
+
+X(LOGININFOEND, {
+	OpenDefaultChannels();
+	SetStatus(L"\t\tlogged in successfully");
+	for (int i=0; i<16; ++i)
+		gMyUser->scriptPassword[i] = '0' + rand()%10;
+	gMyUser->scriptPassword[16] = '\0';
+	BattleList_OnEndLoginInfo();
+	MainWindow_ChangeConnect(1);
+	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
+})
+
+X(MOTD, {
+	Chat_Said(GetServerChat(), NULL, 0, command);
+})
+
+X(OPENBATTLE, {
+// OPENBATTLE BATTLE_ID
+	Battle *b = FindBattle(getNextInt());
+	JoinedBattle(b, GetModHash(gMyBattle->modName));
+})
+
+X(PONG, {
+	extern DWORD lastPing;
+	wchar_t buff[128];
+	swprintf(buff, L"\t\tping: %lums", GetTickCount() - lastPing);
+	SetStatus(buff);
+})
+
+X(REGISTRATIONACCEPTED, {
+	extern void login(void);
+	login();
+	MyMessageBox("Registration accepted", "Logging in now.");
+})
+
+X(REMOVEBOT, {
+// REMOVEBOT BATTLE_ID name
+	char *battleID = getNextWord();
+	assert(atoi(battleID) == gMyBattle->id);
+	DelBot(getNextWord());
+})
+
+X(REMOVESTARTRECT, {
+	memset(&gBattleOptions.startRects[getNextInt()], 0, sizeof(typeof(*gBattleOptions.startRects)));
+	RedrawMinimapBoxes();
+})
+
+X(REMOVEUSER, {
+	User *u = FindUser(getNextWord());
+	assert(u);
+	if (!u)
+		return;
+	if (gSettings.flags & (1<<DEST_SERVER))
+		Chat_Said(GetServerChat(), u->name, CHAT_SYSTEM, "has logged off");
+	// TODO:
+	// if (u->chatWindow)
+		// Chat_Said(u->chatWindow, u->name, CHAT_SYSTEM, "has logged off");
+	ChatWindow_RemoveUser(GetServerChat(), u);
+	assert(!u->battle);
+	DelUser(u);
+})
+
+X(REQUESTBATTLESTATUS, ({
+	gMyUser->battleStatus &= ~MODE_MASK;
+	SetBattleStatus(gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | LOCK_BS_MASK | READY_MASK);
+	extern void resizePlayerListTabs(void);
+	resizePlayerListTabs();
+}))
+
+X(RING, {
+	Ring();
+})
+
+X(SAID, {
+	const char *chanName = getNextWord();
+	const char *username = getNextWord();
+	const char *text = command;
+	Chat_Said(GetChannelChat(chanName), username, 0, text);
+})
+
+X(SAIDBATTLE, {
+	const char *username = getNextWord();
+	const char *text = command;
+
+	char ingameUserName[MAX_NAME_LENGTH_NUL];
+
+	if (!strcmp(username, gMyBattle->founder->name)
+			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingameUserName) == 1) {
+		text += 3 + strlen(ingameUserName);
+		Chat_Said(GetBattleChat(), ingameUserName, CHAT_INGAME, text);
+		return;
+	}
+
+	Chat_Said(GetBattleChat(), username, 0, text);
+})
+
+X(SAIDBATTLEEX, {
+	const char *username = getNextWord();
+	const char *text = command;
+	if (gMyBattle && !strcmp(username, gMyBattle->founder->name)
+			&& !memcmp("* Hi ", text, 5) && !memcmp(gMyUser->name, text+5, strlen(gMyUser->name)) && !memcmp(" (", text + 5 + strlen(gMyUser->name), 2))
+		gBattleOptions.hostType = HOST_SPADS;
+
+	Chat_Said(GetBattleChat(), username, CHAT_EX, text);
+})
+
+X(SAIDEX, {
+	const char *chanName = getNextWord();
+	const char *username = getNextWord();
+	const char *text = command;
+	Chat_Said(GetChannelChat(chanName), username, CHAT_EX, text);
+})
+
+X(SAIDPRIVATE, {
+	const char *username = getNextWord();
+	if (!strcmp(username, "RelayHostManagerList") && !strncmp(command, "managerlist ", sizeof("managerlist ") - 1)) {
+		strsplit(&command, " ");
+		for (const char *c; (c = strsplit(&command, " \t\n"));) {
+			User *u = FindUser(c);
+			if (u) {
+				gRelayManagers = realloc(gRelayManagers, (gRelayManagersCount+1) * sizeof(*gRelayManagers));
+				gRelayManagers[gRelayManagersCount++] = u->name;
+			}
+		}
+	} else if (!strcmp(username, relayManager)) {
+		strcpy(relayHoster, command);
+		*relayManager = '\0';
+	} else if (!strcmp(username, relayHoster) && !strncmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)) {
+		command += sizeof("JOINEDBATTLE ") - 1;
+		getNextWord();
+		User *u = FindUser(getNextWord());
+		if (u)
+			copyNextWord(u->scriptPassword);
+	} else {
+		User *u = FindUser(username);
+		if (!u || u->ignore)
+			return;
+		HWND window = GetPrivateChat(u);
+		Chat_Said(window, username, 0, command);
+		if (!gMyBattle || strcmp(username, gMyBattle->founder->name) || GetTickCount() - gLastAutoMessage > 1000)
+			AddTab(window, 1);
+	}
+})
+
+X(SAYPRIVATE, {
+	char *username = getNextWord();
+	char *text = command;
+	User *u = FindUser(username);
+	if (u)
+		Chat_Said(GetPrivateChat(u), gMyUser->name, 0, text);
+})
+
+X(SERVERMSG, {
+	MOTD();
+})
+
+X(SERVERMSGBOX , {
+	MyMessageBox("Message from the server", command);
+})
+
+X(SETSCRIPTTAGS, {
+	SetScriptTags(command);
+})
+
+X(TASServer, {
+	getNextWord(); //= serverVersion
+	const char *serverSpringVersion = getNextWord();
+	const char *mySpringVersion = _GetSpringVersion();
+	if (strcmp(serverSpringVersion, mySpringVersion)) {
+		char buff[128];
+		sprintf(buff, "Server requires %s.\nYou are using %s.\n", serverSpringVersion, mySpringVersion);
+		MyMessageBox("Wrong Spring version", buff);
+		Disconnect();
+		return;
+	}
+	gUdpHelpPort = getNextInt();
+	SetStatus(L"\t\treceiving server info");
+})
+
+X(UPDATEBATTLEINFO, {
+	Battle *b = FindBattle(getNextInt());
+	#ifndef UNSAFE
+		if (!b)
+			return;
+	#endif
+
+	b->nbSpectators = getNextInt();
+	b->locked = getNextInt();
+	uint32_t lastMapHash = b->mapHash;
+	b->mapHash = getNextInt();
+	copyNextSentence(b->mapName);
+
+	if (b == gMyBattle && b->mapHash != lastMapHash)
+		ChangeMap(gMyBattle->mapName);
+
+	BattleList_UpdateBattle(b);
+})
+
+X(UPDATEBOT, {
+// UPDATEBOT BATTLE_ID name battlestatus teamcolor
+	char *battleID = getNextWord();
+	assert(atoi(battleID) == gMyBattle->id);
+	char *name = getNextWord();
+	for (int i=gMyBattle->nbParticipants - gMyBattle->nbBots; i<gMyBattle->nbParticipants; ++i) {
+		struct Bot *s = &gMyBattle->users[i]->bot;
+		if (!strcmp(name, s->name)) {
+			uint32_t bs = getNextInt() | AI_MASK | MODE_MASK;
+			UpdateBattleStatus((UserOrBot *)s, bs, getNextInt());
+			return;
+		}
+	}
+	assert(0);
+})
