@@ -445,7 +445,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	InitSettings();
 	
-#ifndef BENCHMARK_RAPID
 	srand(time(NULL));
 
 	InitializeSystemMetrics();
@@ -473,22 +472,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		
 	InvalidateRect(tabControl, 0, 0);
 	char username[MAX_NAME_LENGTH_NUL], *s;
-	// if (gSettings.flags & SETTING_AUTOCONNECT
-			// && (s = LoadSetting("username")) && strcpy(username, s)
-			// && (s = LoadSetting("password")))
-		// Login(username, s);
-	// else
-		// CreateLoginBox();
+	if (gSettings.flags & SETTING_AUTOCONNECT
+			&& (s = LoadSetting("username")) && strcpy(username, s)
+			&& (s = LoadSetting("password")))
+		Login(username, s);
+
 	Sync_Init();
-#else
-	// DownloadMap("Archers_Valley_v5");
-	// DownloadMap("Duck");
-	DownloadMod("Zero-K v0.7.3");
-	Sleep(INFINITE);
-#endif
-	// DownloadMap("Duck");
-	// DownloadMap("Small Supreme Battlefield V2");
-	// DownloadMod("Zero-K v0.7.3");
+
     for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {
 		if (msg.message == WM_KEYDOWN && msg.wParam == VK_F1)
 			CreateAboutDlg();

@@ -182,11 +182,9 @@ static void writeFile(wchar_t *path, const void *buffer, size_t len)
 
 static void initializeProgressBar(SessionContext *ses)
 {
-	#ifndef BENCHMARK_RAPID
-		HWND progressBar = ses->progressBar;
-		SetWindowLongPtr(progressBar, GWL_STYLE, GetWindowLong(progressBar, GWL_STYLE) & ~PBS_MARQUEE);
-		SendMessage(progressBar, PBM_SETRANGE32, 0, ses->totalBytes);
-	#endif
+	HWND progressBar = ses->progressBar;
+	SetWindowLongPtr(progressBar, GWL_STYLE, GetWindowLong(progressBar, GWL_STYLE) & ~PBS_MARQUEE);
+	SendMessage(progressBar, PBM_SETRANGE32, 0, ses->totalBytes);
 }
 
 DWORD WINAPI exeucuteOnFinishHelper(HINTERNET requestHandle)
@@ -218,9 +216,6 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			free(ses->packageBytes);
 			--nbDownloads;
 			ses->status = 0;
-			#ifdef BENCHMARK_RAPID
-			exit(0);
-			#endif
 			SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->progressBar);
 			SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->button);
 			UpdateStatusBar();
@@ -471,18 +466,14 @@ void DownloadFile(const char *name, int isMap)
 	
 	*ses = (SessionContext){
 		.status = DL_ACTIVE | isMap * DL_MAP,
-		#ifndef BENCHMARK_RAPID
 		.progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dlgItems[DLG_PROGRESS]),
 		.button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dlgItems[DLG_PROGRESS_BUTTON_]),
-		#endif
 		.handle = handle,
 	};
 	swprintf(ses->name, L"%hs", name);
-	#ifndef BENCHMARK_RAPID
 	SetWindowLongPtr(ses->button, GWLP_USERDATA, (LONG_PTR)ses);
 	SendMessage(ses->progressBar, PBM_SETMARQUEE, 1, 0);
 	UpdateStatusBar();
-	#endif
 	
 	WinHttpSetOption(handle, WINHTTP_OPTION_CONTEXT_VALUE, &ses, sizeof(ses));
 	
