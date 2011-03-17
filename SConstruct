@@ -14,7 +14,7 @@ else:
 
 VariantDir(variant_dir, 'src', duplicate=0)
 
-files = Split('client.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c loginbox.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
+files = Split('client.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c dialogboxes.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
 files = [variant_dir + '/' + s for s in files]
 
 resources = RES(variant_dir + '/res.rc')
