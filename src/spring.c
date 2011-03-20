@@ -180,7 +180,7 @@ void LaunchSpring(void)
 	fwrite(buff, 1, buffEnd - buff, fp);
 	fclose(fp);
 	wchar_t path[128];
-	swprintf(path, L"%hs script_.txt", LoadSetting("spring_path"));
+	swprintf(path, L"%hs script_.txt", gSettings.spring_path);
 	LAUNCH_SPRING(path);
 	return;
 }
@@ -188,7 +188,7 @@ void LaunchSpring(void)
 void LaunchReplay(const wchar_t *replayName)
 {
 	wchar_t path[MAX_PATH];
-	swprintf(path, L"%hs demos/%s", LoadSetting("spring_path"), replayName);
+	swprintf(path, L"%hs demos/%s", gSettings.spring_path, replayName);
 	printf("path = \"%ls\"\n", path);
 	LAUNCH_SPRING(path);
 }

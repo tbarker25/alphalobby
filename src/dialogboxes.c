@@ -62,7 +62,7 @@ static BOOL CALLBACK loginDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		if (pw) {
 			SetDlgItemText(window, IDC_LOGIN_PASSWORD, utf8to16(pw));
 			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 1, 0);
-			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_SETCHECK, LoadSettingInt("autoconnect"), 0);
+			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_SETCHECK, gSettings.flags & SETTING_AUTOCONNECT, 0);
 		} else
 			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), 0);
 	  return 1;
@@ -84,7 +84,7 @@ static BOOL CALLBACK loginDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 				SaveSetting("username", username);
 				SaveSetting("password", password);
 			}
-			SaveSettingInt("autoconnect", SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_GETCHECK, 0, 0));
+			gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_GETCHECK, 0, 0);
 
 			if (wParam == MAKEWPARAM(IDOK, BN_CLICKED))
 				Login(username, password);
@@ -313,9 +313,9 @@ static BOOL CALLBACK preferencesDlgProc(HWND window, UINT msg, WPARAM wParam, LP
     switch (msg) {
 	case WM_INITDIALOG: {
 		HWND autoconnect = GetDlgItem(window, IDC_PREFERENCES_AUTOCONNECT);
-		SendMessage(autoconnect, BM_SETCHECK, LoadSettingInt("autoconnect"), 0);
+		SendMessage(autoconnect, BM_SETCHECK, gSettings.flags & SETTING_AUTOCONNECT, 0);
 		ShowWindow(autoconnect, !!LoadSetting("password"));
-		SetDlgItemTextA(window, IDC_PREFERENCES_PATH, LoadSetting("spring_path"));
+		SetDlgItemTextA(window, IDC_PREFERENCES_PATH, gSettings.spring_path);
 		return 0;
 	}
 	case WM_COMMAND:
@@ -323,9 +323,9 @@ static BOOL CALLBACK preferencesDlgProc(HWND window, UINT msg, WPARAM wParam, LP
 		case MAKEWPARAM(IDOK, BN_CLICKED): {
 			char buff[1024];
 			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buff, sizeof(buff));
-			SaveSetting("spring_path", buff);
-			
-			SaveSettingInt("autoconnect", SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0));
+			free(gSettings.spring_path);
+			gSettings.spring_path = strdup(buff);
+			gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);
 		}	//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED): 
 			EndDialog(window, 0);

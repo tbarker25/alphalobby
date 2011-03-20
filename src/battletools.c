@@ -101,20 +101,17 @@ void Rebalance(void)
 	for (int j=0; j<playerCount; ++j)
 		closest += FROM_RANK_MASK(players[j]->battleStatus);
 	
-	int balanceRank = LoadSettingInt("host_balance_rank");
-	int balanceClan = LoadSettingInt("host_balance_clans");
-	
 	const int initialDiff = closest / -2;
 	uint32_t seed = rand() % (1 << playerCount), n=seed;
 	do {
 		int rankDiff = initialDiff;
 		for (int j=0; j<playerCount; ++j)
 			if (n & 1<<j)
-				rankDiff += 0x1000 + balanceRank * FROM_RANK_MASK(players[j]->battleStatus);
+				rankDiff += 0x1000 + ((gSettings.flags & SETTING_HOST_BALANCE_RANK) != 0) * FROM_RANK_MASK(players[j]->battleStatus);
 		rankDiff = abs(rankDiff);
 		if (rankDiff > closest)
 			goto failure;
-		if (!balanceClan)
+		if (!((gSettings.flags & SETTING_HOST_BALANCE_CLAN) != 0))
 			goto success;
 		for (int i=0; i<playerCount-1; ++i) {
 			if (players[i]->name[0] != '[')
@@ -162,9 +159,6 @@ void FixPlayerStatus(const union UserOrBot *u)
 		return;
 
 	int i=-1;
-	int fixID = LoadSettingInt("host_fix_ids");
-	int fixColor = LoadSettingInt("host_fix_colors");
-	int fixAlly = LoadSettingInt("host_autobalance");
 	
 	FOR_EACH_PLAYER(p, gMyBattle) {
 		++i;
@@ -172,7 +166,7 @@ void FixPlayerStatus(const union UserOrBot *u)
 			continue;
 
 		uint32_t color = -1;
-		if (fixColor) {
+		if (((gSettings.flags & SETTING_HOST_FIX_COLOR) != 0)) {
 			color = ((i&0x01)*0xFF) | ((i&0x02)*0x7F80) | ((i&0x04)*0x3FC000);
 			if (i & 0x08)
 				color = i & 0x07 ? color & 0x010101 : 0x0c0c0c;
@@ -180,7 +174,7 @@ void FixPlayerStatus(const union UserOrBot *u)
 		
 		SetBattleStatusAndColor(p,
 				TO_ALLY_MASK(!!(balance & 1<<i)) | TO_TEAM_MASK(i%16),
-				fixAlly * ALLY_MASK | fixID * TEAM_MASK,
+				((gSettings.flags & SETTING_HOST_BALANCE) != 0) * ALLY_MASK | ((gSettings.flags & SETTING_HOST_FIX_ID) != 0) * TEAM_MASK,
 				color);
 	}
 }
