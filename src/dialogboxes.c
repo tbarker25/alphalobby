@@ -452,7 +452,7 @@ void CreateColorDlg(union UserOrBot *u)
 
 void CreateAboutDlg(void)
 {
-	MessageBox(gMainWindow, L"Created by Axiomatic\nhttp://springrts.com/phpbb/viewtopic.php?f=64&p=469673\nFlag icons by Mark James (http://www.famfamfam.com/)\n", L"Alphalobby 0.04.7 (alpha)", 0);
+	MessageBox(gMainWindow, L"Created by Axiomatic\nhttp://springrts.com/phpbb/viewtopic.php?f=64&p=469673\nFlag icons by Mark James (http://www.famfamfam.com/)\n", L"Alphalobby " STRINGIFY(VERSION), 0);
 }
 
 void CreateReplayDlg(void)

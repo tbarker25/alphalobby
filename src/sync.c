@@ -426,6 +426,7 @@ void ChangeMod(const char *modName)
 void ChangeMap(const char *mapName)
 {
 	// printf("changing map to %s\n", mapName);
+	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
 	free(InterlockedExchangePointer(&mapToSet, strdup(mapName)));
 	SetEvent(event);
 }

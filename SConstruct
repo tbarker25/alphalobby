@@ -1,10 +1,12 @@
 
 libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1')
 libpath = '.'
-cflags = '-ffast-math -fshort-enums -std=gnu99 -DUNICODE -march=i686'
-cppdefines = {}
+cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
 
-if ARGUMENTS.get('NDEBUG', 0) == 0:
+version = ARGUMENTS.get('VERSION', '(development build)')
+cppdefines = {'UNICODE' : 1, 'VERSION' : version}
+
+if version == '(development build)':
 	variant_dir = 'debug'
 	cflags += ' -g -O0'
 else:
@@ -19,4 +21,7 @@ files = [variant_dir + '/' + s for s in files]
 
 resources = RES(variant_dir + '/res.rc')
 
-Program(variant_dir + '/alphalobby', [files, resources], LIBS=libraries, LIBPATH=libpath, CCFLAGS=cflags, CPPDEFINES=cppdefines)
+prog = Program(variant_dir + '/alphalobby', [files, resources], LIBS=libraries, LIBPATH=libpath, LINKFLAGS=cflags, CCFLAGS=cflags, CPPDEFINES=cppdefines)
+
+if version != '(development build)':
+	Command(variant_dir + '/alphalobby-' + version + '.exe', prog, 'upx $SOURCE -qq --brute -f -o $TARGET')
