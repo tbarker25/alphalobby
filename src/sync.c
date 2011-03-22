@@ -642,7 +642,9 @@ void UnitSync_GetOptions(int len; Option2 options[len], int len)
 		}
 		s = strpcpy((options[i].key=s), GetOptionKey(i));
 		s = strpcpy((options[i].name=s), GetOptionName(i));
-		getOptionDef(i, (options[i].val=s));
+		getOptionDef(i, s);
+		if (*(char *)s)
+			options[i].val = s;
 	}
 }
 

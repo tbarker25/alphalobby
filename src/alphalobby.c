@@ -144,7 +144,7 @@ void AddTab(HWND window, int focus)
 		};
 	HWND button = CreateWindowEx(WS_EX_TOPMOST, WC_BUTTON, NULL, WS_VISIBLE | WS_CHILD | BS_ICON, 0,0,0,0, tabControl, (HMENU)index, NULL, 0);
 	SendMessage(button, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_CLOSEBUTTON, 0));
-	index = TabCtrl_InsertItem(tabControl, window == gBattleRoomWindow ?: index, &item);
+	index = TabCtrl_InsertItem(tabControl, /* window == gBattleRoomWindow ?: */ index, &item);
 	end:
 	if (focus)
 		setTab(index);

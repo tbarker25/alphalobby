@@ -31,6 +31,9 @@ void LaunchSpring(void)
 //Script is unreadably compact because it might need to be sent to relayhost.
 //This lets us send it in 1-2 packets, so it doesnt take 5 seconds like in springlobby.
 {
+	if (!*gMyUser->name)
+		strcpy(gMyUser->name, "Player");
+
 	Battle *b = gMyBattle;
 	assert(b);
 
@@ -44,7 +47,7 @@ void LaunchSpring(void)
 	int startPosType = gBattleOptions.hostType == HOST_RELAY && gBattleOptions.startPosType != 2 ? 3 : gBattleOptions.startPosType;
 	
 	if (gBattleOptions.hostType == HOST_SP)
-		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyBattle->founder->name);
+		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyUser->name);
 	else
 		APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;IsHost=%hu;MyPlayerName=%s;MyPasswd=%s;",
 			b->ip, b->port, gBattleOptions.hostType & HOST_FLAG && 
@@ -66,7 +69,7 @@ void LaunchSpring(void)
 		assert(gMapOptions);
 		APPEND_LINE("[MAPOPTIONS]{");
 		for (int i=0; i<gNbMapOptions; ++i)
-			if (gModOptions[i].val && strcmp(gMapOptions[i].val, gMapOptions[i].def))
+			if (gMapOptions[i].val && strcmp(gMapOptions[i].val, gMapOptions[i].def))
 				APPEND_LINE("%s=%s;", gMapOptions[i].key, gMapOptions[i].val);
 		*buffEnd++ = '}';
 	}
@@ -86,7 +89,7 @@ void LaunchSpring(void)
 	
 	#define DOSTARTPOS() {\
 		if (startPosType == STARTPOS_CHOOSE_BEFORE) {\
-			StartPos pos = gBattleOptions.positions[FROM_TEAM_MASK(battleStatus)].x ? gBattleOptions.positions[FROM_TEAM_MASK(battleStatus)] : gMapInfo.positions[FROM_TEAM_MASK(battleStatus)];\
+			StartPos pos = GET_STARTPOS(FROM_TEAM_MASK(battleStatus));\
 			APPEND_LINE("StartPosX=%d;StartPosZ=%d;", pos.x, pos.z);\
 		}\
 	}

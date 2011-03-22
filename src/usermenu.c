@@ -47,7 +47,8 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	if (battleStatus & AI_MASK) {
 		if (!(gBattleOptions.hostType & HOST_FLAG))
 			goto cleanup;
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
+		if (gBattleOptions.hostType != HOST_SP)
+			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[SIDE_MENU], L"Set faction");
 		AppendMenu(menus[0], 0, COLOR, L"Set color");
@@ -101,9 +102,10 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		}
 	} else { //(u == gMyUser)
 		if (battleStatus & MODE_MASK) {
-			if (gBattleOptions.hostType != HOST_SP)
+			if (gBattleOptions.hostType != HOST_SP) {
 				AppendMenu(menus[0], 0, SPEC, L"Spectate");
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
+				AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
+			}
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[SIDE_MENU], L"Set faction");
 			AppendMenu(menus[0], 0, COLOR, L"Set color");
