@@ -121,7 +121,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	case 0:
 		break;
 	case CHAT:
-		AddTab(GetPrivateChat(&s->user), 1);
+		FocusTab(GetPrivateChat(&s->user));
 		break;
 	case IGNORED:
 		s->user.ignore ^= 1;

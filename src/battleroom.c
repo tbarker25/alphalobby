@@ -136,7 +136,7 @@ void BattleRoom_Show(void)
 	RECT rect;
 	GetClientRect(gBattleRoomWindow, &rect);
 	SendMessage(gBattleRoomWindow, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
-	AddTab(gBattleRoomWindow, 1);
+	FocusTab(gBattleRoomWindow);
 }
 
 void BattleRoom_Hide(void)
@@ -531,7 +531,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		case DLG_PLAYER_LIST: {
 			switch (note->code) {
 			case LVN_ITEMACTIVATE:
-				AddTab(GetPrivateChat(getUserFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)), 1);
+				FocusTab(GetPrivateChat(getUserFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)));
 				return 1;
 			case NM_RCLICK: {
 				POINT pt =  ((LPNMITEMACTIVATE)lParam)->ptAction;

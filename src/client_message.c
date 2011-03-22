@@ -173,7 +173,7 @@ void JoinChannel(const char *chanName, int focus)
 		
 	SendToServer("JOIN %s", chanName);
 	if (focus)
-		AddTab(GetChannelChat(chanName), 1);
+		FocusTab(GetChannelChat(chanName));
 }
 
 void RenameAccount(const char *newUsername)

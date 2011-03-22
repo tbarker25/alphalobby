@@ -171,7 +171,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 				DownloadMod(b->modName);
 				break;
 			default: {
-				AddTab(GetPrivateChat((User *)clicked), 1);
+				FocusTab(GetPrivateChat((User *)clicked));
 			}	break;
 			}
 			DestroyMenu(userMenu);

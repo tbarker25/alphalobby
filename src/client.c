@@ -158,6 +158,7 @@ void SendToServer(const char *format, ...)
 	#ifndef NDEBUG
 	printf("< %s\n", buff);
 	#endif
+
 	HWND serverWindow = GetServerChat();
 	if (GetTabIndex(serverWindow) >= 0)
 		Chat_Said(serverWindow, NULL, CHAT_SERVEROUT, buff);

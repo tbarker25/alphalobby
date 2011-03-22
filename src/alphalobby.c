@@ -79,7 +79,6 @@ static void resizeTabItem(void)
 
 static void setTab(int i)
 {
-	
 	TCITEM item = {.mask = TCIF_PARAM};
 	if (!TabCtrl_GetItem(tabControl, i, &item)
 			|| tabItem == (HWND)item.lParam)
@@ -97,7 +96,7 @@ static void setTab(int i)
 int GetTabIndex(HWND window)
 {
 	TCITEM item = {.mask = TCIF_PARAM};
-	for (int index=TabCtrl_GetItemCount(tabControl); index >= 0; --index) {
+	for (int index=TabCtrl_GetItemCount(tabControl)-1; index >= 0; --index) {
 		TabCtrl_GetItem(tabControl, index, &item);
 		if ((HWND)item.lParam == window)
 			return index;
@@ -109,7 +108,7 @@ void AttachTab(HWND window)
 {
 	SetParent(window, gMainWindow);
 	SetWindowLongPtr(window, GWL_STYLE, WS_CHILD);
-	AddTab(window, 1);
+	FocusTab(window);
 }
 
 void DetatchTab(HWND window)
@@ -120,14 +119,14 @@ void DetatchTab(HWND window)
 	return;
 }
 
-void AddTab(HWND window, int focus)
+void AddTab(HWND window)
 {
 	if (!GetParent(window)) {
-		if (focus)
-			BringWindowToTop(window);
+		// if (focus)
+			// BringWindowToTop(window);
 		return;
 	}
-
+	
 	TCITEM item = {.mask = TCIF_PARAM};
 	int index = GetTabIndex(window);
 	if (index >= 0)
@@ -146,12 +145,14 @@ void AddTab(HWND window, int focus)
 	SendMessage(button, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_CLOSEBUTTON, 0));
 	index = TabCtrl_InsertItem(tabControl, /* window == gBattleRoomWindow ?: */ index, &item);
 	end:
-	if (focus)
-		setTab(index);
 	resizeTabControl();
 }
 
-
+void FocusTab(HWND window)
+{
+	AddTab(window);
+	setTab(GetTabIndex(window));
+}
 
 void RemoveTab(HWND window)
 {
@@ -230,7 +231,7 @@ void Ring(void)
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */ 
 		           0x0000000C, /* FLASHW_TIMERNOFG */
 	});
-	AddTab(gBattleRoomWindow, 1);
+	FocusTab(gBattleRoomWindow);
 }
 
 static LRESULT CALLBACK tabControlProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR unused)
@@ -282,10 +283,11 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	switch(msg) {
 	case WM_CREATE: {
 		gMainWindow = window;
+		Chat_Init();
 		CreateDlgItems(window, dlgItems, DLG_LAST+1);
 		tabControl = GetDlgItem(window, DLG_TAB);
 		statusBar = GetDlgItem(gMainWindow, DLG_STATUSBAR);
-		AddTab(GetDlgItem(window, DLG_BATTLELIST), 1);
+		FocusTab(GetDlgItem(window, DLG_BATTLELIST));
 		SetStatus(L"\t\tNot Connected");
 		SetWindowSubclass(tabControl, tabControlProc, 0, 0);
 		UpdateWindow(tabControl);
@@ -345,7 +347,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			DestroyWindow(window);
 			return 0;
 		case IDM_SERVER_LOG:
-			AddTab(GetServerChat(), 1);
+			FocusTab(GetServerChat());
 			return 0;
 		case IDM_ABOUT:
 			CreateAboutDlg();
@@ -467,10 +469,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	CreateWindowEx(0, WC_ALPHALOBBY, L"AlphaLobby", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		left, top, width, height,
 		NULL, (HMENU)0, NULL, NULL);
-	// if (maximize)
-		// ShowWindow(gMainWindow, SW_SHOWMAXIMIZED);
-		
-	InvalidateRect(tabControl, 0, 0);
+
+
+	// InvalidateRect(tabControl, 0, 0);
 	char username[MAX_NAME_LENGTH_NUL], *s;
 	if (gSettings.flags & SETTING_AUTOCONNECT
 			&& (s = LoadSetting("username")) && strcpy(username, s)
@@ -478,7 +479,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Login(username, s);
 
 	Sync_Init();
-
+	
     for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {
 		if (msg.message == WM_KEYDOWN && msg.wParam == VK_F1)
 			CreateAboutDlg();

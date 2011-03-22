@@ -34,7 +34,7 @@
 // #define PRIVATE_CHAT_ID 0x2002
 
 static HWND channelWindows[128];
-static HWND serverChatWindow;
+HWND _gServerChatWindow;
 
 #define MARGIN (MAP_X(115))
 
@@ -227,7 +227,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 				User *u = FindUser(username);
 				if (u) {
 					SendToServer("SAYPRIVATE %s %s", u->name, s);
-					AddTab(GetPrivateChat(u), 1);
+					FocusTab(GetPrivateChat(u));
 				} else {
 					char buff[128];
 					sprintf(buff, "Could not send message: %s is not logged in.", username);
@@ -356,7 +356,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			DestroyMenu(menu);
 			if (clicked == 1)
 				addtab:
-				AddTab(GetPrivateChat(u), 1);
+				FocusTab(GetPrivateChat(u));
 			else if (clicked == 2) {
 				u->ignore ^= 1;
 				UpdateUser(u);
@@ -537,12 +537,12 @@ HWND GetPrivateChat(User *u)
 	return u->chatWindow;
 }
 
-HWND GetServerChat(void)
-{
-	if (!serverChatWindow)
-		serverChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gMainWindow, (HMENU)DEST_SERVER, NULL, (void *)"TAS Server");
-	return serverChatWindow;
-}
+// HWND GetServerChat(void)
+// {
+	// if (!_gServerChatWindow)
+		// _gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gMainWindow, (HMENU)DEST_SERVER, NULL, (void *)"TAS Server");
+	// return _gServerChatWindow;
+// }
 
 void SaveLastChatWindows(void)
 {
@@ -565,7 +565,7 @@ void SaveLastChatWindows(void)
 	gSettings.autojoin = strdup(autojoinChannels);
 }
 
-static void __attribute__((constructor)) _init_ (void)
+void Chat_Init(void)
 {
 	RegisterClass((&(WNDCLASS){
 		.lpszClassName = WC_CHATBOX,
@@ -573,5 +573,9 @@ static void __attribute__((constructor)) _init_ (void)
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	}));
+	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gMainWindow, (HMENU)DEST_SERVER, NULL, (void *)"TAS Server");
 }
+
+
+
 

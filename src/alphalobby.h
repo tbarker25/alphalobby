@@ -16,7 +16,10 @@ extern HWND gMainWindow;
 void UpdateStatusBar(void);
 void SetStatus(const wchar_t *text);
 void Ring(void);
-void AddTab(HWND window, int focus);
+
+void FocusTab(HWND window);
+void AddTab(HWND window);
+
 void RemoveTab(HWND window);
 void MainWindow_ChangeConnect(int isNowConnected);
 int GetTabIndex(HWND window);

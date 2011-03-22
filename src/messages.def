@@ -182,7 +182,7 @@ X(FORCEQUITBATTLE, {
 
 X(JOIN, {
 	const char *chanName = getNextWord();
-	AddTab(GetChannelChat(chanName), 0);
+	AddTab(GetChannelChat(chanName));
 })
 
 X(JOINBATTLE, {
@@ -414,7 +414,7 @@ X(SAIDPRIVATE, {
 		HWND window = GetPrivateChat(u);
 		Chat_Said(window, username, 0, command);
 		if (!gMyBattle || strcmp(username, gMyBattle->founder->name) || GetTickCount() - gLastAutoMessage > 1000)
-			AddTab(window, 1);
+			FocusTab(window);
 	}
 })
 

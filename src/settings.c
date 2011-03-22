@@ -78,7 +78,7 @@ void OpenDefaultChannels(void)
 	
 	while ((s=strsplit(&s2, ";"))) {
 		if (*s == '*')
-			AddTab(GetServerChat(), 1);
+			FocusTab(GetServerChat());
 		else
 			JoinChannel(s, 0);
 	}
