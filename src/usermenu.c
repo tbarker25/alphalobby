@@ -132,6 +132,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		sprintf(title, "Set alias for %s", s->name);
 		if (!GetTextDlg(title, strcpy(buff, s->name), sizeof(buff))) {
 			strcpy(s->user.alias, buff);
+			UpdateUser(&s->user);
 		}
 		} break;
 	case COLOR:

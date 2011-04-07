@@ -77,11 +77,12 @@ User * NewUser(uint32_t id, const char *name)
 		gMyUser->id = id;
 		return gMyUser;
 	}
-	// assert(strcmp("_Axiomatic", name));
+
 	int i=1;
 	for (; i<nbUsers; ++i)
 		if (_users[i].id == id)
 			break;
+
 	if (i == nbUsers) {
 		++nbUsers;
 		_users[i].id = id;
@@ -96,12 +97,12 @@ void DelUser(User *u)
 	u->name[0] = 0;
 }
 
-
 void ResetData (void)
 {
-	nbUsers = 1;
 	nbBattles = 0;
-	memset(_users + 1, 0, sizeof(_users) - sizeof(_users[0]));
+	for (int i=1; i < lengthof(_users); ++i)
+		_users[i].name[0] = 0;
+
 	memset(battles, 0, sizeof(battles));
 	
 	if (gMyBattle && gBattleOptions.hostType != HOST_SP)

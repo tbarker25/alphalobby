@@ -89,18 +89,6 @@ extern size_t gWritableDataDirectoryLen;
 #define CFM_STYLE			0x00080000
 #define CFM_KERNING			0x00100000
 
-typedef struct tagTCITEMHEADER
-{
-    UINT  mask;
-    UINT  lpReserved1;
-    UINT  lpReserved2;
-    LPSTR pszText;
-    int   cchTextMax;
-    int   iImage;
-} TCITEMHEADER, *LPTCITEMHEADER;
-
-#pragma once
-
 typedef struct LVGROUP {
     UINT cbSize;
     UINT mask;
