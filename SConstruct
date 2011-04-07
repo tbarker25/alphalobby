@@ -12,7 +12,7 @@ if version == '(development build)':
 else:
 	cppdefines['NDEBUG'] = 1
 	variant_dir = 'release'
-	cflags += ' -s -Os'
+	cflags += ' -s -Os -mwindows'
 
 VariantDir(variant_dir, 'src', duplicate=0)
 

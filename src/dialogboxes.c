@@ -105,14 +105,9 @@ static BOOL CALLBACK loginDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
 			return 1;
-		case MAKEWPARAM(IDC_LOGIN_USERNAME, EN_CHANGE):
-			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 0, 0);
-		  break;
-		case MAKEWPARAM(IDC_LOGIN_SAVE, BN_CLICKED): {
-			HWND autoconnect = GetDlgItem(window, IDC_LOGIN_AUTOCONNECT);
-			SendMessage(autoconnect, BM_SETCHECK, 0, 0);
-			EnableWindow(autoconnect, SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0));
-		} return 1;
+		case MAKEWPARAM(IDC_LOGIN_SAVE, BN_CLICKED):
+			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0));
+			return 1;
 		} break;
     }
 	return 0;
@@ -367,6 +362,38 @@ static BOOL CALLBACK agreementDlgProc(HWND window, UINT msg, WPARAM wParam, LPAR
 	return 0;
 }
 
+static BOOL CALLBACK aboutDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+	case WM_INITDIALOG: {
+		HWND editBox = GetDlgItem(window, IDC_ABOUT_EDIT);
+		SendMessage(editBox, EM_AUTOURLDETECT, 1, 0);
+		SendMessage(editBox, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
+		SendMessage(editBox, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){},
+			(LPARAM)"{\\rtf {\\b Alphalobby} {\\i" STRINGIFY(VERSION) "}\\par\\par "
+			"{\\b Author:}\\par Tom Barker (Axiomatic)\\par \\par "
+			"{\\b Homepage:}\\par http://code.google.com/p/alphalobby/\\par \\par "
+			"{\\b Flag icons:}\\par Mark James http://www.famfamfam.com/\\par }");
+	} return 0;
+	case WM_NOTIFY: {
+		ENLINK *s = (void *)lParam;
+		if (s->nmhdr.idFrom == IDC_ABOUT_EDIT && s->nmhdr.code == EN_LINK && s->msg == WM_LBUTTONUP) {
+			SendMessage(s->nmhdr.hwndFrom, EM_EXSETSEL, 0, (LPARAM)&s->chrg);
+			wchar_t url[256];
+			SendMessage(s->nmhdr.hwndFrom, EM_GETTEXTEX,
+					(WPARAM)&(GETTEXTEX){.cb = sizeof(url), .flags = GT_SELECTION, .codepage = 1200},
+					(LPARAM)url);
+			ShellExecute(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL);
+		}
+	} return 0;
+	case WM_COMMAND:
+		if (wParam == MAKEWPARAM(IDCANCEL, BN_CLICKED))
+			EndDialog(window, 0);
+		return 0;
+    }
+	return 0;
+}
+
 static void activateReplayListItem(HWND listViewWindow, int index)
 {
 	printf("index = %d\n", index);
@@ -452,11 +479,13 @@ void CreateColorDlg(union UserOrBot *u)
 
 void CreateAboutDlg(void)
 {
-	MessageBox(gMainWindow, L"Created by Axiomatic\nhttp://springrts.com/phpbb/viewtopic.php?f=64&p=469673\nFlag icons by Mark James (http://www.famfamfam.com/)\n", L"Alphalobby " STRINGIFY(VERSION), 0);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_ABOUT), gMainWindow, aboutDlgProc);
+	// MessageBox(gMainWindow, L"Created by Axiomatic\nhttp://springrts.com/phpbb/viewtopic.php?f=64&p=469673\nFlag icons by Mark James (http://www.famfamfam.com/)\n", L"Alphalobby " STRINGIFY(VERSION), 0);
 }
 
 void CreateReplayDlg(void)
 {
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), gMainWindow, replayListProc);
 }
+
 
