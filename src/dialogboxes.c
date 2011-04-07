@@ -370,7 +370,7 @@ static BOOL CALLBACK aboutDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		SendMessage(editBox, EM_AUTOURLDETECT, 1, 0);
 		SendMessage(editBox, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
 		SendMessage(editBox, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){},
-			(LPARAM)"{\\rtf {\\b Alphalobby} {\\i" STRINGIFY(VERSION) "}\\par\\par "
+			(LPARAM)"{\\rtf {\\b Alphalobby} {\\i " STRINGIFY(VERSION) "}\\par\\par "
 			"{\\b Author:}\\par Tom Barker (Axiomatic)\\par \\par "
 			"{\\b Homepage:}\\par http://code.google.com/p/alphalobby/\\par \\par "
 			"{\\b Flag icons:}\\par Mark James http://www.famfamfam.com/\\par }");
@@ -480,7 +480,6 @@ void CreateColorDlg(union UserOrBot *u)
 void CreateAboutDlg(void)
 {
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_ABOUT), gMainWindow, aboutDlgProc);
-	// MessageBox(gMainWindow, L"Created by Axiomatic\nhttp://springrts.com/phpbb/viewtopic.php?f=64&p=469673\nFlag icons by Mark James (http://www.famfamfam.com/)\n", L"Alphalobby " STRINGIFY(VERSION), 0);
 }
 
 void CreateReplayDlg(void)
