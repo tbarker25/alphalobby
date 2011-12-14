@@ -1,0 +1,62 @@
+#pragma once
+
+#include "resource.h"
+
+#define INGAME_MASK 1
+#define PW_MASK 2
+#define FULL_MASK 4
+#define USER_MASK 8
+#define UNSYNC_MASK 1
+#define AWAY_MASK 2
+#define IGNORE_MASK 4
+enum ICONS {
+	ICONS_MASK = 0x0F,
+
+	ICONS_CLOSED,
+	ICONS_OPEN,
+	
+	ICONS_HOST,
+	ICONS_SPECTATOR,
+	ICONS_HOST_SPECTATOR,
+	ICONS_INGAME,
+	
+	ICONS_FIRST_RANK,
+	ICONS_LAST_RANK = ICONS_FIRST_RANK + 7,
+	
+	ICONS_CLOSEBUTTON,
+	
+	ICONS_FIRST_FLAG,
+	ICONS_FLAG_COUNT = 240,
+	ICONS_LAST_FLAG = ICONS_FIRST_FLAG + ICONS_FLAG_COUNT - 1,
+
+	ICONS_FIRST_SIDE,
+	ICONS_SIDE_COUNT = 16,
+	ICONS_LAST_SIDE = ICONS_FIRST_SIDE + ICONS_SIDE_COUNT - 1,
+	
+	ICONS_FIRST_COLOR,
+	ICONS_COLOR_COUNT = 32,
+	ICONS_LAST_COLOR = ICONS_FIRST_COLOR + ICONS_COLOR_COUNT - 1,
+	
+	ICONS_LAST = ICONS_LAST_COLOR,
+	
+	ICONS_READY = ICONS_OPEN,
+	ICONS_UNREADY = ICONS_CLOSED,
+};
+
+void ReplaceIcon(int index, const wchar_t *fileName);
+int GetColorIndex(const union UserOrBot *);
+#ifdef WINVER
+extern HIMAGELIST iconList;
+#endif
+
+#define EnableIcons(window)\
+{\
+	extern HIMAGELIST iconList;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)iconList);\
+}
+
+#define EnableStateIcons(window)\
+{\
+	extern HIMAGELIST iconList;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)iconList);\
+}
