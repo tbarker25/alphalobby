@@ -193,7 +193,7 @@ void login(void)
 
 static void registerAccount(void)
 {
-	SendToServer("REGISTER %s %s", gMyUser->name, myPassword);
+	SendToServer("REGISTER %s %s", myUserName, myPassword);
 }
 
 void RegisterAccount(const char *username, const char *password)
