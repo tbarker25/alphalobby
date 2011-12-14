@@ -16,7 +16,7 @@
 
 extern uint32_t gLastBattleStatus;
 
-User gMyUser[1000];
+User gMyUser[10000];
 Battle *gMyBattle;
 uint32_t gUdpHelpPort;
 
@@ -24,7 +24,7 @@ uint32_t gUdpHelpPort;
 #define _users gMyUser
 static size_t nbUsers = 1;
 
-static Battle battles[1000];
+static Battle battles[10000];
 static size_t nbBattles;
 
 uint32_t battleToJoin;
@@ -33,6 +33,10 @@ uint32_t gMapHash, gModHash;
 size_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
+
+char **gMaps, **gMods;
+size_t gNbMaps, gNbMods;
+
 
 MapInfo gMapInfo = {
 	.description = (char[256]){},

@@ -120,24 +120,24 @@ static BOOL CALLBACK hostDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
     switch (msg) {
 		case WM_INITDIALOG: {
 			SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(LoadSetting("last_host_description")));
-			const char *def; int defIndex, i;
-			HWND comboBox;
-			void func(const char *name)
-			{
-				if (def && !strcmp(def, name))
-					defIndex = i;
-				SendMessageA(comboBox, CB_ADDSTRING, 0, (LPARAM)name);
-				++i;
-			}
-			def = LoadSetting("last_host_mod"); i=0; defIndex=0;
-			comboBox = GetDlgItem(window, IDC_HOST_MOD);
-			ForEachModName(func);
-			SendMessage(comboBox, CB_SETCURSEL, defIndex, 0);
+			const char *def; int defIndex;
 			
-			def = LoadSetting("last_host_map"); i=0; defIndex=0;
-			comboBox = GetDlgItem(window, IDC_HOST_MAP);
-			ForEachMapName(func);
-			SendMessage(comboBox, CB_SETCURSEL, defIndex, 0);
+			
+			def = LoadSetting("last_host_mod"); defIndex=0;
+			for (int i=0; i<gNbMods; ++i) {
+				if (def && !strcmp(def, gMods[i]))
+					defIndex = i;
+				SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
+			}
+			SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, defIndex, 0);
+			
+			def = LoadSetting("last_host_map"); defIndex=0;
+			for (int i=0; i<gNbMaps; ++i) {
+				if (def && !strcmp(def, gMaps[i]))
+					defIndex = i;
+				SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)gMaps[i]);
+			}
+			SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, defIndex, 0);
 			
 			SetDlgItemInt(window, IDC_HOST_PORT, 8452, 0);
 			SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_SETCHECK, 1, 0);

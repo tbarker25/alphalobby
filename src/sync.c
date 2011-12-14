@@ -89,13 +89,8 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 	if ((s = LoadSetting("last_mod")))
 		modToSet = strdup(s);
 
-	STARTCLOCK();
-	Init(false, 0);
-	SendMessage(gBattleRoomWindow, WM_RESYNC, 0, 0);
-	// writableDataDirectoryLen = MultiByteToWideChar(CP_UTF8, 0, GetWritableDataDirectory(), -1, writableDataDirectory, lengthof(writableDataDirectory)) - 1;
-	ENDCLOCK();
-
 	event = CreateEvent(NULL, FALSE, 0, NULL);
+	taskReload=1;
 	while (1) {
 		if (taskReload) {
 			STARTCLOCK();
@@ -105,6 +100,23 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			currentMod[0] = 0;
 			gMapHash = 0;
 			currentMap[0] = 0;
+			
+			for (int i=0; i<gNbMods; ++i)
+				free(gMods[i]);
+			free(gMods);
+			gNbMods = GetPrimaryModCount();
+			gMods = malloc(gNbMods * sizeof(gMods[0]));
+			for (int i=0; i<gNbMods; ++i)
+				gMods[i] = strdup(GetPrimaryModName(i));
+			
+			for (int i=0; i<gNbMaps; ++i)
+				free(gMaps[i]);
+			free(gMaps);
+			gNbMaps = GetMapCount();
+			gMaps = malloc(gNbMaps * sizeof(gMaps[0]));
+			for (int i=0; i<gNbMaps; ++i)
+				gMaps[i] = strdup(GetMapName(i));
+			
 			SendMessage(gBattleRoomWindow, WM_RESYNC, 0, 0);
 			ENDCLOCK();
 		} else if ((s = (void *)__sync_fetch_and_and(&modToSet, NULL))) {
@@ -582,19 +594,6 @@ static void changeOption(int iWithFlags)
 	} else if (gBattleOptions.hostType & HOST_FLAG) {
 		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", key, val);
 	}
-}
-
-void ForEachModName(void (*func)(const char *))
-{
-	for (int n=GetPrimaryModCount(), i=0; i<n; ++i)
-		func(GetPrimaryModName(i));
-
-}
-
-void ForEachMapName(void (*func)(const char *))
-{
-	for (int n=GetMapCount(), i=0; i<n; ++i)
-		func(GetMapName(i));
 }
 
 void ForEachAiName(void (*func)(const char *, void *), void *arg)

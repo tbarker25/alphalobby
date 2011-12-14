@@ -622,12 +622,8 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			menu = CreatePopupMenu();
 			HMENU mapMenu = CreatePopupMenu();
 
-			i=0;
-			void appendMap(const char *name)
-			{
-				AppendMenuA(mapMenu, MF_CHECKED * !strcmp(gMyBattle->mapName, name), MAP_FLAG | i++, name);
-			}
-			ForEachMapName(appendMap);
+			for (int i=0; i<gNbMaps; ++i)
+				AppendMenuA(mapMenu, MF_CHECKED * !strcmp(gMyBattle->mapName,  gMaps[i]), MAP_FLAG | i,  gMaps[i]);
 			
 			AppendMenu(menu, MF_POPUP, (UINT_PTR)mapMenu, L"Change map");
 			AppendMenu(menu, MF_POPUP, (UINT_PTR)aiMenu, L"Add bot");
@@ -762,27 +758,25 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		}
 		break;
 	case WM_RESYNC: {
-		const char *def; int defIndex, i;
+		const char *def; int defIndex;
 		
-		HWND comboBox;
-		void addToComboBox(const char *name)
-		{
-			if (def && !strcmp(def, name))
+		def = LoadSetting("last_host_mod"); defIndex=0;
+		for (int i=0; i<gNbMods; ++i) {
+			if (def && !strcmp(def, gMods[i]))
 				defIndex = i;
-			SendMessageA(comboBox, CB_ADDSTRING, 0, (LPARAM)name);
-			++i;
+			SendDlgItemMessageA(window, DLG_MAP, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
 		}
-		def = LoadSetting("last_host_mod"); i=0; defIndex=0;
-		comboBox = GetDlgItem(window, DLG_MOD);
-		SendMessage(comboBox, CB_RESETCONTENT, 0, 0);
-		ForEachModName(addToComboBox);
-		SendDlgItemMessage(window, DLG_MOD, CB_SETCURSEL, defIndex, 0);
-		
-		def = LoadSetting("last_host_map"); i=0; defIndex=0;
-		comboBox = GetDlgItem(window, DLG_MAP);
-		SendMessage(comboBox, CB_RESETCONTENT, 0, 0);
-		ForEachMapName(addToComboBox);
 		SendDlgItemMessage(window, DLG_MAP, CB_SETCURSEL, defIndex, 0);
+		
+		
+		def = LoadSetting("last_host_map"); defIndex=0;
+		for (int i=0; i<gNbMaps; ++i) {
+			if (def && !strcmp(def, gMaps[i]))
+				defIndex = i;
+			SendDlgItemMessageA(window, DLG_MAP, CB_ADDSTRING, 0, (LPARAM)gMaps[i]);
+		}
+		SendDlgItemMessage(window, DLG_MAP, CB_SETCURSEL, defIndex, 0);
+		
 	 }	return 0;
 	case WM_SETMODDETAILS: {
 		HWND infoWindow = GetDlgItem(window, DLG_BATTLE_INFO);

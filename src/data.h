@@ -182,6 +182,9 @@ extern Option *gModOptions, *gMapOptions;
 extern uint32_t gMapHash, gModHash;
 extern MapInfo gMapInfo;
 
+extern char **gMaps, **gMods;
+extern size_t gNbMaps, gNbMods;
+
 
 extern User gMyUser[];
 extern Battle *gMyBattle;
