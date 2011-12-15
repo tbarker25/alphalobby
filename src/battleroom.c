@@ -760,15 +760,17 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 	case WM_RESYNC: {
 		const char *def; int defIndex;
 		
+		SendDlgItemMessage(window, DLG_MOD, CB_RESETCONTENT, 0, 0);
 		def = LoadSetting("last_host_mod"); defIndex=0;
 		for (int i=0; i<gNbMods; ++i) {
 			if (def && !strcmp(def, gMods[i]))
 				defIndex = i;
-			SendDlgItemMessageA(window, DLG_MAP, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
+			SendDlgItemMessageA(window, DLG_MOD, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
 		}
-		SendDlgItemMessage(window, DLG_MAP, CB_SETCURSEL, defIndex, 0);
+		SendDlgItemMessage(window, DLG_MOD, CB_SETCURSEL, defIndex, 0);
 		
 		
+		SendDlgItemMessage(window, DLG_MAP, CB_RESETCONTENT, 0, 0);
 		def = LoadSetting("last_host_map"); defIndex=0;
 		for (int i=0; i<gNbMaps; ++i) {
 			if (def && !strcmp(def, gMaps[i]))
