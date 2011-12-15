@@ -127,9 +127,9 @@ static BOOL CALLBACK hostDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 			for (int i=0; i<gNbMods; ++i) {
 				if (def && !strcmp(def, gMods[i]))
 					defIndex = i;
-				SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
+				SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
 			}
-			SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, defIndex, 0);
+			SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, defIndex, 0);
 			
 			def = LoadSetting("last_host_map"); defIndex=0;
 			for (int i=0; i<gNbMaps; ++i) {
