@@ -407,6 +407,8 @@ X(SAIDPRIVATE, {
 		User *u = FindUser(getNextWord());
 		if (u)
 			copyNextWord(u->scriptPassword);
+	} else if (gMyBattle && !strcmp(username, gMyBattle->founder) && strncmp(command, "!join ", sizeof("!join ") - 1)) {
+		JoinBattle(command + sizeof("!join ") - 1);
 	} else {
 		User *u = FindUser(username);
 		if (!u || u->ignore)

@@ -27,5 +27,4 @@ int GetTabIndex(HWND window);
 #define ExecuteInMainThread(_func)\
 	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (WPARAM)0)	
 
-#define MyMessageBox(caption, text)\
-	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)text, (WPARAM)caption)
+void MyMessageBox(const char *caption, const char *text);
