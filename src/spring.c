@@ -17,7 +17,7 @@ static DWORD WINAPI _launchSpring2(LPVOID path)
 {
 	PROCESS_INFORMATION processInfo = {};
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL, &(STARTUPINFO){.cb=sizeof(STARTUPINFO)}, &processInfo)) {
-		SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
+		// SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
 		SetBattleStatus(gMyUser, 0, READY_MASK);
 		WaitForSingleObject(processInfo.hProcess, INFINITE);
 		SetClientStatus(0, CS_INGAME_MASK);

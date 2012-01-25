@@ -133,10 +133,11 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			}
 		} else if ((s = (void *)__sync_fetch_and_and(&mapToSet, NULL))) {
 			STARTCLOCK();
-			// printf("map %s %s\n", s, currentMap);
+			printf("map %s %s\n", s, currentMap);
 			strcpy(currentMap, s);
 			free(s);
 			setMap();
+			printf("map2 %s\n",  currentMap);
 			taskSetMinimap = 1;
 			taskSetInfo = 1;
 			ENDCLOCK();
@@ -166,7 +167,11 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			ENDCLOCK();
 		} else {
 			STARTCLOCK();
-			SetBattleStatus(gMyUser, UNSYNCED >> (gMyBattle && gMapHash == gMyBattle->mapHash && gModHash == gBattleOptions.modHash), SYNC_MASK);
+			SetBattleStatus(gMyUser,
+					UNSYNCED >> (gMyBattle 
+						&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
+						&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash)),
+					SYNC_MASK);
 			ENDCLOCK();
 			WaitForSingleObject(event, INFINITE);
 		}

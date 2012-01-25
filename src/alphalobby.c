@@ -410,6 +410,8 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		return 0;
 	case WM_MAKE_MESSAGEBOX:
 		MessageBoxA(window, (char *)wParam, (char *)lParam, 0);
+		free(wParam);
+		free(lParam);
 		return 0;
 	case WM_DESTROY_WINDOW:
 		DestroyWindow((HWND)lParam);
@@ -430,6 +432,11 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		break;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
+}
+
+void MyMessageBox(const char *caption, const char *text)
+{
+	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)strdup(text), (WPARAM)strdup(caption));
 }
 
 static const int connectedOnlyMenuItems[] = {
