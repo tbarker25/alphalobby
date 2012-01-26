@@ -46,7 +46,7 @@ void JoinBattle(uint32_t id, const char *password)
 		CreateSinglePlayerDlg();
 	} else {
 		battleToJoin = 0;
-		gMyUser->battleStatus = 0;
+		gMyUser.battleStatus = 0;
 		password = password ?: passwordToJoin;
 		//NB: This section must _not_ be accessed from PollServer
 		if (b->passworded && !password) {
@@ -58,7 +58,7 @@ void JoinBattle(uint32_t id, const char *password)
 		}
 		gBattleOptions.hostType = 0;
 		BattleRoom_Show();
-		SendToServer("JOINBATTLE %u %s %s", id, password ?: "", gMyUser->scriptPassword);
+		SendToServer("JOINBATTLE %u %s %s", id, password ?: "", gMyUser.scriptPassword);
 		free((void *)passwordToJoin);
 	}
 }
@@ -77,10 +77,10 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		return;
 	}
 	
-	if (&s->user == gMyUser) {
+	if (&s->user == &gMyUser) {
 		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask);
-		if ((bs != gLastBattleStatus && (gLastBattleStatus=bs, gMyUser))
-					|| color != gMyUser->color)
+		if ((bs != gLastBattleStatus && (gLastBattleStatus=bs, &gMyUser))
+					|| color != gMyUser.color)
 			if (!(bs & LOCK_BS_MASK))
 				SendToServer("MYBATTLESTATUS %d %d", bs & ~INTERNAL_MASK, color);
 		return;
@@ -90,7 +90,7 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		return;
 	
 	if (s->battleStatus & AI_MASK) {
-		SendToServer("!UPDATEBOT %s %d %d" + (s->bot.owner == gMyUser), s->name, bs, color);
+		SendToServer("!UPDATEBOT %s %d %d" + (s->bot.owner == &gMyUser), s->name, bs, color);
 		return;
 	}
 

@@ -80,7 +80,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 				break;
 			}
 		}
-	} else if (&s->user != gMyUser && gBattleOptions.hostType != HOST_SP) {
+	} else if (&s->user != &gMyUser && gBattleOptions.hostType != HOST_SP) {
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
 		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
@@ -100,7 +100,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 			if (gBattleOptions.hostType == HOST_RELAY)
 				AppendMenu(menus[0], 0, COLOR, L"Set color");
 		}
-	} else { //(u == gMyUser)
+	} else { //(u == &gMyUser)
 		if (battleStatus & MODE_MASK) {
 			if (gBattleOptions.hostType != HOST_SP) {
 				AppendMenu(menus[0], 0, SPEC, L"Spectate");
@@ -143,8 +143,8 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		Kick(s);
 		}break;
 	case SPEC:
-		if (&s->user == gMyUser) {
-			SetBattleStatus(gMyUser, ~s->user.battleStatus, MODE_MASK);
+		if (&s->user == &gMyUser) {
+			SetBattleStatus(&gMyUser, ~s->user.battleStatus, MODE_MASK);
 			break;
 		}
 		//FALLTHROUGH:

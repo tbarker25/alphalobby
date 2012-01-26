@@ -1,8 +1,8 @@
 
 
 X(ACCEPTED, {
-	copyNextWord(gMyUser->name);
-	strcpy(gMyUser->alias, gMyUser->name);
+	copyNextWord(gMyUser.name);
+	strcpy(gMyUser.alias, gMyUser.name);
 })
 
 
@@ -100,7 +100,7 @@ X(BATTLECLOSED, {
 		return;
 
 	if (b == gMyBattle) {
-		if (gMyBattle->founder != gMyUser)
+		if (gMyBattle->founder != &gMyUser)
 			MyMessageBox("Leaving Battle", "The battle was closed by the host.");
 		LeftBattle();
 	}
@@ -156,7 +156,7 @@ X(CLIENTSTATUS, {
 	UpdateUser(u);
 	if (!u->battle)
 		return;
-	if (u == gMyUser)
+	if (u == &gMyUser)
 		gLastClientStatus = (u->clientStatus & ~CS_INGAME_MASK) | (gLastClientStatus & CS_INGAME_MASK);
 	if (u == u->battle->founder && (oldStatus ^ u->clientStatus) & CS_INGAME_MASK)
 		BattleList_UpdateBattle(u->battle);
@@ -165,7 +165,7 @@ X(CLIENTSTATUS, {
 			&& !(oldStatus & CS_INGAME_MASK)
 			&& u->clientStatus & CS_INGAME_MASK
 			&& u == u->battle->founder
-			&& u != gMyUser)
+			&& u != &gMyUser)
 		LaunchSpring();
 })
 
@@ -262,7 +262,7 @@ X(LEFTBATTLE, {
 	for (;i < b->nbParticipants; ++i)
 		b->users[i] = b->users[i + 1];
 
-	if (u == gMyUser)
+	if (u == &gMyUser)
 		LeftBattle();
 
 	UpdateUser(u);
@@ -279,8 +279,8 @@ X(LOGININFOEND, {
 	OpenDefaultChannels();
 	SetStatus(L"\t\tlogged in successfully");
 	for (int i=0; i<16; ++i)
-		gMyUser->scriptPassword[i] = '0' + rand()%10;
-	gMyUser->scriptPassword[16] = '\0';
+		gMyUser.scriptPassword[i] = '0' + rand()%10;
+	gMyUser.scriptPassword[16] = '\0';
 	BattleList_OnEndLoginInfo();
 	MainWindow_ChangeConnect(1);
 	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
@@ -337,8 +337,8 @@ X(REMOVEUSER, {
 })
 
 X(REQUESTBATTLESTATUS, ({
-	gMyUser->battleStatus &= ~MODE_MASK;
-	SetBattleStatus(gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | LOCK_BS_MASK | READY_MASK);
+	gMyUser.battleStatus &= ~MODE_MASK;
+	SetBattleStatus(&gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | LOCK_BS_MASK | READY_MASK);
 	extern void resizePlayerListTabs(void);
 	resizePlayerListTabs();
 }))
@@ -374,7 +374,7 @@ X(SAIDBATTLEEX, {
 	const char *username = getNextWord();
 	const char *text = command;
 	if (gMyBattle && !strcmp(username, gMyBattle->founder->name)
-			&& !memcmp("* Hi ", text, 5) && !memcmp(gMyUser->name, text+5, strlen(gMyUser->name)) && !memcmp(" (", text + 5 + strlen(gMyUser->name), 2))
+			&& !memcmp("* Hi ", text, 5) && !memcmp(gMyUser.name, text+5, strlen(gMyUser.name)) && !memcmp(" (", text + 5 + strlen(gMyUser.name), 2))
 		gBattleOptions.hostType = HOST_SPADS;
 
 	Chat_Said(GetBattleChat(), username, CHAT_EX, text);
@@ -407,8 +407,10 @@ X(SAIDPRIVATE, {
 		User *u = FindUser(getNextWord());
 		if (u)
 			copyNextWord(u->scriptPassword);
-	} else if (gMyBattle && !strcmp(username, gMyBattle->founder) && strncmp(command, "!join ", sizeof("!join ") - 1)) {
-		JoinBattle(command + sizeof("!join ") - 1);
+	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && strncmp(command, "!join ", sizeof("!join ") - 1)) {
+		User *u = FindUser(command + sizeof("!join ") - 1);
+		if (u && u->battle)
+			JoinBattle(u->battle->id, NULL);
 	} else {
 		User *u = FindUser(username);
 		if (!u || u->ignore)
@@ -425,7 +427,7 @@ X(SAYPRIVATE, {
 	char *text = command;
 	User *u = FindUser(username);
 	if (u)
-		Chat_Said(GetPrivateChat(u), gMyUser->name, 0, text);
+		Chat_Said(GetPrivateChat(u), gMyUser.name, 0, text);
 })
 
 X(SERVERMSG, {
