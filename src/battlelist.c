@@ -243,8 +243,8 @@ void BattleList_UpdateBattle(Battle *b)
 	char buff[128];
 	sprintf(buff, "%d of %d - %d spectators", GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
 	AddText(buff);
-	if (gMyUser)
-		SortBattleList(0);
+
+	SortBattleList(0);
 }
 
 void BattleList_OnEndLoginInfo(void)

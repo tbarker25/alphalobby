@@ -235,14 +235,14 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 	setIcon(item, COLUMN_FLAG, ICONS_FIRST_FLAG + u->country);
 	setIcon(item, COLUMN_RANK, ICONS_FIRST_RANK + FROM_RANK_MASK(u->clientStatus));
 
-	if (u == gMyUser) {
+	if (u == &gMyUser) {
 		SendDlgItemMessage(gBattleRoomWindow, DLG_READY, BM_SETCHECK, !!(battleStatus & READY_MASK), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, !(battleStatus & MODE_MASK), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_SIDE, CB_SETCURSEL, FROM_SIDE_MASK(battleStatus), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_ALLY, CB_SETCURSEL, FROM_ALLY_MASK(battleStatus), 0);
 	}
 	if (u->battle->founder == u)
-		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_START), !!(u->clientStatus & CS_INGAME_MASK) ^ (u == gMyUser) || gBattleOptions.hostType & HOST_FLAG);
+		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_START), !!(u->clientStatus & CS_INGAME_MASK) ^ (u == &gMyUser) || gBattleOptions.hostType & HOST_FLAG);
 
 	int teamSizes[16] = {};
 	FOR_EACH_PLAYER(u, gMyBattle)
@@ -615,7 +615,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			for (int i=0; i<16; ++i) {
 				wchar_t buff[3];
 				swprintf(buff, L"%d", i+1);
-				AppendMenu(teamMenu, MF_CHECKED * (i == FROM_TEAM_MASK(gMyUser->battleStatus)), TEAM_FLAG | i, buff);
+				AppendMenu(teamMenu, MF_CHECKED * (i == FROM_TEAM_MASK(gMyUser.battleStatus)), TEAM_FLAG | i, buff);
 			}
 
 
@@ -654,7 +654,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			AppendMenu(menu, MFS_CHECKED * (currentSplit == 3) | MF_POPUP, (UINT_PTR)splitMenus[3], L"Northeast vs southwest");
 			// AppendMenu(menu, MFS_CHECKED * (currentSplit == 0) | MF_POPUP, 0, L"Custom split");
 			
-			if (gMyUser->battleStatus & MODE_MASK) {
+			if (gMyUser.battleStatus & MODE_MASK) {
 				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
 				AppendMenu(menu, MF_POPUP, (UINT_PTR)teamMenu, L"Change ID");
 				AppendMenu(menu, MF_POPUP, CHANGE_COLOR, L"Change Color");
@@ -666,7 +666,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
 			switch (clicked) {
 			case CHANGE_COLOR:
-				CreateColorDlg((union UserOrBot *)gMyUser);
+				CreateColorDlg((union UserOrBot *)&gMyUser);
 				break;
 			case RING_UNREADY:
 				if (gBattleOptions.hostType == HOST_SPADS)
@@ -711,7 +711,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 					else
 						SendToServer("ADDBOT %s %d %d %s", botName, GetNewBattleStatus(), color, aiDll);
 				} else if (clicked & TEAM_FLAG) {
-					SetBattleStatus(gMyUser, FROM_TEAM_MASK(clicked & ~TEAM_FLAG), TEAM_MASK);
+					SetBattleStatus(&gMyUser, FROM_TEAM_MASK(clicked & ~TEAM_FLAG), TEAM_MASK);
 				} else if (clicked & MAP_FLAG) {
 					char mapName[128];
 					GetMenuStringA(mapMenu, clicked, mapName, sizeof(mapName), MF_BYCOMMAND);
@@ -742,18 +742,18 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			goto close;
 			return 0;
 		case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
-			SetBattleStatus(gMyUser, ~gMyUser->battleStatus, MODE_MASK);
+			SetBattleStatus(&gMyUser, ~gMyUser.battleStatus, MODE_MASK);
 			return 0;
 		case MAKEWPARAM(DLG_READY, BN_CLICKED):
-			SetBattleStatus(gMyUser, ~gMyUser->battleStatus, READY_MASK);
+			SetBattleStatus(&gMyUser, ~gMyUser.battleStatus, READY_MASK);
 			return 0;
 		case MAKEWPARAM(DLG_ALLY, CBN_SELCHANGE):
-			SetBattleStatus(gMyUser, TO_ALLY_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), ALLY_MASK);
-			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_ALLY_MASK(gMyUser->battleStatus), 0);
+			SetBattleStatus(&gMyUser, TO_ALLY_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), ALLY_MASK);
+			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_ALLY_MASK(gMyUser.battleStatus), 0);
 			return 0;
 		case MAKEWPARAM(DLG_SIDE, CBN_SELCHANGE):
-			SetBattleStatus(gMyUser, TO_SIDE_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), SIDE_MASK);
-			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_SIDE_MASK(gMyUser->battleStatus), 0);
+			SetBattleStatus(&gMyUser, TO_SIDE_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), SIDE_MASK);
+			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_SIDE_MASK(gMyUser.battleStatus), 0);
 			return 0;
 		}
 		break;
@@ -816,7 +816,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			item.iImage = s->battleStatus & MODE_MASK && *gSideNames[FROM_SIDE_MASK(s->battleStatus)] ? ICONS_FIRST_SIDE + FROM_SIDE_MASK(s->battleStatus) : -1;
 			SendMessage(playerList, LVM_SETITEM, 0, (LPARAM)&item);
 		}
-		SendMessage(sideBox, CB_SETCURSEL, gMyUser ? FROM_SIDE_MASK(gMyUser->battleStatus) : 0, 0);
+		SendMessage(sideBox, CB_SETCURSEL, &gMyUser ? FROM_SIDE_MASK(gMyUser.battleStatus) : 0, 0);
 		// resizePlayerListTabs();
 		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME)
 			for (int i=0; i<16; ++i)
@@ -885,10 +885,10 @@ void CreateSinglePlayerDlg(void)
 	gMyBattle->mapHash = gMapHash;
 	gBattleOptions.modHash = gModHash;
 	
-	gMyUser->battleStatus = READY_MASK | MODE_MASK | SYNC_MASK;
-	gMyUser->battle = gMyBattle;
+	gMyUser.battleStatus = READY_MASK | MODE_MASK | SYNC_MASK;
+	gMyUser.battle = gMyBattle;
 	SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, 0, 0);
-	gMyBattle->founder = gMyUser;
+	gMyBattle->founder = &gMyUser;
 	gMyBattle->nbParticipants = 1;
 
 	BattleRoom_Show();

@@ -186,7 +186,7 @@ extern char **gMaps, **gMods;
 extern size_t gNbMaps, gNbMods;
 
 
-extern User gMyUser[];
+extern User gMyUser;
 extern Battle *gMyBattle;
 extern uint32_t battleToJoin;
 extern BattleOption gBattleOptions;

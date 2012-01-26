@@ -18,7 +18,7 @@ static DWORD WINAPI _launchSpring2(LPVOID path)
 	PROCESS_INFORMATION processInfo = {};
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL, &(STARTUPINFO){.cb=sizeof(STARTUPINFO)}, &processInfo)) {
 		// SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
-		SetBattleStatus(gMyUser, 0, READY_MASK);
+		SetBattleStatus(&gMyUser, 0, READY_MASK);
 		WaitForSingleObject(processInfo.hProcess, INFINITE);
 		SetClientStatus(0, CS_INGAME_MASK);
 	} else
@@ -31,8 +31,8 @@ void LaunchSpring(void)
 //Script is unreadably compact because it might need to be sent to relayhost.
 //This lets us send it in 1-2 packets, so it doesnt take 5 seconds like in springlobby.
 {
-	if (!*gMyUser->name)
-		strcpy(gMyUser->name, "Player");
+	if (!*gMyUser.name)
+		strcpy(gMyUser.name, "Player");
 
 	Battle *b = gMyBattle;
 	assert(b);
@@ -47,12 +47,12 @@ void LaunchSpring(void)
 	int startPosType = gBattleOptions.hostType == HOST_RELAY && gBattleOptions.startPosType != 2 ? 3 : gBattleOptions.startPosType;
 	
 	if (gBattleOptions.hostType == HOST_SP)
-		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyUser->name);
+		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyUser.name);
 	else
 		APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;IsHost=%hu;MyPlayerName=%s;MyPasswd=%s;",
 			b->ip, b->port, gBattleOptions.hostType & HOST_FLAG && 
 			!(gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))
-			, gMyUser->name, gMyUser->scriptPassword);
+			, gMyUser.name, gMyUser.scriptPassword);
 
 	if (!(gBattleOptions.hostType & HOST_FLAG) || (gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))) {
 		*buffEnd++ = '}';

@@ -16,16 +16,18 @@
 
 extern uint32_t gLastBattleStatus;
 
-User gMyUser[10000];
+
+
+#define USERS_STEP 1024
+User gMyUser;
+User **users;
+static size_t nbUsers;
+
+static Battle **battles;
 Battle *gMyBattle;
-uint32_t gUdpHelpPort;
-
-
-#define _users gMyUser
-static size_t nbUsers = 1;
-
-static Battle battles[10000];
 static size_t nbBattles;
+
+uint32_t gUdpHelpPort;
 
 uint32_t battleToJoin;
 
@@ -37,7 +39,6 @@ BattleOption gBattleOptions;
 char **gMaps, **gMods;
 size_t gNbMaps, gNbMods;
 
-
 MapInfo gMapInfo = {
 	.description = (char[256]){},
 	.author = (char[201]){},
@@ -46,22 +47,27 @@ MapInfo gMapInfo = {
 Battle * FindBattle(uint32_t id)
 {
 	for (int i=0; i<nbBattles; ++i)
-		if (battles[i].id == id)
-			return &battles[i];
+		if (battles[i]->id == id)
+			return battles[i];
 	return NULL;
 }
 
 User * FindUser(const char *name)
 {
+	if (!strcmp(name, gMyUser.name))
+		return &gMyUser;
 	for (int i=0; i<nbUsers; ++i)
-		if (!strcmp(_users[i].name, name))
-			return &_users[i];
+		if (!strcmp(users[i]->name, name))
+			return &(*users[i]);
 	return NULL;
 }
 
 Battle *NewBattle(void)
 {
-	return &battles[nbBattles++];
+	if (nbBattles % USERS_STEP == 0)
+		battles = realloc(battles, (nbBattles + USERS_STEP) * sizeof(Battle *));
+	battles[nbBattles] = calloc(1, sizeof(Battle));
+	return battles[nbBattles++];
 }
 
 void DelBattle(Battle *b)
@@ -72,28 +78,31 @@ void DelBattle(Battle *b)
 User *GetNextUser(void)
 {
 	static int last;
-	return last < nbUsers ? &_users[last++] : (last = 0, NULL);
+	return last < nbUsers ? &users[last++] : (last = 0, NULL);
 }
 
 User * NewUser(uint32_t id, const char *name)
 {
-	if (!strcmp(gMyUser->name, name)) {
-		gMyUser->id = id;
-		return gMyUser;
+	if (!strcmp(gMyUser.name, name)) {
+		gMyUser.id = id;
+		return &gMyUser;
 	}
 
-	int i=1;
+	int i=0;
 	for (; i<nbUsers; ++i)
-		if (_users[i].id == id)
+		if (users[i]->id == id)
 			break;
 
 	if (i == nbUsers) {
+		if (nbUsers % USERS_STEP == 0)
+			users = realloc(users, (nbUsers + USERS_STEP) * sizeof(User *));
 		++nbUsers;
-		_users[i].id = id;
-		strcpy(_users[i].alias, name);
+		users[i] = calloc(1, sizeof(User));
+		users[i]->id = id;
+		strcpy(users[i]->alias, name);
 	}
-	SetWindowTextA(_users[i].chatWindow, name);
-	return &_users[i];
+	SetWindowTextA(users[i]->chatWindow, name);
+	return users[i];
 }
 
 void DelUser(User *u)
@@ -104,8 +113,8 @@ void DelUser(User *u)
 void ResetData (void)
 {
 	nbBattles = 0;
-	for (int i=1; i < lengthof(_users); ++i)
-		_users[i].name[0] = 0;
+	for (int i=1; i < lengthof(users); ++i)
+		users[i]->name[0] = 0;
 
 	memset(battles, 0, sizeof(battles));
 	
@@ -170,7 +179,7 @@ void LeftBattle(void)
 	if (gBattleOptions.hostType == HOST_SP)
 		free(gMyBattle);
 
-	gMyUser->battleStatus = LOCK_BS_MASK;
+	gMyUser.battleStatus = LOCK_BS_MASK;
 	gLastBattleStatus = LOCK_BS_MASK;
 	
 	gMyBattle = NULL;
@@ -194,10 +203,10 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 	if (!strcmp(b->founder->name, relayHoster)) {
 		gBattleOptions.hostType = HOST_RELAY;
 		SendToServer("!SUPPORTSCRIPTPASSWORD");
-	} else if (b->founder ==  gMyUser)
+	} else if (b->founder ==  &gMyUser)
 		gBattleOptions.hostType = HOST_LOCAL;
 
-	gMyUser->battleStatus = 0;
+	gMyUser.battleStatus = 0;
 	gLastBattleStatus = LOCK_BS_MASK;
 
 	if (gModHash !=modHash)
@@ -222,7 +231,7 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 	
 	BattleRoom_UpdateUser(s);
 	
-	if (&s->user == gMyUser)
+	if (&s->user == &gMyUser)
 		gLastBattleStatus = bs;
 	
 	if ((lastBS ^ bs) & MODE_MASK) {
@@ -241,7 +250,7 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 	
 	SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
 
-	if (&s->user == gMyUser && (lastBS ^ bs) & (MODE_MASK | ALLY_MASK))
+	if (&s->user == &gMyUser && (lastBS ^ bs) & (MODE_MASK | ALLY_MASK))
 		RedrawMinimapBoxes();
 
 }

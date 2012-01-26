@@ -236,7 +236,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			} else if (!strcmp(code, "j") || !strcmp(code, "join"))
 				JoinChannel(s, 1);
 			else if (!strcmp(code, "away"))
-				SetClientStatus(~gMyUser->clientStatus, CS_AWAY_MASK);
+				SetClientStatus(~gMyUser.clientStatus, CS_AWAY_MASK);
 			else if (!strcmp(code, "ingame"))
 				SendToServer("GETINGAMETIME");
 			else if (!strcmp(code, "split")) {
@@ -342,7 +342,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			
 			SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
 			User *u = (void *)item.lParam;
-			if (u == gMyUser)
+			if (u == &gMyUser)
 				return 0;
 			if (note->code == LVN_ITEMACTIVATE)
 				goto addtab;

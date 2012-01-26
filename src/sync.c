@@ -167,7 +167,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			ENDCLOCK();
 		} else {
 			STARTCLOCK();
-			SetBattleStatus(gMyUser,
+			SetBattleStatus(&gMyUser,
 					UNSYNCED >> (gMyBattle 
 						&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
 						&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash)),
@@ -276,9 +276,9 @@ void setBitmap(void)
 	for (int i=0; i<res*res; ++i)
 		pixels32[i] = (minimapPixels[i] & 0x001F) << 3 | (minimapPixels[i] & 0x7E0 ) << 5 | (minimapPixels[i] & 0xF800) << 8;
 	
-	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME && gMyUser) {
+	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
 		for (int j=0; j<NUM_ALLIANCES; ++j) {
-			size_t color = (gMyUser->battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser->battleStatus) ? 1 : 2;
+			size_t color = (gMyUser.battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser.battleStatus) ? 1 : 2;
 			int xMin = gBattleOptions.startRects[j].left * res / START_RECT_MAX;
 			int xMax = gBattleOptions.startRects[j].right * res / START_RECT_MAX;
 			int yMin = gBattleOptions.startRects[j].top * res / START_RECT_MAX;
