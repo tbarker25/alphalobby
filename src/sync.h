@@ -35,7 +35,6 @@ void ChangeMap(const char *mapName);
 void ChangeOption(uint16_t);
 void SetScriptTags(char *);
 const char * _GetSpringVersion(void);
-uint32_t GetSyncStatus(void);
 void ForEachAiName(void (*func)(const char *, void *), void *arg);
 int UnitSync_GetSkirmishAIOptionCount(const char *name);
 void UnitSync_GetOptions(int len; Option2 options[len], int len);
