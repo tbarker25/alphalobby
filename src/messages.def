@@ -389,7 +389,7 @@ X(SAIDEX, {
 
 X(SAIDPRIVATE, {
 	const char *username = getNextWord();
-	if (!strcmp(username, "RelayHostManagerList") && !strncmp(command, "managerlist ", sizeof("managerlist ") - 1)) {
+	if (!strcmp(username, "RelayHostManagerList") && !memcmp(command, "managerlist ", sizeof("managerlist ") - 1)) {
 		strsplit(&command, " ");
 		for (const char *c; (c = strsplit(&command, " \t\n"));) {
 			User *u = FindUser(c);
@@ -401,13 +401,13 @@ X(SAIDPRIVATE, {
 	} else if (!strcmp(username, relayManager)) {
 		strcpy(relayHoster, command);
 		*relayManager = '\0';
-	} else if (!strcmp(username, relayHoster) && !strncmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)) {
+	} else if (!strcmp(username, relayHoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)) {
 		command += sizeof("JOINEDBATTLE ") - 1;
 		getNextWord();
 		User *u = FindUser(getNextWord());
 		if (u)
 			copyNextWord(u->scriptPassword);
-	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && strncmp(command, "!join ", sizeof("!join ") - 1)) {
+	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)) {
 		User *u = FindUser(command + sizeof("!join ") - 1);
 		if (u && u->battle)
 			JoinBattle(u->battle->id, NULL);
