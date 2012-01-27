@@ -49,7 +49,7 @@ static size_t writableDataDirectoryLen;
 
 //Shared between threads:
 static uint16_t optionToChange; 
-static uint8_t taskReload, taskSetMinimap, taskSetInfo;
+static uint8_t taskReload, taskSetMinimap, taskSetInfo, taskSetBattleStatus;
 static HANDLE event;
 
 //malloc new value, swap atomically, and free old value:
@@ -101,6 +101,8 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			gMapHash = 0;
 			currentMap[0] = 0;
 			
+			taskSetBattleStatus = 1;
+			
 			for (int i=0; i<gNbMods; ++i)
 				free(gMods[i]);
 			free(gMods);
@@ -130,17 +132,21 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 				taskSetInfo = 1;
 				PostMessage(gBattleRoomWindow, WM_CHANGEMOD, 0, 0);
 				ENDCLOCK();
+				taskSetBattleStatus = 1;
 			}
 		} else if ((s = (void *)__sync_fetch_and_and(&mapToSet, NULL))) {
 			STARTCLOCK();
-			printf("map %s %s\n", s, currentMap);
 			strcpy(currentMap, s);
 			free(s);
+			PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
 			setMap();
-			printf("map2 %s\n",  currentMap);
 			taskSetMinimap = 1;
 			taskSetInfo = 1;
+			taskSetBattleStatus = 1;
 			ENDCLOCK();
+		} else if (taskSetBattleStatus) {
+			SetBattleStatus(&gMyUser, 0, 0);
+			taskSetBattleStatus = 0;
 		} else if ((s = __sync_fetch_and_and(&scriptToSet, NULL))) {
 			STARTCLOCK();
 			_setScriptTags(s);
@@ -151,10 +157,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			STARTCLOCK();
 			setModInfo();
 			taskSetInfo = 0;
-			ENDCLOCK();
-		} else if (!minimapPixels && currentMap[0]) {
-			STARTCLOCK();
-			minimapPixels = (void *)GetMinimap(currentMap, MAP_DETAIL);
 			ENDCLOCK();
 		} else if (taskSetMinimap) {
 			STARTCLOCK();
@@ -167,15 +169,17 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			ENDCLOCK();
 		} else {
 			STARTCLOCK();
-			SetBattleStatus(&gMyUser,
-					UNSYNCED >> (gMyBattle 
-						&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
-						&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash)),
-					SYNC_MASK);
 			ENDCLOCK();
 			WaitForSingleObject(event, INFINITE);
 		}
 	};
+}
+
+uint32_t GetSyncStatus(void) {
+	return (gMyBattle 
+			&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
+			&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash))
+		? SYNCED : UNSYNCED;
 }
 
 static void setModInfo(void)
@@ -265,8 +269,13 @@ static void setModInfo(void)
 void setBitmap(void)
 {
 	#define res (1024 >> MAP_DETAIL)
+	#define INVALID_MAP ((void *)-1)
 
 	if (!minimapPixels) {
+		minimapPixels = (void *)GetMinimap(currentMap, MAP_DETAIL) ?: INVALID_MAP;
+	}
+
+	if (minimapPixels == INVALID_MAP) {
 		PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
 		return;
 	}

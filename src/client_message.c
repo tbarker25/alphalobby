@@ -78,11 +78,12 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 	}
 	
 	if (&s->user == &gMyUser) {
-		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask);
-		if ((bs != gLastBattleStatus && (gLastBattleStatus=bs, &gMyUser))
-					|| color != gMyUser.color)
+		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask & ~SYNC_MASK) | GetSyncStatus();
+		if (bs != gLastBattleStatus || color != gMyUser.color) {
+			gLastBattleStatus=bs;
 			if (!(bs & LOCK_BS_MASK))
 				SendToServer("MYBATTLESTATUS %d %d", bs & ~INTERNAL_MASK, color);
+		}
 		return;
 	}
 	
