@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <string.h>
+#include <assert.h>
 
 #include "common.h"
 #include "wincommon.h"
@@ -35,6 +36,7 @@ static KeyPair getLine(FILE *fd)
 			|| !(delim = strchr(buff, '='))
 			|| !(end = strchr(delim, '\n')))
 		return delim ? getLine(fd) : (KeyPair){};
+	assert(end - buff < sizeof(buff));
 	*end = '\0'; *delim = '\0';
 	return (KeyPair){buff, delim+1};
 }

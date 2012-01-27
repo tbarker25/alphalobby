@@ -16,11 +16,9 @@
 
 extern uint32_t gLastBattleStatus;
 
-
-
-#define USERS_STEP 1024
+#define ALLOC_STEP 10
 User gMyUser;
-User **users;
+static User **users;
 static size_t nbUsers;
 
 static Battle **battles;
@@ -47,7 +45,7 @@ MapInfo gMapInfo = {
 Battle * FindBattle(uint32_t id)
 {
 	for (int i=0; i<nbBattles; ++i)
-		if (battles[i]->id == id)
+		if (battles[i] && battles[i]->id == id)
 			return battles[i];
 	return NULL;
 }
@@ -64,38 +62,47 @@ User * FindUser(const char *name)
 
 Battle *NewBattle(void)
 {
-	if (nbBattles % USERS_STEP == 0)
-		battles = realloc(battles, (nbBattles + USERS_STEP) * sizeof(Battle *));
-	battles[nbBattles] = calloc(1, sizeof(Battle));
-	return battles[nbBattles++];
+	int i=0;
+	for (; i<nbBattles; ++i) {
+		if (battles[i] == NULL)
+			break;
+	}
+	if (i == nbBattles) {
+		if (nbBattles % ALLOC_STEP == 0)
+			battles = realloc(battles, (nbBattles + ALLOC_STEP) * sizeof(Battle *));
+		++nbBattles;
+	}
+	battles[i] = calloc(1, sizeof(Battle));
+	return battles[i];
 }
 
 void DelBattle(Battle *b)
 {
-	b->id = 0;
+	free(b);
+	b = NULL;
 }
 
 User *GetNextUser(void)
 {
 	static int last;
-	return last < nbUsers ? &users[last++] : (last = 0, NULL);
+	return last < nbUsers ? users[last++] : (last = 0, NULL);
 }
 
 User * NewUser(uint32_t id, const char *name)
 {
+
 	if (!strcmp(gMyUser.name, name)) {
 		gMyUser.id = id;
 		return &gMyUser;
 	}
-
 	int i=0;
 	for (; i<nbUsers; ++i)
 		if (users[i]->id == id)
 			break;
 
 	if (i == nbUsers) {
-		if (nbUsers % USERS_STEP == 0)
-			users = realloc(users, (nbUsers + USERS_STEP) * sizeof(User *));
+		if (nbUsers % ALLOC_STEP == 0)
+			users = realloc(users, (nbUsers + ALLOC_STEP) * sizeof(User *));
 		++nbUsers;
 		users[i] = calloc(1, sizeof(User));
 		users[i]->id = id;
