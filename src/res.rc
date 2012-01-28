@@ -216,9 +216,7 @@ FONT 8, "Ms Shell Dlg 2"
 //
 // Icon resources
 //
-MAINICON           ICON           ".\\icons\\alphalobby.ico"
-
-
+MAINICON             ICON       ".\\icons\\alphalobby.ico"
 
 //
 // Manifest resources

@@ -1,3 +1,4 @@
+
 #include "common.h"
 #include "countryCodes.h"
 
@@ -10,6 +11,7 @@ const char countryCodes[][2] = {
 	{'A', 'I'},
 	{'A', 'L'},
 	{'A', 'M'},
+	{'A', 'N'},
 	{'A', 'O'},
 	{'A', 'R'},
 	{'A', 'S'},
@@ -42,6 +44,7 @@ const char countryCodes[][2] = {
 	{'C', 'D'},
 	{'C', 'F'},
 	{'C', 'G'},
+	{'C', 'S'},
 	{'C', 'H'},
 	{'C', 'I'},
 	{'C', 'K'},
@@ -253,6 +256,7 @@ const char *countryNames[] = {
 	"Anguilla",
 	"Albania",
 	"Armenia",
+	"Netherlands Antilles",
 	"Angola",
 	"Argentina",
 	"American Samoa",
@@ -293,6 +297,7 @@ const char *countryNames[] = {
 	"China",
 	"Colombia",
 	"Costa Rica",
+	"Serbia and Montenegro"
 	"Cuba",
 	"Cape Verde",
 	"Christmas Island",

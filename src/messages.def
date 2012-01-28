@@ -293,7 +293,7 @@ X(MOTD, {
 X(OPENBATTLE, {
 // OPENBATTLE BATTLE_ID
 	Battle *b = FindBattle(getNextInt());
-	JoinedBattle(b, GetModHash(gMyBattle->modName));
+	JoinedBattle(b, 0);
 })
 
 X(PONG, {
