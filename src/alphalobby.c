@@ -487,9 +487,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	Sync_Init();
 	
+	
+	
     for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {
 		if (msg.message == WM_KEYDOWN && msg.wParam == VK_F1)
 			CreateAboutDlg();
+		#ifndef NDEBUG
 		if (msg.message == WM_KEYDOWN && GetKeyState(VK_CONTROL) & 0x80) {
 			switch (msg.wParam) {
 			case 'Q': {
@@ -499,9 +502,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				else
 					AttachTab(window);
 			}	break;
-			case 'W':
-				SendMessage(tabItem, WM_CLOSE, 0, 0);
-				continue;
+			case 'W': {
+				User *founder = NewUser(12, "founder");
+				strcpy(founder->name, "founder");
+				Battle *battle = NewBattle();
+				*battle = (Battle){.id = 3413, .mapHash = 423614726, .mapName = "Tempest",
+					.modName = "Balanced Annihilation V7.63", .title = "1400+ maps - max 6vs6",
+					.ip = "94.23.255.23", .port = 8452,
+					.maxPlayers = 12 , .nbParticipants = 2 , .nbSpectators = 2, .users = {founder, &gMyUser}, .founder = founder};
+				battle->users[1] = &gMyUser;
+				JoinedBattle(battle, 12);
+				extern uint32_t gLastBattleStatus;
+				gLastBattleStatus = 0;
+				// SendMessage(tabItem, WM_CLOSE, 0, 0);
+			}	continue;
 			case VK_LEFT:
 				setTab(TabCtrl_GetCurSel(tabControl) - 1);
 				continue;
@@ -513,9 +527,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				continue;
 			}
 		}
+		#endif
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+	
 	
     return 0;
 }

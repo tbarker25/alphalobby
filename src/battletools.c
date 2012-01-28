@@ -30,15 +30,13 @@ void SetSplit(SplitType type, int size)
 	int startPosType = type < SPLIT_FIRST ? type : 2;
 	
 	if (gBattleOptions.hostType == HOST_SPADS) {
+		size /= 2; //Script uses 200pts for each dimension, spads uses 100pts:
 		if (startPosType != gBattleOptions.startPosType)
 			SpadsMessageF("!bSet startpostype %d", startPosType);
 		if (type >= SPLIT_FIRST)
 			SpadsMessageF("!split %s %d", (char [][3]){"h", "v", "c1", "c2"}[type - SPLIT_FIRST], size);
 		return;
 	}
-	
-	//Script uses 200pts for each dimension, spads uses 100pts:
-	size *= 2;
 	
 	if (startPosType != gBattleOptions.startPosType)
 		ChangeOption(STARTPOS_FLAG | startPosType);
