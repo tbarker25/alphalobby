@@ -268,10 +268,13 @@ X(LEFTBATTLE, {
 	UpdateUser(u);
 	BattleList_UpdateBattle(b);
 
-	if (b == gMyBattle && gSettings.flags & (1<<DEST_BATTLE)) {
-		Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
-		BattleRoom_RemoveUser((void *)u);
-		*relayHoster = '\0';
+	if (b == gMyBattle) {
+		if (u->battleStatus & MODE_MASK && BattleRoom_IsAutoUnspec())
+			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
+		if (gSettings.flags & (1<<DEST_BATTLE)) {
+			Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
+			BattleRoom_RemoveUser((void *)u);
+		}
 	}
 })
 
