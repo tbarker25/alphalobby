@@ -1,5 +1,7 @@
 #pragma once
 
+#include "wincommon.h"
+
 enum {
 	WM_POLL_SERVER = WM_APP + 0x0100,
 	WM_DESTROY_WINDOW,
@@ -13,18 +15,21 @@ enum {
 
 extern HWND gMainWindow;
 
-void UpdateStatusBar(void);
-void SetStatus(const wchar_t *text);
+#define UpdateStatusBar()
+#define SetStatus()
+
 void Ring(void);
 
-void FocusTab(HWND window);
-void AddTab(HWND window);
+#define AddTab(x)
+#define FocusTab(x)
+#define RemoveTab(x)
+#define GetTabIndex(x) -1
 
-void RemoveTab(HWND window);
 void MainWindow_ChangeConnect(int isNowConnected);
-int GetTabIndex(HWND window);
 
 #define ExecuteInMainThread(_func)\
 	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (WPARAM)0)	
 
 void MyMessageBox(const char *caption, const char *text);
+
+void SetCurrentTab(HWND newTab);

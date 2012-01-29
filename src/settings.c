@@ -4,6 +4,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "alphalobby.h"
 #include "common.h"
 #include "wincommon.h"
 #include <Shlobj.h>

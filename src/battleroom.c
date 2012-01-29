@@ -96,11 +96,11 @@ static const DialogItem dlgItems[] = {
 	}, [DLG_READY] = {
 		.class = WC_BUTTON,
 		.name = L"Ready",
-		.style = WS_VISIBLE | BS_CHECKBOX,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_ICON,
 	}, [DLG_SPECTATE] = {
 		.class = WC_BUTTON,
 		.name = L"Spectate",
-		.style = WS_VISIBLE | BS_CHECKBOX,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_ICON,
 	}, [DLG_AUTO_UNSPEC] = {
 		.class = WC_BUTTON,
 		.name = L"Auto unspectate",
@@ -169,7 +169,7 @@ void BattleRoom_Show(void)
 	RECT rect;
 	GetClientRect(gBattleRoomWindow, &rect);
 	SendMessage(gBattleRoomWindow, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
-	FocusTab(gBattleRoomWindow);
+	SetCurrentTab(gBattleRoomWindow);
 }
 
 void BattleRoom_Hide(void)

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <malloc.h>
+#include "alphalobby.h"
 #include "wincommon.h"
 #include "data.h"
 #include "sync.h"

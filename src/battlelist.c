@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "alphalobby.h"
 #include "wincommon.h"
 #include "downloader.h"
 
@@ -21,7 +22,7 @@
 #include "common.h"
 #include "sync.h"
 
-HWND gBattleListHandle;
+HWND gBattleListWindow;
 
 
 enum DLG_ID {
@@ -70,13 +71,13 @@ static void SortBattleList(int newOrder)
 		return _stricmp(s1, s2);
 	}
 
-	ListView_SortItems(GetDlgItem(gBattleListHandle, DLG_LIST), CompareFunc, 0);
+	ListView_SortItems(GetDlgItem(gBattleListWindow, DLG_LIST), CompareFunc, 0);
 }
 
 static void resizeColumns(void)
 {
 	RECT rect;
-	HWND list = GetDlgItem(gBattleListHandle, DLG_LIST);
+	HWND list = GetDlgItem(gBattleListWindow, DLG_LIST);
 	GetClientRect(list, &rect);
 
 	int columnRem = rect.right % lengthof(columns);
@@ -92,10 +93,10 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		gBattleListHandle = window;
+		gBattleListWindow = window;
 		CreateDlgItems(window, battleListDialogItems, DLG_LAST + 1);
 		
-		HWND listDlg = GetDlgItem(gBattleListHandle, DLG_LIST);
+		HWND listDlg = GetDlgItem(gBattleListWindow, DLG_LIST);
 		
 		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
 			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
@@ -118,7 +119,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 				.mask = LVIF_PARAM,
 				.iItem = index
 			};
-			ListView_GetItem(GetDlgItem(gBattleListHandle, DLG_LIST), &item);
+			ListView_GetItem(GetDlgItem(gBattleListWindow, DLG_LIST), &item);
 			return (Battle *)item.lParam;
 		}
 		case LVN_COLUMNCLICK: {
@@ -192,7 +193,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 void BattleList_CloseBattle(Battle *b)
 {
-	ListView_DeleteItem(GetDlgItem(gBattleListHandle, DLG_LIST), ListView_FindItem(GetDlgItem(gBattleListHandle, DLG_LIST), -1, (&(LVFINDINFO){
+	ListView_DeleteItem(GetDlgItem(gBattleListWindow, DLG_LIST), ListView_FindItem(GetDlgItem(gBattleListWindow, DLG_LIST), -1, (&(LVFINDINFO){
 		.flags = LVFI_PARAM,
 		.lParam = (LPARAM)b,
 	})));
@@ -200,7 +201,7 @@ void BattleList_CloseBattle(Battle *b)
 
 void BattleList_UpdateBattle(Battle *b)
 {
-	HWND list = GetDlgItem(gBattleListHandle, DLG_LIST);
+	HWND list = GetDlgItem(gBattleListWindow, DLG_LIST);
 	int item = ListView_FindItem(list, -1,
 		(&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)b})
 	);
@@ -241,7 +242,7 @@ void BattleList_UpdateBattle(Battle *b)
 	AddText(b->modName);
 	AddText(b->mapName);
 	char buff[128];
-	sprintf(buff, "%d of %d - %d spectators", GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
+	sprintf(buff, "%d / %d +%d", GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
 	AddText(buff);
 
 	SortBattleList(0);
