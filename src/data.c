@@ -192,6 +192,8 @@ void LeftBattle(void)
 	gMyBattle = NULL;
 	if (battleToJoin)
 		JoinBattle(battleToJoin, NULL);
+
+	*relayHoster = '\0';
 }
 
 void ResetBattleOptions(void)
@@ -242,6 +244,8 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 		gLastBattleStatus = bs;
 	
 	if ((lastBS ^ bs) & MODE_MASK) {
+		if (!(bs & MODE_MASK) && BattleRoom_IsAutoUnspec())
+			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
 		gMyBattle->nbSpectators = 0;
 		for (int i=0; i < gMyBattle->nbParticipants; ++i)
 			gMyBattle->nbSpectators += !(gMyBattle->users[i]->battleStatus & MODE_MASK);

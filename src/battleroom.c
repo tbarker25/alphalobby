@@ -51,6 +51,7 @@ enum DLG_ID {
 	DLG_PLAYER_LIST,
 	DLG_SIDE,
 	DLG_SPECTATE,
+	DLG_AUTO_UNSPEC,
 	DLG_READY,
 	DLG_MINIMAP,
 	DLG_TOOLS,
@@ -100,6 +101,10 @@ static const DialogItem dlgItems[] = {
 		.class = WC_BUTTON,
 		.name = L"Spectate",
 		.style = WS_VISIBLE | BS_CHECKBOX,
+	}, [DLG_AUTO_UNSPEC] = {
+		.class = WC_BUTTON,
+		.name = L"Auto unspectate",
+		.style = WS_VISIBLE | BS_AUTOCHECKBOX,
 	}, [DLG_MINIMAP] = {
 		.class = WC_STATIC,
 		.style = WS_VISIBLE | SS_BITMAP | SS_REALSIZECONTROL,
@@ -229,6 +234,11 @@ static void updatePlayerListGroup(int groupId)
 		});
 }
 
+bool BattleRoom_IsAutoUnspec(void)
+{
+	return SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
+}
+
 void BattleRoom_UpdateUser(union UserOrBot *s)
 {
 	HWND playerList = GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST);
@@ -291,6 +301,10 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 	if (u == &gMyUser) {
 		SendDlgItemMessage(gBattleRoomWindow, DLG_READY, BM_SETCHECK, !!(battleStatus & READY_MASK), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, !(battleStatus & MODE_MASK), 0);
+		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_AUTO_UNSPEC), !(battleStatus & MODE_MASK));
+		if (battleStatus & MODE_MASK)
+			SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_SETCHECK, BST_UNCHECKED, 0);
+
 		SendDlgItemMessage(gBattleRoomWindow, DLG_SIDE, CB_SETCURSEL, FROM_SIDE_MASK(battleStatus), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_ALLY, CB_SETCURSEL, FROM_ALLY_MASK(battleStatus), 0);
 	}
@@ -333,52 +347,51 @@ void resizePlayerListTabs(void)
 
 static void resizeAll(LPARAM lParam)
 {
-	#define INFO_MARGIN 140
-	#define LIST_MARGIN 200
+	#define INFO_WIDTH (MAP_Y(140))
+	#define LIST_WIDTH 280
+	#define INFO_HEIGHT (MAP_Y(200))
+	
+	#define CHAT_WIDTH (width - MAP_X(2*50 + 7 + 4))
+	#define CHAT_TOP (INFO_HEIGHT + 2*YS)
+	
 	#define S 2
 	#define XS MAP_X(S)
 	#define YS MAP_Y(S)
 	#define YH MAP_Y(14)
 	
-	int w = LOWORD(lParam), h = HIWORD(lParam);
-	int battleInfoMargin = MAP_X(INFO_MARGIN);
-	int playerListMargin = MAP_X(LIST_MARGIN);
+	int width = LOWORD(lParam), h = HIWORD(lParam);
+
 	
-			 
 	HDWP dwp = BeginDeferWindowPos(DLG_LAST + 1);
 		
-	#define MOVE(window, x, y, cx, cy)\
-		(DeferWindowPos(dwp, (window), NULL, (x), (y), (cx), (cy), 0))
-	#define MOVEID(id, x, y, cx, cy)\
-		MOVE(GetDlgItem(gBattleRoomWindow, (id)), (x), (y), (cx), (cy))
+	#define MOVE_ID(id, x, y, cx, cy)\
+		(DeferWindowPos(dwp, (GetDlgItem(gBattleRoomWindow, (id))), NULL, (x), (y), (cx), (cy), 0))
+	
+	
+	MOVE_ID(DLG_BATTLE_INFO, XS, YS, INFO_WIDTH, INFO_HEIGHT);
+	MOVE_ID(DLG_PLAYER_LIST, INFO_WIDTH + 2*XS, YS, LIST_WIDTH, INFO_HEIGHT);
+	int minimapX = INFO_WIDTH + LIST_WIDTH + 3*XS;
+	MOVE_ID(DLG_MINIMAP, minimapX, MAP_Y(14 + 2*S), width - minimapX - XS, INFO_HEIGHT - MAP_Y(14 + 2*S));
+	MOVE_ID(DLG_CHAT, XS, CHAT_TOP, CHAT_WIDTH - MAP_X(7), h - INFO_HEIGHT - 3*YS);
+	
+	// MOVE_ID(DLG_TOOLS, width - MAP_X(171), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
+	MOVE_ID(DLG_START, CHAT_WIDTH, h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
+	MOVE_ID(DLG_LEAVE, CHAT_WIDTH + MAP_X(54), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
+
+
+	MOVE_ID(DLG_READY,       CHAT_WIDTH, CHAT_TOP,                 MAP_X(70), TEXTBOX_Y);
+	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, CHAT_TOP + MAP_Y(2 + 10), MAP_X(70), TEXTBOX_Y);
+	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH, CHAT_TOP + MAP_Y(4 + 20), MAP_X(70), TEXTBOX_Y);
+	MOVE_ID(DLG_ALLY,        CHAT_WIDTH, CHAT_TOP + MAP_Y(8 + 30), MAP_X(70), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_SIDE,        CHAT_WIDTH, CHAT_TOP + MAP_Y(10 + 44), MAP_X(70), COMMANDBUTTON_Y);
 		
-	
-	MOVEID(DLG_TOOLS, w - MAP_X(171), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
-	MOVEID(DLG_START, w - MAP_X(114), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
-	MOVEID(DLG_LEAVE, w - MAP_X(57), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
-	
-	int minimapX = w - playerListMargin;
-	int minimapY = MAP_Y(14 + 2*S);
-	int minimapW = playerListMargin;
+	MOVE_ID(DLG_SPLIT_HORZ, minimapX + XS, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_VERT, minimapX + 2*XS + YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_CORNER, minimapX + 3*XS + 2*YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_EDGE, minimapX + 4*XS + 3*YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_RANDOM, minimapX + 5*XS + 4*YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_STARTBOX_SIZE, minimapX + 6*XS + 5*YH, YS, width - minimapX - 7*XS - 5*YH, YH);
 
-	MOVEID(DLG_CHAT, MAP_X(INFO_MARGIN + S), 0, w - MAP_X(INFO_MARGIN + 2*S + LIST_MARGIN), h);
-	MOVEID(DLG_PLAYER_LIST, w - MAP_X(LIST_MARGIN), minimapW + minimapY, playerListMargin, h - playerListMargin - 3*YS - YH - minimapY);
-
-	MOVEID(DLG_READY, 0, 0, MAP_X(70), COMMANDBUTTON_Y);
-	MOVEID(DLG_SPECTATE, 0, 0 + COMMANDBUTTON_Y, MAP_X(70), COMMANDBUTTON_Y);
-	MOVEID(DLG_ALLY, 2 * 0 + MAP_X(70), 0, MAP_X(70), COMMANDBUTTON_Y);
-	MOVEID(DLG_SIDE, 2 * 0 + MAP_X(70), COMMANDBUTTON_Y, MAP_X(70), COMMANDBUTTON_Y);
-	
-	
-	DeferWindowPos(dwp, GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), NULL, minimapX, minimapY, minimapW, minimapW, SWP_SHOWWINDOW);
-	MOVEID(DLG_SPLIT_HORZ, minimapX + XS, YS, MAP_Y(14), MAP_Y(14));
-	MOVEID(DLG_SPLIT_VERT, minimapX + 2*XS + YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVEID(DLG_SPLIT_CORNER, minimapX + 3*XS + 2*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVEID(DLG_SPLIT_EDGE, minimapX + 4*XS + 3*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVEID(DLG_SPLIT_RANDOM, minimapX + 5*XS + 4*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVEID(DLG_STARTBOX_SIZE, minimapX + 6*XS + 5*YH, YS, minimapW - 7*XS - 5*YH, YH);
-
-	DeferWindowPos(dwp, GetDlgItem(gBattleRoomWindow, DLG_BATTLE_INFO), NULL, 0, MAP_Y(28), battleInfoMargin, h - MAP_Y(28), SWP_SHOWWINDOW);
 	
 	done:
 	EndDeferWindowPos(dwp);

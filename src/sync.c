@@ -318,7 +318,6 @@ void setBitmap(void)
 }
 
 
-
 void Sync_Init(void)
 {
 	CreateThread(NULL, 0, syncThread, NULL, 0, NULL);

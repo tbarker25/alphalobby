@@ -16,11 +16,13 @@
 #define COMMANDBUTTON_X MAP_X(50)
 #define COMMANDBUTTON_Y MAP_Y(14)
 
+#define TEXTBOX_Y MAP_Y(10)
+
 #define PROGRESS_Y MAP_Y(8)
 #define PROGRESS_S_X MAP_X(107)
 #define PROGRESS_L_X MAP_X(237)
 
-#define TEXTBOX_Y MAP_Y(14)
+
 #define TEXTLABEL_Y MAP_Y(8)
 #define BOX_Y MAP_Y(10)
 

@@ -24,3 +24,4 @@ void BattleRoom_RemoveUser(const union UserOrBot *u);
 
 void BattleRoom_Show(void);
 void BattleRoom_Hide(void);
+bool BattleRoom_IsAutoUnspec(void);
