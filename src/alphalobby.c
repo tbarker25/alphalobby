@@ -111,34 +111,26 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		gMainWindow = window;
 		Chat_Init();
 		CreateDlgItems(window, dlgItems, DLG_LAST+1);
-		// tabControl = GetDlgItem(window, DLG_TAB);
-		// FocusTab(GetDlgItem(window, DLG_BATTLELIST));
-		// SetWindowSubclass(tabControl, tabControlProc, 0, 0);
-		// UpdateWindow(tabControl);
 		
-		HWND hWndToolbar = GetDlgItem(window, DLG_TOOLBAR);
-		printf("%p\n", hWndToolbar);
-		SendMessage(hWndToolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-		SendMessage(hWndToolbar, TB_SETIMAGELIST, 0, (LPARAM)iconList);
+		HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
+		SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
+		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)iconList);
 
 		TBBUTTON tbButtons[] = {
-			{ ICONS_CLOSED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
+			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
 			{ I_IMAGENONE,  0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,      {}, 0, 0},
 			{ I_IMAGENONE,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
-			{ I_IMAGENONE,  ID_BATTLEROOM,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
-			{ I_IMAGENONE,  ID_SINGLEPLAYER, 0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
+			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
+			{ ICONS_SINGLEPLAYER,  ID_SINGLEPLAYER, 0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
 			{ I_IMAGENONE,  ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
-			{ I_IMAGENONE,  ID_HOSTBATTLE,   0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
+			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
 			{ I_IMAGENONE,  ID_OPTIONS,      0,          BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
 			// { I_IMAGENONE, 0, TBSTATE_ENABLED, BTNS_AUTOSIZE|BTNS_WHOLEDROPDOWN, {}, 0, 0},
 		};
 
-		// Add buttons.
-		SendMessage(hWndToolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
-		SendMessage(hWndToolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
-
-		// Resize the toolbar, and then show it.
-		SendMessage(hWndToolbar, TB_AUTOSIZE, 0, 0); 
+		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
+		SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
+		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
 		
 		SetCurrentTab(GetDlgItem(window, DLG_BATTLELIST));
 	}	break;
@@ -173,7 +165,6 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	}	//FALLTHROUGH:
 	case WM_EXITSIZEMOVE:
 		dontMoveMinimap = 0;
-		// InvalidateRect(tabControl, 0, 0);
 		SendMessage(gBattleRoomWindow, WM_EXITSIZEMOVE, 0, 0);
 		return 0;
 	case WM_ENTERSIZEMOVE:
@@ -315,7 +306,7 @@ void MainWindow_ChangeConnect(int isNowConnected)
 		(LPARAM)&(TBBUTTONINFO){
 			.cbSize = sizeof(TBBUTTONINFO),
 			.dwMask = TBIF_IMAGE | TBIF_STATE | TBIF_TEXT,
-			.iImage = isNowConnected ? ICONS_OPEN : ICONS_CLOSED,
+			.iImage = isNowConnected ? ICONS_UNCONNECTED : ICONS_UNCONNECTED,
 			.fsState = isNowConnected ? TBSTATE_ENABLED : TBSTATE_ENABLED,
 			.pszText = isNowConnected ? L"Connected" : L"Unconnected",
 		});
@@ -340,7 +331,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		.hIcon          = ImageList_GetIcon(iconList, 0, 0),
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
-		// .lpszMenuName = MAKEINTRESOURCE(IDR_MENU),
 	});
 	LONG left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
 	const char *windowPlacement = LoadSetting("window_placement");
@@ -365,26 +355,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {
 		if (msg.message == WM_KEYDOWN && msg.wParam == VK_F1)
 			CreateAboutDlg();
-		#ifndef NDEBUG
-		if (msg.message == WM_KEYDOWN && GetKeyState(VK_CONTROL) & 0x80) {
-			switch (msg.wParam) {
-			case 'W': {
-				User *founder = NewUser(12, "founder");
-				strcpy(founder->name, "founder");
-				Battle *battle = NewBattle();
-				*battle = (Battle){.id = 3413, .mapHash = 423614726, .mapName = "Tempest",
-					.modName = "Balanced Annihilation V7.63", .title = "1400+ maps - max 6vs6",
-					.ip = "94.23.255.23", .port = 8452,
-					.maxPlayers = 12 , .nbParticipants = 2 , .nbSpectators = 2, .users = {founder, &gMyUser}, .founder = founder};
-				battle->users[1] = &gMyUser;
-				JoinedBattle(battle, 12);
-				extern uint32_t gLastBattleStatus;
-				gLastBattleStatus = 0;
-				// SendMessage(tabItem, WM_CLOSE, 0, 0);
-			}	continue;
-			}
-		}
-		#endif
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
