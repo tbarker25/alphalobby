@@ -279,7 +279,9 @@ void setBitmap(void)
 		return;
 	}
 
-	uint32_t pixels32[res*res];
+	static uint32_t *pixels32;
+	if (!pixels32)
+		pixels32 = malloc(res * res * sizeof(*pixels32));
 	
 	for (int i=0; i<res*res; ++i)
 		pixels32[i] = (minimapPixels[i] & 0x001F) << 3 | (minimapPixels[i] & 0x7E0 ) << 5 | (minimapPixels[i] & 0xF800) << 8;
@@ -291,11 +293,24 @@ void setBitmap(void)
 			int xMax = gBattleOptions.startRects[j].right * res / START_RECT_MAX;
 			int yMin = gBattleOptions.startRects[j].top * res / START_RECT_MAX;
 			int yMax = gBattleOptions.startRects[j].bottom * res / START_RECT_MAX;
+			
 			for (int x=xMin; x<xMax; ++x) {
 				for (int y=yMin; y<yMax; ++y) {
 					uint8_t *p = &((uint8_t *)&pixels32[x+res*y])[color];
 					*p = *p < 0xFF - 50 ? *p + 50 : 0xFF;
 				}
+			}
+			for (int x=xMin; x<xMax; ++x) {
+				pixels32[x+res*yMin] = 0;
+				pixels32[x+res*(yMin+1)] = 0;
+				pixels32[x+res*(yMax-1)] = 0;
+				pixels32[x+res*(yMax-2)] = 0;
+			}
+			for (int y=yMin; y<yMax; ++y) {
+				pixels32[xMin+res*y] = 0;
+				pixels32[(xMin+1)+res*y] = 0;
+				pixels32[(xMax-1)+res*y] = 0;
+				pixels32[(xMax-2)+res*y] = 0;
 			}
 		}
 	}
@@ -306,7 +321,6 @@ void setBitmap(void)
 
 void Sync_Init(void)
 {
-	// wcscpy(writableDataDirectory, L"c:\\programs\\spring\\");
 	CreateThread(NULL, 0, syncThread, NULL, 0, NULL);
 }
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <inttypes.h>
 #include <stdbool.h>
-#define MAP_DETAIL 2
+#define MAP_DETAIL 0
 #define MOD_OPTION_FLAG  0x8000
 #define MAP_OPTION_FLAG  0x4000
 #define STARTPOS_FLAG    0x2000
