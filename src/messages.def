@@ -280,7 +280,6 @@ X(LEFTBATTLE, {
 
 X(LOGININFOEND, {
 	OpenDefaultChannels();
-	SetStatus(L"\t\tlogged in successfully");
 	for (int i=0; i<16; ++i)
 		gMyUser.scriptPassword[i] = '0' + rand()%10;
 	gMyUser.scriptPassword[16] = '\0';
@@ -297,13 +296,6 @@ X(OPENBATTLE, {
 // OPENBATTLE BATTLE_ID
 	Battle *b = FindBattle(getNextInt());
 	JoinedBattle(b, 0);
-})
-
-X(PONG, {
-	extern DWORD lastPing;
-	wchar_t buff[128];
-	swprintf(buff, L"\t\tping: %lums", GetTickCount() - lastPing);
-	SetStatus(buff);
 })
 
 X(REGISTRATIONACCEPTED, {
@@ -457,7 +449,6 @@ X(TASServer, {
 		return;
 	}
 	gUdpHelpPort = getNextInt();
-	SetStatus(L"\t\treceiving server info");
 })
 
 X(UPDATEBATTLEINFO, {

@@ -8,4 +8,4 @@ void BattleList_CloseBattle(struct battle *);
 void BattleList_OnEndLoginInfo(void);
 void BattleList_Reset(void);
 
-extern HWND gBattleListHandle;
+extern HWND gBattleListWindow;

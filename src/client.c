@@ -87,7 +87,6 @@ static const struct {
 };
 
 static SOCKET sock = INVALID_SOCKET;
-DWORD lastPing;
 
 void PollServer(void)
 {
@@ -185,7 +184,6 @@ void Disconnect(void)
 
 void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
 {
-	lastPing = GetTickCount();
 	SendToServer("PING");
 }
 
@@ -195,13 +193,12 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	if (sock != INVALID_SOCKET)
 		Disconnect();
 	
-	SetStatus(L"\t\tconnecting");
 	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
 		MyMessageBox("Could not connect to server.", "WSAStartup failed.\nPlease check your internet connection.");
 		return 1;
 	}
 	
-	struct hostent *host = gethostbyname("taspringmaster.clan-sy.com");
+	struct hostent *host = gethostbyname("lobby.springrts.com");
 	if (!host) {
 		MyMessageBox("Could not connect to server.", "Could not retrieve host information.\nPlease check your internet connection.");
 		return 1;

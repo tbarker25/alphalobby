@@ -7,6 +7,7 @@
 
 #include <Commctrl.h>
 
+#include "alphalobby.h"
 #include "userlist.h"
 #include "layoutmetrics.h"
 #include "client_message.h"
