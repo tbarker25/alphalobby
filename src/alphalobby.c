@@ -114,7 +114,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		
 		HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
 		SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)iconList);
+		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
 
 		TBBUTTON tbButtons[] = {
 			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
@@ -181,7 +181,10 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			EndDownload((void *)GetWindowLongPtr((HWND)lParam, GWLP_USERDATA));
 			return 0;
 		case (ID_CONNECT):
-			CreateLoginBox();
+			if (IsConnected())
+				CreateLoginBox();
+			else
+				Disconnect();
 			return 0;
 		case (ID_BATTLEROOM):
 			SetCurrentTab(gBattleRoomWindow);
@@ -295,23 +298,15 @@ void MyMessageBox(const char *caption, const char *text)
 	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)strdup(text), (WPARAM)strdup(caption));
 }
 
-static const int connectedOnlyMenuItems[] = {
-	IDM_RENAME, IDM_CHANGE_PASSWORD, IDM_HOST_BATTLE, IDM_OPEN_CHANNEL
-};
-
 void MainWindow_ChangeConnect(int isNowConnected)
 {
-	HMENU menu = GetMenu(gMainWindow);
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, IDM_CONNECT,
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
 		(LPARAM)&(TBBUTTONINFO){
 			.cbSize = sizeof(TBBUTTONINFO),
 			.dwMask = TBIF_IMAGE | TBIF_TEXT,
-			.iImage = isNowConnected ? ICONS_UNCONNECTED : ICONS_CONNECTED,
+			.iImage = isNowConnected ? ICONS_CONNECTED : ICONS_UNCONNECTED,
 			.pszText = isNowConnected ? L"Connected" : L"Unconnected",
 		});
-
-	for (int i=0; i < lengthof(connectedOnlyMenuItems); ++i)
-		EnableMenuItem(menu, connectedOnlyMenuItems[i], !isNowConnected * MF_GRAYED);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -327,7 +322,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		.cbSize = sizeof(WNDCLASSEX),
 		.lpszClassName = WC_ALPHALOBBY,
 		.lpfnWndProc	= winMainProc,
-		.hIcon          = ImageList_GetIcon(iconList, 0, 0),
+		.hIcon          = ImageList_GetIcon(gIconList, 0, 0),
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	});

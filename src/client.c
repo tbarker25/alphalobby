@@ -224,33 +224,10 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	return 0;
 }
 
-#if 0
-char * (void)
-//TODO: real error handling
+int IsConnected(void)
 {
-	char hostName[256];
-	WSASetLastError(0);
-	if (gethostname(hostName, sizeof(hostName))) {
-		printf("last error = %d\n", WSAGetLastError());
-		assert(0);
-		return NULL;
-	}
-	
-	struct hostent *host = NULL;
-	if (!(host = gethostbyname(hostName))) {
-		printf("last error = %d\n", WSAGetLastError());
-		assert(0);
-		return NULL;
-	}
-
-	char *ret;
-	if (!(ret = inet_ntoa(*(struct in_addr *)host->h_addr))) {
-		printf("last error = %d\n", WSAGetLastError());
-		assert(0);
-	}
-	return ret;
+	return sock == INVALID_SOCKET;
 }
-#endif
 
 void Connect(void (*onFinish)(void))
 {
