@@ -1,5 +1,5 @@
 env = Environment(tools=['mingw'])
-libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1')
+libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1 devil')
 libpath = '.'
 cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
 
@@ -15,6 +15,8 @@ else:
 	cflags += ' -s -Os -mwindows'
 
 cflags += ' -I' + variant_dir
+cflags += ' -Iinclude'
+cflags += ' -Llib'
 
 env.VariantDir(variant_dir, 'src', duplicate=0)
 

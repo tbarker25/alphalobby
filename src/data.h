@@ -190,7 +190,8 @@ extern User gMyUser;
 extern Battle *gMyBattle;
 extern uint32_t battleToJoin;
 extern BattleOption gBattleOptions;
-char gSideNames[16][128];
+
+extern char gSideNames[16][128];
 
 extern uint32_t gUdpHelpPort;
 

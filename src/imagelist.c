@@ -6,14 +6,7 @@
 #include "icons.h"
 #include "resource.h"
 
-HIMAGELIST iconList;
-
-void ReplaceIcon(int index, const wchar_t *fileName)
-{
-	HBITMAP bitmap = fileName ? LoadImage(NULL, fileName, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE) : NULL;
-	ImageList_Replace(iconList, index, bitmap, NULL);
-	DeleteObject(bitmap);
-}
+HIMAGELIST gIconList;
 
 int GetColorIndex(const union UserOrBot *s)
 {
@@ -36,12 +29,12 @@ int GetColorIndex(const union UserOrBot *s)
 		HDC bitmapDC = CreateCompatibleDC(dc);
 		HBITMAP bitmap = CreateCompatibleBitmap(dc, 16, 16);
 		ReleaseDC(NULL, dc);
-		SelectObject(bitmapDC, bitmap );
+		SelectObject(bitmapDC, bitmap);
 		for (int i=0; i<16*16; ++i)
 			SetPixelV(bitmapDC, i%16, i/16, s->color);
 		DeleteDC(bitmapDC);
 		
-		ImageList_Replace(iconList, ICONS_FIRST_COLOR + i, bitmap, NULL);
+		ImageList_Replace(gIconList, ICONS_FIRST_COLOR + i, bitmap, NULL);
 		DeleteObject(bitmap);
 		return ICONS_FIRST_COLOR + i;
 
@@ -56,13 +49,13 @@ int GetColorIndex(const union UserOrBot *s)
 
 static void __attribute__((constructor)) Init(void)
 {
-	iconList = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
+	gIconList = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
 
 	HBITMAP iconsBitmap = CreateBitmap(ICONS_WIDTH, ICONS_HEIGHT, 1, ICONS_BBP*8, iconData);
-	ImageList_Add(iconList, iconsBitmap, NULL);
+	ImageList_Add(gIconList, iconsBitmap, NULL);
 	DeleteObject(iconsBitmap);
 	
 	for (int i=1; i<=ICONS_MASK; ++i)
 		if (i & ~ USER_MASK)
-			ImageList_SetOverlayImage(iconList, i, i);
+			ImageList_SetOverlayImage(gIconList, i, i);
 }

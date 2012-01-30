@@ -57,20 +57,19 @@ enum ICONS {
 	ICONS_SINGLEPLAYER = INGAME_MASK,
 };
 
-void ReplaceIcon(int index, const wchar_t *fileName);
 int GetColorIndex(const union UserOrBot *);
 #ifdef WINVER
-extern HIMAGELIST iconList;
+extern HIMAGELIST gIconList;
 #endif
 
 #define EnableIcons(window)\
 {\
-	extern HIMAGELIST iconList;\
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)iconList);\
+	extern HIMAGELIST gIconList;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);\
 }
 
 #define EnableStateIcons(window)\
 {\
-	extern HIMAGELIST iconList;\
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)iconList);\
+	extern HIMAGELIST gIconList;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)gIconList);\
 }

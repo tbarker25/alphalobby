@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <assert.h>
+#include <IL/il.h>
 
 #include "wincommon.h"
 #include "data.h"
@@ -17,6 +18,7 @@
 #include "sync.h"
 #include "settings.h"
 #include "imagelist.h"
+
 
 #define PLAIN_API_STRUCTURE
 #define EXPORT2(type, name, args)\
@@ -73,6 +75,8 @@ static void printLastError(wchar_t *title)
 __attribute__((noreturn))
 static DWORD WINAPI syncThread (LPVOID lpParameter) 
 {
+	ilInit();
+	
 	HMODULE libUnitSync = LoadLibrary(L"unitsync.dll");
 	if (!libUnitSync)
 		printLastError(L"Could not load unitsync.dll");
@@ -415,35 +419,37 @@ static void setMod(void)
 		strcpy(gSideNames[i], GetSideName(i));
 		
 		char vfsPath[128];
-		sprintf(vfsPath, R"(SidePics/%s.bmp)", GetSideName(i));
-		int ini = OpenFileVFS(vfsPath);
-		if (!ini) {
-			strchr(gSideNames[i], '\0')[1] = -1;
+		int n = sprintf(vfsPath, "SidePics/%s.png", gSideNames[i]);
+		int fd = OpenFileVFS(vfsPath);
+		if (!fd) {
+			memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
+			fd = OpenFileVFS(vfsPath);
+		}
+		if (!fd) {
 			continue;
 		}
 		
-		uint8_t buff[FileSizeVFS(ini)];
-		ReadFileVFS(ini, buff, sizeof(buff));
-		CloseFileVFS(ini);
-		
-		wchar_t tmpFileName[MAX_PATH];
-		GetTempPath(MAX_PATH, tmpFileName);
-		GetTempFileName(tmpFileName, NULL, 0, tmpFileName);
-		wcscat(tmpFileName, L".bmp");
-		FILE *fd = _wfopen(tmpFileName, L"wb");
-		fwrite(buff, 1, sizeof(buff), fd);
-		fclose(fd);
-		
-		ReplaceIcon(ICONS_FIRST_SIDE + i, tmpFileName);
-		
-		_wremove(tmpFileName);
-	}
-	
+		uint8_t buff[FileSizeVFS(fd)];
+		ReadFileVFS(fd, buff, sizeof(buff));
+		CloseFileVFS(fd);
+		ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
+		uint32_t data[16*16];
+		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, data);
+		ILint format = ilGetInteger(IL_IMAGE_FORMAT);
+		if (format == IL_RGB || format == IL_BGR) {
+			for (int i=16 * 16 - 1; i>=0; --i)
+				if (data[i] == data[0])
+					data[i] &= 0x00FFFFFF;
+		}
+		HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, data);
+		ImageList_Replace(gIconList, ICONS_FIRST_SIDE + i, bitmap, NULL);
+		DeleteObject(bitmap);
+	}	
+
 	gModHash = GetPrimaryModChecksum(mod_index);
 	
 	initOptions(GetModOptionCount(), &gModOptions, &gNbModOptions);
 }
-
 static void setMap(void)
 {
 	gMapHash = GetMapChecksumFromName(currentMap);

@@ -533,7 +533,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SendMessage(playerList, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){});
 
 		ListView_SetExtendedListViewStyle(playerList, LVS_EX_DOUBLEBUFFER |  LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-		SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)iconList);
+		SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);
 		ListView_EnableGroupView(playerList, TRUE);
 		for (int i=0; i<=16; ++i) {
 			wchar_t buff[lengthof("Spectators")];
@@ -561,11 +561,11 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		
 		SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_SETRANGE, 1, MAKELONG(0, 200));
 		
-		SendDlgItemMessage(window, DLG_SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_HORZ, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_VERT, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_EDGE, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_EDGE, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_CORNER, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_CORNER, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_RANDOM, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_RANDOM, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_HORZ, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_EDGE, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_EDGE, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_CORNER, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_RANDOM, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RANDOM, 0));
 		
 		return 0;
 	case WM_SIZE:
@@ -883,10 +883,10 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 		for (int i=0; i<=DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i) {
 			HWND sideButton = GetDlgItem(window, DLG_SIDE_FIRST + i);
-			SendMessage(sideButton, BM_SETIMAGE, IMAGE_ICON, strchr(gSideNames[i], '\0')[1] == -1 ? 0 : (WPARAM)ImageList_GetIcon(iconList, ICONS_FIRST_SIDE + i, 0));
+			SendMessage(sideButton, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_FIRST_SIDE + i, 0));
 			ShowWindow(sideButton, gSideNames[i][0]);
 		}
-		// SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_VERT, 0));
+		// SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
 		// for (int i=0; *gSideNames[i]; ++i)
 			// SendMessage(sideBox, CBEM_INSERTITEMA, 0,
 					// (LPARAM)&(COMBOBOXEXITEMA){
@@ -965,7 +965,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SetWindowLongPtr(startPosControl, GWLP_USERDATA, (LONG_PTR)s);
 			SetWindowPos(startPosControl, NULL,
 					rect.right * pos.x / mapWidth - startBoxWidth/2, rect.bottom * pos.z / mapHeight - startBoxWidth/2, startBoxWidth, startBoxWidth, SWP_SHOWWINDOW);
-			SendMessage(startPosControl, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, GetColorIndex(s), 0));
+			SendMessage(startPosControl, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, GetColorIndex(s), 0));
 		}
 		} return 0;
 	}

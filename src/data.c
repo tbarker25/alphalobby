@@ -34,6 +34,8 @@ size_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
 
+char gSideNames[16][128];
+
 char **gMaps, **gMods;
 size_t gNbMaps, gNbMods;
 
