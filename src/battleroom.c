@@ -47,10 +47,11 @@ enum PLAYER_LIST_COLUMNS {
 
 enum DLG_ID {
 	DLG_CHAT,
-	DLG_ALLY,
 	DLG_ALLY_LABEL,
-	DLG_SIDE,
+	DLG_ALLY,
 	DLG_SIDE_LABEL,
+	DLG_SIDE_FIRST,
+	DLG_SIDE_LAST = DLG_SIDE_FIRST+4,
 	DLG_PLAYER_LIST,
 	DLG_SPECTATE,
 	DLG_AUTO_UNSPEC,
@@ -95,9 +96,9 @@ static const DialogItem dlgItems[] = {
 		.class = WC_STATIC,
 		.name = L"Team:",
 		.style = WS_VISIBLE,
-	}, [DLG_SIDE] = {
-		.class = WC_COMBOBOXEX,
-		.style = WS_VISIBLE | CBS_DROPDOWNLIST | LVS_SHAREIMAGELISTS | WS_VSCROLL,
+	}, [DLG_SIDE_FIRST ... DLG_SIDE_LAST] = {
+		.class = WC_BUTTON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_SIDE_LABEL] = {
 		.class = WC_STATIC,
 		.name = L"Side:",
@@ -336,8 +337,10 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_AUTO_UNSPEC), !(battleStatus & MODE_MASK));
 		if (battleStatus & MODE_MASK)
 			SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_SETCHECK, BST_UNCHECKED, 0);
-
-		SendDlgItemMessage(gBattleRoomWindow, DLG_SIDE, CB_SETCURSEL, FROM_SIDE_MASK(battleStatus), 0);
+		
+		for (int i=DLG_SIDE_FIRST; i<=DLG_SIDE_LAST; ++i)
+			SendDlgItemMessage(gBattleRoomWindow, i, BM_SETCHECK, FROM_SIDE_MASK(battleStatus) == i - DLG_SIDE_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
+			
 		SendDlgItemMessage(gBattleRoomWindow, DLG_ALLY, CB_SETCURSEL, FROM_ALLY_MASK(battleStatus), 0);
 	}
 	if (u->battle->founder == u)
@@ -412,17 +415,21 @@ static void resizeAll(LPARAM lParam)
 
 	#define VOTEBOX_TOP (CHAT_TOP)
 	#define VOTETEXT_HEIGHT (2 * COMMANDBUTTON_Y)
-	MOVE_ID(DLG_VOTEBOX,	CHAT_WIDTH, VOTEBOX_TOP, MAP_X(2 * 50 + 4), VOTETEXT_HEIGHT + MAP_Y(3*7 + 11));
+	#define VOTETEXT_WIDTH (MAP_X(2 * 50 + 4))
+	#define VOTEBUTTON_WIDTH ((VOTETEXT_WIDTH - MAP_X(14)) / 2)
+	MOVE_ID(DLG_VOTEBOX,	CHAT_WIDTH, VOTEBOX_TOP, VOTETEXT_WIDTH, VOTETEXT_HEIGHT + MAP_Y(3*7 + 11));
 	MOVE_ID(DLG_VOTETEXT,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + MAP_Y(11), MAP_X(2 * 50 + 7 + 4), VOTETEXT_HEIGHT);
-	MOVE_ID(DLG_VOTEYES,	width - 17 - 2 * MAP_X(40), VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), MAP_X(40), COMMANDBUTTON_Y);
-	MOVE_ID(DLG_VOTENO,		width - 13 - MAP_X(40), VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), MAP_X(40), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_VOTEYES,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
+	MOVE_ID(DLG_VOTENO,		CHAT_WIDTH + MAP_X(10) + VOTEBUTTON_WIDTH, VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
 
 	#define VOTEBOX_BOTTOM (VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(41))
 	MOVE_ID(DLG_ALLY_LABEL,  CHAT_WIDTH, VOTEBOX_BOTTOM, MAP_X(70), TEXTLABEL_Y);
 	MOVE_ID(DLG_ALLY,        CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(10), MAP_X(70), COMMANDBUTTON_Y);
 	
 	MOVE_ID(DLG_SIDE_LABEL,  CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(31), MAP_X(70), TEXTLABEL_Y);
-	MOVE_ID(DLG_SIDE,        CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(41), MAP_X(70), COMMANDBUTTON_Y);
+
+	for (int i=0; i <= DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i)
+		MOVE_ID(DLG_SIDE_FIRST + i, CHAT_WIDTH + i * (COMMANDBUTTON_Y + MAP_X(4)), VOTEBOX_BOTTOM + MAP_Y(41), COMMANDBUTTON_Y, COMMANDBUTTON_Y);
 
 	MOVE_ID(DLG_READY,       CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(62), MAP_X(70), TEXTBOX_Y);
 	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(77), MAP_X(70), TEXTBOX_Y);
@@ -520,7 +527,6 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			swprintf(buff, L"Team %d", i+1);
 			SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buff);
 		}
-		SendDlgItemMessage(window, DLG_SIDE, CBEM_SETIMAGELIST, 0, (LPARAM)iconList);
 
 		HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
 		for (int i=0; i <= COLUMN_LAST; ++i)
@@ -829,9 +835,8 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SetBattleStatus(&gMyUser, TO_ALLY_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), ALLY_MASK);
 			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_ALLY_MASK(gMyUser.battleStatus), 0);
 			return 0;
-		case MAKEWPARAM(DLG_SIDE, CBN_SELCHANGE):
-			SetBattleStatus(&gMyUser, TO_SIDE_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), SIDE_MASK);
-			SendMessage((HWND)lParam, CB_SETCURSEL, FROM_SIDE_MASK(gMyUser.battleStatus), 0);
+		case MAKEWPARAM(DLG_SIDE_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SIDE_LAST, BN_CLICKED):
+			SetBattleStatus(&gMyUser, TO_SIDE_MASK(LOWORD(wParam) - DLG_SIDE_FIRST), SIDE_MASK);
 			return 0;
 		}
 		break;
@@ -873,16 +878,22 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		SendMessage(infoWindow, EM_SETSCROLLPOS, 0, (LPARAM)&scrollPosition);
 		} return 0;
 	case WM_CHANGEMOD: {
-		HWND sideBox = GetDlgItem(window, DLG_SIDE);
-		SendDlgItemMessage(sideBox, DLG_SIDE, CB_RESETCONTENT, 0, 0);
+		// HWND sideBox = GetDlgItem(window, DLG_SIDE);
+		// SendDlgItemMessage(sideBox, DLG_SIDE, CB_RESETCONTENT, 0, 0);
 
-		for (int i=0; *gSideNames[i]; ++i)
-			SendMessage(sideBox, CBEM_INSERTITEMA, 0,
-					(LPARAM)&(COMBOBOXEXITEMA){
-						.iItem = -1, .mask = CBEIF_TEXT | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE,
-							.pszText = gSideNames[i],
-						.iImage = ICONS_FIRST_SIDE + i, .iSelectedImage = ICONS_FIRST_SIDE + i,
-					});
+		for (int i=0; i<=DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i) {
+			HWND sideButton = GetDlgItem(window, DLG_SIDE_FIRST + i);
+			SendMessage(sideButton, BM_SETIMAGE, IMAGE_ICON, strchr(gSideNames[i], '\0')[1] == -1 ? 0 : (WPARAM)ImageList_GetIcon(iconList, ICONS_FIRST_SIDE + i, 0));
+			ShowWindow(sideButton, gSideNames[i][0]);
+		}
+		// SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(iconList, ICONS_SPLIT_VERT, 0));
+		// for (int i=0; *gSideNames[i]; ++i)
+			// SendMessage(sideBox, CBEM_INSERTITEMA, 0,
+					// (LPARAM)&(COMBOBOXEXITEMA){
+						// .iItem = -1, .mask = CBEIF_TEXT | CBEIF_IMAGE | CBEIF_SELECTEDIMAGE,
+							// .pszText = gSideNames[i],
+						// .iImage = ICONS_FIRST_SIDE + i, .iSelectedImage = ICONS_FIRST_SIDE + i,
+					// });
 		HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
 		LVITEM item = {LVIF_PARAM};
 		for (item.iItem= -1; (item.iItem = SendMessage(playerList, LVM_GETNEXTITEM, item.iItem, 0)) >= 0;) {
@@ -894,7 +905,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			item.iImage = s->battleStatus & MODE_MASK && *gSideNames[FROM_SIDE_MASK(s->battleStatus)] ? ICONS_FIRST_SIDE + FROM_SIDE_MASK(s->battleStatus) : -1;
 			SendMessage(playerList, LVM_SETITEM, 0, (LPARAM)&item);
 		}
-		SendMessage(sideBox, CB_SETCURSEL, &gMyUser ? FROM_SIDE_MASK(gMyUser.battleStatus) : 0, 0);
+		// SendMessage(sideBox, CB_SETCURSEL, &gMyUser ? FROM_SIDE_MASK(gMyUser.battleStatus) : 0, 0);
 		// resizePlayerListTabs();
 		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME)
 			for (int i=0; i<16; ++i)

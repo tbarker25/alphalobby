@@ -119,12 +119,12 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		TBBUTTON tbButtons[] = {
 			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
 			{ I_IMAGENONE,  0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,      {}, 0, 0},
-			{ I_IMAGENONE,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
+			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
 			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
 			{ ICONS_SINGLEPLAYER,  ID_SINGLEPLAYER, 0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
-			{ I_IMAGENONE,  ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
+			{ ICONS_REPLAY,  ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
 			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
-			{ I_IMAGENONE,  ID_OPTIONS,      0,          BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+			{ ICONS_OPTIONS,  ID_OPTIONS,      0,          BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
 			// { I_IMAGENONE, 0, TBSTATE_ENABLED, BTNS_AUTOSIZE|BTNS_WHOLEDROPDOWN, {}, 0, 0},
 		};
 
@@ -305,9 +305,8 @@ void MainWindow_ChangeConnect(int isNowConnected)
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, IDM_CONNECT,
 		(LPARAM)&(TBBUTTONINFO){
 			.cbSize = sizeof(TBBUTTONINFO),
-			.dwMask = TBIF_IMAGE | TBIF_STATE | TBIF_TEXT,
-			.iImage = isNowConnected ? ICONS_UNCONNECTED : ICONS_UNCONNECTED,
-			.fsState = isNowConnected ? TBSTATE_ENABLED : TBSTATE_ENABLED,
+			.dwMask = TBIF_IMAGE | TBIF_TEXT,
+			.iImage = isNowConnected ? ICONS_UNCONNECTED : ICONS_CONNECTED,
 			.pszText = isNowConnected ? L"Connected" : L"Unconnected",
 		});
 

@@ -25,7 +25,8 @@ ICONS=' alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_i
 ICONS+=' null: user_unsync user_away user_unsync_away user_ignore user_unsync_ignore user_away_ignore user_unsync_away_ignore'
 ICONS+=" closed open host spectator host_spectator ingame"
 ICONS+=" rank0 rank1 rank2 rank3 rank4 rank5 rank6 rank7"
-ICONS+=" close horizontal_split vertical_split edge_split corner_split random_split"
+ICONS+=" battlelist replays options"
+ICONS+=" horizontal_split vertical_split edge_split corner_split random_split"
 ICONS+=" flags/*"
 ICONS2 = ' '.join('icons/' + f + '.png' if f != 'null:' else 'null:' for f in ICONS.split())
 ICONS2 += ' null:' * 48
