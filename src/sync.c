@@ -410,7 +410,6 @@ static void setMod(void)
 	for (int i=0, sideCount = GetSideCount(); i < 16; ++i) {
 		if (i >= sideCount) {
 			*gSideNames[i] = '\0';
-			ReplaceIcon(ICONS_FIRST_SIDE + i, NULL);
 			continue;
 		}
 		strcpy(gSideNames[i], GetSideName(i));
@@ -418,6 +417,11 @@ static void setMod(void)
 		char vfsPath[128];
 		sprintf(vfsPath, R"(SidePics/%s.bmp)", GetSideName(i));
 		int ini = OpenFileVFS(vfsPath);
+		if (!ini) {
+			strchr(gSideNames[i], '\0')[1] = -1;
+			continue;
+		}
+		
 		uint8_t buff[FileSizeVFS(ini)];
 		ReadFileVFS(ini, buff, sizeof(buff));
 		CloseFileVFS(ini);
