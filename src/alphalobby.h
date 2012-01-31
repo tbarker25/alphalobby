@@ -20,9 +20,9 @@ extern HWND gMainWindow;
 
 void Ring(void);
 
-#define AddTab(x)
-#define FocusTab(x)
-#define RemoveTab(x)
+#define AddTab(x) (x)
+#define FocusTab(x) (ShowWindow(x, 1))
+#define RemoveTab(x) (ShowWindow(x, 0))
 #define GetTabIndex(x) -1
 
 void MainWindow_ChangeConnect(int isNowConnected);

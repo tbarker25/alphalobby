@@ -47,6 +47,7 @@ enum {
 	ID_SINGLEPLAYER,
 	ID_REPLAY,
 	ID_HOSTBATTLE,
+	ID_CHANNEL,
 	ID_OPTIONS
 };
 	
@@ -118,14 +119,17 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 
 		TBBUTTON tbButtons[] = {
 			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
-			{ I_IMAGENONE,  0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,      {}, 0, 0},
+			{ I_IMAGENONE,  0,   TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,                       {}, 0, 0},
 			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
 			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
-			{ ICONS_SINGLEPLAYER,  ID_SINGLEPLAYER, 0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
-			{ ICONS_REPLAY,  ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
-			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   0,               BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
-			{ ICONS_OPTIONS,  ID_OPTIONS,      0,          BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
-			// { I_IMAGENONE, 0, TBSTATE_ENABLED, BTNS_AUTOSIZE|BTNS_WHOLEDROPDOWN, {}, 0, 0},
+			#ifndef NDEBUG
+			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
+			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
+			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
+			{ I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Channels"},
+			{ I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
+			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+			#endif
 		};
 
 		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
@@ -202,17 +206,14 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			return 0;
 		case (ID_OPTIONS):
 			return 0;
-		// case IDM_QUIT:
-			// DestroyWindow(window);
-			// return 0;
+		case (ID_CHANNEL):
+			ChannelList_Show();
+			return 0;
 		// case IDM_SERVER_LOG:
 			// FocusTab(GetServerChat());
 			// return 0;
 		// case IDM_ABOUT:
 			// CreateAboutDlg();
-			// return 0;
-		// case IDM_OPEN_CHANNEL:
-			// ChannelList_Show();
 			// return 0;
 		// case IDM_SPRING_RTS:
 			// ShellExecute(NULL, NULL, L"http://springrts.com/", NULL, NULL, SW_SHOWNORMAL);
@@ -238,17 +239,8 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		// case IDM_CHANGE_PASSWORD:
 			// CreateChangePasswordDlg();
 			// return 0;
-		// case IDM_REPLAY:
-			// CreateReplayDlg();
-			// return 0;
-		// case IDM_CONNECT:
-			// CreateLoginBox();
-			// return 0;
 		// case IDM_RELOAD_MAPS_MODS:
 			// ReloadMapsAndMod();
-			// return 0;
-		// case IDM_DISCONNECT:
-			// Disconnect();
 			// return 0;
 		// case IDM_LOBBY_PREFERENCES:
 			// CreatePreferencesDlg();
@@ -258,12 +250,6 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 				// &(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
 				// &(PROCESS_INFORMATION){}
 			// );
-			// return 0;
-		// case IDM_HOST_BATTLE:
-			// CreateHostBattleDlg();
-			// return 0;
-		// case IDM_SINGLE_PLAYER:
-			// JoinBattle(-1, NULL);
 			// return 0;
 		}
 		return 0;
