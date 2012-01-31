@@ -51,6 +51,11 @@ enum {
 	DLG_LAST = DLG_LIST,
 };
 
+typedef struct chatWindowData {
+	char *name;
+	ChatDest type;
+}chatWindowData;
+
 static DialogItem dlgItems[] = {
 	[DLG_LOG] = {
 		.class = RICHEDIT_CLASS,
@@ -276,8 +281,11 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 {
     switch (msg) {
 	case WM_CREATE: {
-		if (*(char **)lParam)
-			SetWindowTextA(window, *(char **)lParam);
+		static chatWindowData battleRoomData = {NULL, DEST_BATTLE};
+		chatWindowData *data = ((CREATESTRUCT *)lParam)->lpCreateParams ?: &battleRoomData;
+		SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
+		if (data->name)
+			SetWindowTextA(window, data->name);
 		HWND logWindow = CreateDlgItem(window, &dlgItems[DLG_LOG], DLG_LOG);
 		SendMessage(logWindow, EM_EXLIMITTEXT, 0, INT_MAX);
 		SendMessage(logWindow, EM_AUTOURLDETECT, TRUE, 0);
@@ -288,24 +296,21 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		inputBoxData_t *inputBoxData = calloc(1, sizeof(*inputBoxData));
 		inputBoxData->buffTail = inputBoxData->textBuff;
 		
-		UINT_PTR destType = GetDlgCtrlID(window);
-		SetWindowSubclass(inputBox, (void *)inputBoxProc, destType, (DWORD_PTR)inputBoxData);
+		SetWindowSubclass(inputBox, (void *)inputBoxProc, (UINT_PTR)data->type, (DWORD_PTR)inputBoxData);
 		
-		if (destType >= DEST_CHANNEL) {
+		if (data->type >= DEST_CHANNEL) {
 			HWND list = CreateDlgItem(window, &dlgItems[DLG_LIST], DLG_LIST);
 			for (int i=0; i<=COLUMN_LAST; ++i)
 				SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&(LVCOLUMN){});
 			ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
 			EnableIcons(list);
 		}
-		return 0;
+		// return 0;
 	}	break;
 	case WM_CLOSE: {
-		if (GetDlgCtrlID(window) == DEST_CHANNEL) {
-			char name[MAX_NAME_LENGTH_NUL];
-			GetWindowTextA(window, name, sizeof(name));
-			LeaveChannel(name);
-		}
+		chatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
+		if (data->type == DEST_CHANNEL)
+			LeaveChannel(data->name);
 		RemoveTab(window);
 	}	return 0;
 	case WM_SIZE: {
@@ -374,18 +379,19 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			if (s->msg != WM_RBUTTONUP)
 				break;
 
+			chatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
+			
 			HMENU menu = CreatePopupMenu();
-			// ChatType type = ((chat_window_t *)GetWindowLongPtr(window, GWLP_USERDATA))->type;
 			AppendMenu(menu, 0, 1, L"Copy");
 			AppendMenu(menu, 0, 2, L"Clear window");
 			AppendMenu(menu, gSettings.flags & SETTING_TIMESTAMP ? MF_CHECKED : 0, 3, L"Timestamp messages");
-			ChatDest destType = GetDlgCtrlID(window);
-			if (destType == DEST_PRIVATE)
+
+			if (data->type == DEST_PRIVATE)
 				AppendMenu(menu, 0, 6, L"Ignore user");
 
-			AppendMenu(menu, gSettings.flags & (1<<destType) ? MF_CHECKED : 0, 4, L"Show login/logout");
+			AppendMenu(menu, gSettings.flags & (1<<data->type) ? MF_CHECKED : 0, 4, L"Show login/logout");
 
-			AppendMenu(menu, 0, 5, (const wchar_t *[]){L"Leave Battle", L"Close private chat", L"Leave channel", L"Hide server log"}[destType]);
+			AppendMenu(menu, 0, 5, (const wchar_t *[]){L"Leave Battle", L"Close private chat", L"Leave channel", L"Hide server log"}[data->type]);
 			
 			POINT pt = {.x = LOWORD(s->lParam), .y = HIWORD(s->lParam)};
 			ClientToScreen(s->nmhdr.hwndFrom, &pt);
@@ -412,18 +418,16 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 				GetMenuItemInfo(menu, index, 0, &info);
 				int newVal = !(info.fState & MFS_CHECKED);
 				if (index == 3)
-					destType = DEST_LAST + 1;
-				gSettings.flags = (gSettings.flags & ~(1<<destType)) | newVal<<destType;
+					data->type = DEST_LAST + 1;
+				gSettings.flags = (gSettings.flags & ~(1<<data->type)) | newVal<<data->type;
 			}	break;
 			case 6: {
-				char name[MAX_NAME_LENGTH_NUL];
-				GetWindowTextA(window, name, sizeof(name));
-				User *u = FindUser(name);
+				User *u = FindUser(data->name);
 				if (u)
 					u->ignore = 1;
 			}	// FALLTHROUGH:
 			case 5:
-				SendMessage(destType == DEST_BATTLE ? GetParent(window) : window, WM_CLOSE, 0, 0);
+				SendMessage(data->type == DEST_BATTLE ? GetParent(window) : window, WM_CLOSE, 0, 0);
 				break;
 			}
 			
@@ -520,9 +524,8 @@ HWND GetChannelChat(const char *name)
 			gMainWindow, (HMENU)DEST_CHANNEL, NULL, (void *)name);
 			return channelWindows[i];
 		}
-		char buff[MAX_NAME_LENGTH + 1];
-		GetWindowTextA(channelWindows[i], buff, sizeof(buff));
-		if (!strcmp(name, buff))
+		chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
+		if (!strcmp(name, data->name))
 			return channelWindows[i];
 	}
 	return NULL;
@@ -530,10 +533,13 @@ HWND GetChannelChat(const char *name)
 
 HWND GetPrivateChat(User *u)
 {
-	if (!u->chatWindow)
-		u->chatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
-			0, 0, 0, 0,
-			gMainWindow, (HMENU)DEST_PRIVATE, NULL, (void *)u->name);
+	if (!u->chatWindow) {
+		chatWindowData *data = malloc(sizeof(chatWindowData));
+		*data = (chatWindowData){u->name, DEST_PRIVATE};
+		u->chatWindow = CreateWindow(WC_CHATBOX, NULL, WS_OVERLAPPEDWINDOW,
+			0, 0, 400, 400,
+			NULL, /* (HMENU)DEST_PRIVATE */ NULL, NULL, (void *)data);
+	}
 	return u->chatWindow;
 }
 
@@ -552,13 +558,8 @@ void SaveLastChatWindows(void)
 	for (int i=0; i<lengthof(channelWindows); ++i) {
 		SendDlgItemMessage(channelWindows[i], DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 		if (GetTabIndex(channelWindows[i]) >= 0) {
-			if (len)
-				autojoinChannels[len++] = ';';
-			// if (i == SERVER_ID) {
-				// autojoinChannels[len++] = '*';
-				// autojoinChannels[len] = 0;
-			// } else
-			len += GetWindowTextA(channelWindows[i], autojoinChannels + len, sizeof(autojoinChannels) - len) - 1;
+			chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
+			len += sprintf("%s%s", len ? ";" : "", data->name);
 		}
 	}
 	free(gSettings.autojoin);
