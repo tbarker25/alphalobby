@@ -34,7 +34,7 @@ void JoinBattle(uint32_t id, const char *password)
 	if (b) {
 		ChangeMod(b->modName);
 		if (gMapHash != b->mapHash)
-			ChangeMap(b->mapName);
+			ChangedMap(b->mapName);
 	}
 	
 	if (gMyBattle) {
@@ -154,6 +154,14 @@ void LeaveBattle(void)
 		LeftBattle();
 	else
 		SendToServer("LEAVEBATTLE");
+}
+
+void ChangeMap(const char *mapName)
+{
+	if (gBattleOptions.hostType == HOST_SPADS)
+		SpadsMessageF("!map %s", mapName);
+	else
+		SendToServer("!UPDATEBATTLEINFO 0 0 %d %s", GetMapHash(mapName), mapName);
 }
 
 void RequestChannels(void)

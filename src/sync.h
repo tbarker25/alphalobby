@@ -31,7 +31,7 @@ uint32_t GetModHash(const char *modName);
 void RedrawMinimapBoxes(void);
 void ReloadMapsAndMod(void);
 void ChangeMod(const char *modName);
-void ChangeMap(const char *mapName);
+void ChangedMap(const char *mapName);
 void ChangeOption(uint16_t);
 void SetScriptTags(char *);
 const char * _GetSpringVersion(void);

@@ -223,7 +223,7 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 	if (gModHash !=modHash)
 		ChangeMod(b->modName);
 	if (gMapHash != b->mapHash)
-		ChangeMap(b->mapName);
+		ChangedMap(b->mapName);
 
 	BattleRoom_Show();
 }
