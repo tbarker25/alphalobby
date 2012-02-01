@@ -100,6 +100,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			STARTCLOCK();
 			taskReload = 0;
 			Init(false, 0);
+			ENDCLOCK();
 			gModHash = 0;
 			currentMod[0] = 0;
 			gMapHash = 0;
@@ -471,7 +472,7 @@ void ChangeMod(const char *modName)
 	SetEvent(event);
 }
 
-void ChangeMap(const char *mapName)
+void ChangedMap(const char *mapName)
 {
 	// printf("changing map to %s\n", mapName);
 	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);

@@ -465,7 +465,7 @@ X(UPDATEBATTLEINFO, {
 	copyNextSentence(b->mapName);
 
 	if (b == gMyBattle && b->mapHash != lastMapHash)
-		ChangeMap(gMyBattle->mapName);
+		ChangedMap(gMyBattle->mapName);
 
 	BattleList_UpdateBattle(b);
 })

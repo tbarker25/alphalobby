@@ -57,7 +57,6 @@ enum DLG_ID {
 	DLG_AUTO_UNSPEC,
 	DLG_READY,
 	DLG_MINIMAP,
-	DLG_TOOLS,
 	DLG_START,
 	DLG_LEAVE,
 	DLG_BATTLE_INFO,
@@ -69,6 +68,12 @@ enum DLG_ID {
 	DLG_SPLIT_EDGE,
 	DLG_STARTBOX_SIZE,
 	DLG_SPLIT_RANDOM,
+	
+	DLG_MAPMODE_LABEL,
+	DLG_MAPMODE_MINIMAP,
+	DLG_MAPMODE_METAL,
+	DLG_MAPMODE_ELEVATION,
+	DLG_CHANGE_MAP,
 	
 	DLG_VOTEBOX,
 	DLG_VOTETEXT,
@@ -132,10 +137,6 @@ static const DialogItem dlgItems[] = {
 		.class = WC_BUTTON,
 		.name = L"Start",
 		.style = WS_VISIBLE | BS_PUSHBUTTON | WS_DISABLED,
-	}, [DLG_TOOLS] = {
-		.class = WC_BUTTON,
-		.name = L"Tools",
-		.style = WS_VISIBLE | BS_PUSHBUTTON,
 	}, [DLG_PLAYER_LIST] = {
 		.class = WC_LISTVIEW,
 		.exStyle = WS_EX_CLIENTEDGE,
@@ -160,7 +161,27 @@ static const DialogItem dlgItems[] = {
 		.class = WC_BUTTON,
 		.name = L"No",
 		.style = WS_VISIBLE | BS_PUSHBUTTON | WS_DISABLED,
-
+	
+	}, [DLG_MAPMODE_LABEL] = {
+		.class = WC_STATIC,
+		.name = L"Map:",
+		.style = WS_VISIBLE,
+	}, [DLG_MAPMODE_MINIMAP] = {
+		.class = WC_BUTTON,
+		.name = L"Minimap",
+		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_MAPMODE_METAL] = {
+		.class = WC_BUTTON,
+		.name = L"Metal",
+		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_MAPMODE_ELEVATION] = {
+		.class = WC_BUTTON,
+		.name = L"Resources",
+		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_CHANGE_MAP] = {
+		.class = WC_BUTTON,
+		.name = L"Change Map",
+		.style = WS_VISIBLE | BS_PUSHBUTTON,
 		
 	}, [DLG_SPLIT_VERT] = {
 		.class = WC_BUTTON,
@@ -197,18 +218,17 @@ void BattleRoom_Show(void)
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MOD), isSP);
 	if (isSP)
 		ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 1);
-	SetDlgItemText(gBattleRoomWindow, DLG_TOOLS, !isSP ? L"Tools" : L"Add bot");
 	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_START), isSP);
 	RECT rect;
 	GetClientRect(gBattleRoomWindow, &rect);
 	SendMessage(gBattleRoomWindow, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
-	SetCurrentTab(gBattleRoomWindow);
+	EnableBattleroomButton();
 }
 
 void BattleRoom_Hide(void)
 {
-	RemoveTab(gBattleRoomWindow);
 	ListView_DeleteAllItems(GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST));
+	DisableBattleroomButton();
 }
 
 static int findUser(const void *u)
@@ -260,7 +280,7 @@ static void updatePlayerListGroup(int groupId)
 	swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
 	
 	SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_SETGROUPINFO, groupId,
-		&(LVGROUP){
+		(LPARAM)&(LVGROUP){
 			.cbSize = sizeof(LVGROUP),
 			.mask = LVGF_HEADER,
 			.pszHeader = buff,
@@ -406,10 +426,9 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_BATTLE_INFO, XS, YS, INFO_WIDTH, INFO_HEIGHT);
 	MOVE_ID(DLG_PLAYER_LIST, INFO_WIDTH + 2*XS, YS, LIST_WIDTH, INFO_HEIGHT);
 	int minimapX = INFO_WIDTH + LIST_WIDTH + 3*XS;
-	MOVE_ID(DLG_MINIMAP, minimapX, MAP_Y(14 + 2*S), width - minimapX - XS, INFO_HEIGHT - MAP_Y(14 + 2*S));
+	MOVE_ID(DLG_MINIMAP, minimapX, MAP_Y(14 + 2*S), width - minimapX - XS, INFO_HEIGHT - MAP_Y(28 + 4*S));
 	MOVE_ID(DLG_CHAT, XS, CHAT_TOP, CHAT_WIDTH - MAP_X(7), h - INFO_HEIGHT - 3*YS);
 	
-	// MOVE_ID(DLG_TOOLS, width - MAP_X(171), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
 	MOVE_ID(DLG_START, CHAT_WIDTH, h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
 	MOVE_ID(DLG_LEAVE, CHAT_WIDTH + MAP_X(54), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
 
@@ -442,7 +461,14 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_SPLIT_EDGE, minimapX + 4*XS + 3*YH, YS, MAP_Y(14), MAP_Y(14));
 	MOVE_ID(DLG_SPLIT_RANDOM, minimapX + 5*XS + 4*YH, YS, MAP_Y(14), MAP_Y(14));
 	MOVE_ID(DLG_STARTBOX_SIZE, minimapX + 6*XS + 5*YH, YS, width - minimapX - 7*XS - 5*YH, YH);
-
+	
+	#define TOP (INFO_HEIGHT - MAP_Y(14 + S))
+	MOVE_ID(DLG_MAPMODE_LABEL,     minimapX + XS, TOP + MAP_Y(3),   MAP_X(20), TEXTBOX_Y);
+	MOVE_ID(DLG_MAPMODE_MINIMAP,   minimapX + XS + MAP_X(20),  TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_METAL,     minimapX + XS + MAP_X(70),  TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_ELEVATION, minimapX + XS + MAP_X(120), TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_CHANGE_MAP,        width - 2*XS - MAP_X(60),   TOP, MAP_X(60), COMMANDBUTTON_Y);
+	#undef TOP
 	
 	done:
 	EndDeferWindowPos(dwp);
@@ -653,166 +679,31 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		break;
 	case WM_CLOSE:
 		close:
+		DisableBattleroomButton();
 		LeaveBattle();
-		RemoveTab(window);
 		return 0;
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(DLG_START, BN_CLICKED):
 			LaunchSpring();
 			return 0;
+		case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED): {
+			HMENU menu = CreatePopupMenu();
+			for (int i=0; i<gNbMaps; ++i)
+				AppendMenuA(menu, MF_CHECKED * !strcmp(gMyBattle->mapName,  gMaps[i]), i + 1, gMaps[i]);
+			POINT pt;
+			GetCursorPos(&pt);
+			int mapIndex = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
+			if (mapIndex > 0)
+				ChangeMap(gMaps[mapIndex - 1]);
+			DestroyMenu(menu);
+		}	return 0;
 		case MAKEWPARAM(DLG_SPLIT_HORZ, BN_CLICKED):
 			SetSplit(SPLIT_HORIZONTAL, SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_GETPOS, 0, 0));
 			return 0;
 		case MAKEWPARAM(DLG_SPLIT_VERT, BN_CLICKED):
 			SetSplit(SPLIT_VERTICAL, SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_GETPOS, 0, 0));
 			return 0;
-		case MAKEWPARAM(DLG_TOOLS, BN_CLICKED): {
-			enum {
-				CHANGE_COLOR = 1,
-				RING_UNREADY, SPEC_UNREADY,
-				
-				
-				//Keep order from settings.h:
-				FIX_ALLIES, FIX_RANK, FIX_CLANS, FIX_IDS, FIX_COLORS,
-				
-				
-				BALANCE_RANDOM, BALANCE_RANK, BALANCE_CLANS,
-				TEAM_FLAG = 0x100,
-				AI_FLAG = 0x200,
-				MAP_FLAG = 0x400,
-			};
-
-		
-			HMENU aiMenu = CreatePopupMenu();
-			HMENU menu;
-			int i=0;
-			void appendAi(const char *name, void *aiMenu)
-			{
-				AppendMenuA(aiMenu, 0, AI_FLAG | i++, name);
-			}
-			ForEachAiName(appendAi, aiMenu);
-			
-			if (gBattleOptions.hostType == HOST_SP) {
-				menu = aiMenu;
-				goto domenu;
-			}
-			
-			// int currentSplit = gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? -1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT)) ? 0
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 2
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){200 - gBattleOptions.startRects[1].right, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 3 : -1;
-
-			HMENU teamMenu = CreatePopupMenu();
-			for (int i=0; i<16; ++i) {
-				wchar_t buff[3];
-				swprintf(buff, L"%d", i+1);
-				AppendMenu(teamMenu, MF_CHECKED * (i == FROM_TEAM_MASK(gMyUser.battleStatus)), TEAM_FLAG | i, buff);
-			}
-
-
-			menu = CreatePopupMenu();
-			HMENU mapMenu = CreatePopupMenu();
-
-			for (int i=0; i<gNbMaps; ++i)
-				AppendMenuA(mapMenu, MF_CHECKED * !strcmp(gMyBattle->mapName,  gMaps[i]), MAP_FLAG | i,  gMaps[i]);
-			
-			AppendMenu(menu, MF_POPUP, (UINT_PTR)mapMenu, L"Change map");
-			AppendMenu(menu, MF_POPUP, (UINT_PTR)aiMenu, L"Add bot");
-			AppendMenu(menu, 0, RING_UNREADY, L"Ring unready");
-			if (gBattleOptions.hostType & HOST_FLAG) {
-				AppendMenu(menu, 0, SPEC_UNREADY, L"Force spectate unready");
-				AppendMenu(menu, MF_CHECKED * gSettings.flags & SETTING_HOST_FIX_COLOR, FIX_COLORS, L"Fix colors");
-				AppendMenu(menu, MF_CHECKED * gSettings.flags & SETTING_HOST_FIX_ID, FIX_IDS, L"Fix IDs");
-
-				AppendMenu(menu, MF_CHECKED * gSettings.flags & SETTING_HOST_BALANCE, FIX_ALLIES, L"Enable autobalance");
-				AppendMenu(menu, MF_CHECKED * gSettings.flags & SETTING_HOST_BALANCE_RANK, FIX_RANK, L"Use ranks when balancing");
-				AppendMenu(menu, MF_CHECKED * gSettings.flags & SETTING_HOST_BALANCE_CLAN, FIX_CLANS, L"Respect clan tags when balancing");
-			} else {
-				AppendMenu(menu, 0, BALANCE_RANK, L"Use ranks when balancing");
-				AppendMenu(menu, 0, BALANCE_CLANS, L"Use ranks and clan tags when balancing");
-				AppendMenu(menu, 0, BALANCE_RANDOM, L"Ignore ranks and clan tags when balancing");
-			}
-
-
-			// AppendMenu(menu, MF_SEPARATOR, 0, NULL);
-			// AppendMenu(menu, MF_CHECKED * (gBattleOptions.startPosType == STARTPOS_FIXED), (STARTPOS_FIXED + 1) * SPLIT_FLAG, L"Fixed start positions");
-			// AppendMenu(menu, MF_CHECKED * (gBattleOptions.startPosType == STARTPOS_RANDOM), (STARTPOS_RANDOM + 1) * SPLIT_FLAG, L"Random start positions");
-			// AppendMenu(menu, MF_CHECKED * (gBattleOptions.startPosType == STARTPOS_CHOOSE_BEFORE), (STARTPOS_CHOOSE_BEFORE + 1) * SPLIT_FLAG, L"Choose start positions before game");
-			
-			if (gMyUser.battleStatus & MODE_MASK) {
-				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
-				AppendMenu(menu, MF_POPUP, (UINT_PTR)teamMenu, L"Change ID");
-				AppendMenu(menu, MF_POPUP, CHANGE_COLOR, L"Change Color");
-			}
-
-			domenu:;
-			POINT pt;
-			GetCursorPos(&pt);
-			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
-			switch (clicked) {
-			case CHANGE_COLOR:
-				CreateColorDlg((union UserOrBot *)&gMyUser);
-				break;
-			case RING_UNREADY:
-				if (gBattleOptions.hostType == HOST_SPADS)
-					SpadsMessageF("!ring");
-				else {
-					FOR_EACH_HUMAN_PLAYER(p, gMyBattle) {
-						if (!(p->battleStatus & READY_MASK))
-							SendToServer("!RING %s", p);
-					}
-				}
-				break;
-			case FIX_ALLIES ... FIX_COLORS: {
-				int settingToSave = 1 << (clicked - FIX_ALLIES + SETTING_HOST_BALANCE_OFFSET);
-				
-				MENUITEMINFO info = {.cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_STATE};
-				GetMenuItemInfo(menu, clicked, 0, &info);
-					
-				gSettings.flags = (gSettings.flags & ~settingToSave) | !((info.fState & MFS_CHECKED)) * settingToSave;
-				
-				if (clicked <= FIX_CLANS)
-					Rebalance();
-				else
-					FixPlayerStatus(NULL);
-					
-			}	break;
-			case BALANCE_RANDOM: case BALANCE_RANK: case BALANCE_CLANS:
-				SpadsMessageF("!set balanceMode %s",
-				clicked == BALANCE_RANDOM ? "random"
-				: clicked == BALANCE_RANK ? "rank"
-				: "clan;rank");
-				break;
-			default:
-				if (clicked & AI_FLAG) {
-					char aiDll[128];
-					GetMenuStringA(aiMenu, clicked, aiDll, sizeof(aiDll), MF_BYCOMMAND);
-					static int lastBot;
-					char botName[16];
-					sprintf(botName, "bot%d", ++lastBot);
-					uint32_t color = (rand() | rand() * (RAND_MAX + 1)) & 0xFFFFFF;
-					if (gBattleOptions.hostType == HOST_SP)
-						AddBot(botName, gMyBattle->founder, GetNewBattleStatus(), color, aiDll);
-					else
-						SendToServer("ADDBOT %s %d %d %s", botName, GetNewBattleStatus(), color, aiDll);
-				} else if (clicked & TEAM_FLAG) {
-					SetBattleStatus(&gMyUser, FROM_TEAM_MASK(clicked & ~TEAM_FLAG), TEAM_MASK);
-				} else if (clicked & MAP_FLAG) {
-					char mapName[128];
-					GetMenuStringA(mapMenu, clicked, mapName, sizeof(mapName), MF_BYCOMMAND);
-					if (gBattleOptions.hostType == HOST_SPADS)
-						SpadsMessageF("!map %s", mapName);
-					else
-						SendToServer("!UPDATEBATTLEINFO 0 0 %d %s", GetMapHash(mapName), mapName);
-				}
-				break;
-			}
-
-			DestroyMenu(menu);
-			break;
-		}
 		//These map/mod are only visible in sp mode:
 		case MAKEWPARAM(DLG_MOD, CBN_SELCHANGE): {
 			GetWindowTextA((HWND)lParam, gMyBattle->modName, sizeof(gMyBattle->modName));
@@ -820,7 +711,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		}	return 0;
 		case MAKEWPARAM(DLG_MAP, CBN_SELCHANGE): {
 			GetWindowTextA((HWND)lParam, gMyBattle->mapName, sizeof(gMyBattle->mapName));
-			ChangeMap(gMyBattle->mapName);
+			ChangedMap(gMyBattle->mapName);
 		}	return 0;
 		case MAKEWPARAM(DLG_LEAVE, BN_CLICKED):
 			goto close;
@@ -996,7 +887,7 @@ void CreateSinglePlayerDlg(void)
 	
 	ChangeMod(gMyBattle->modName);
 	if (!gMapHash || gMapHash != GetMapHash(gMyBattle->mapName))
-		ChangeMap(gMyBattle->mapName);
+		ChangedMap(gMyBattle->mapName);
 	gMyBattle->mapHash = gMapHash;
 	gBattleOptions.modHash = gModHash;
 	

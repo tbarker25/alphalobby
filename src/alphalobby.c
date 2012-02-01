@@ -55,7 +55,7 @@ enum {
 static const DialogItem dlgItems[] = {
 	[DLG_TOOLBAR] {
 		.class = TOOLBARCLASSNAME,
-		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT,
+		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
 	}, [DLG_BATTLELIST] = {
 		.name = L"Battle List",
 		.class = WC_BATTLELIST,
@@ -81,10 +81,20 @@ void SetCurrentTab(HWND newTab)
 		ShowWindow(newTab, 1);
 		
 		HWND toolbar = GetDlgItem(gMainWindow, DLG_TOOLBAR);
-		for (int i=0; i<2; ++i)
-			for (int j=0; j<2; ++j)
-				if ((i ? newTab : currentTab) == (j ? gBattleListWindow : gBattleRoomWindow))
-					SendMessage(toolbar, TB_SETSTATE, j ? ID_BATTLELIST : ID_BATTLEROOM, i ? TBSTATE_ENABLED | TBSTATE_CHECKED : TBSTATE_ENABLED);;
+		for (int isNewTab=0; isNewTab<2; ++isNewTab) {
+			for (int isBattleList=0; isBattleList<2; ++isBattleList) {
+				if ((isNewTab ? newTab : currentTab) == (isBattleList ? gBattleListWindow : gBattleRoomWindow)) {
+					WPARAM state = 0;
+					if (isNewTab)
+						state |= TBSTATE_CHECKED;
+					#ifndef NDEBUG
+					if (isNewTab || isBattleList || gMyBattle)
+					#endif
+						state |= TBSTATE_ENABLED;
+					SendMessage(toolbar, TB_SETSTATE, isBattleList ? ID_BATTLELIST : ID_BATTLEROOM, state);
+				}
+			}
+		}
 		
 		currentTab = newTab;
 		
@@ -105,6 +115,22 @@ void Ring(void)
 	SetCurrentTab(gBattleRoomWindow);
 }
 
+void DisableBattleroomButton(void)
+{
+	if (currentTab == gBattleRoomWindow)
+		SetCurrentTab(gBattleListWindow);
+	#ifndef NDEBUG
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, 0);
+	#endif
+}
+
+void EnableBattleroomButton(void)
+{
+	SetCurrentTab(gBattleRoomWindow);
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
+}
+
+
 static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
@@ -121,7 +147,14 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
 			{ I_IMAGENONE,  0,   TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,                       {}, 0, 0},
 			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
-			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
+			
+			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,
+			#ifdef NDEBUG
+				                                  0,
+			#else
+				                                  TBSTATE_ENABLED,
+			#endif
+			                                                       BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
 			#ifndef NDEBUG
 			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
 			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},

@@ -33,3 +33,5 @@ void MainWindow_ChangeConnect(int isNowConnected);
 void MyMessageBox(const char *caption, const char *text);
 
 void SetCurrentTab(HWND newTab);
+void EnableBattleroomButton(void);
+void DisableBattleroomButton(void);
