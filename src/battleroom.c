@@ -775,7 +775,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		for (int i=0; i<=DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i) {
 			HWND sideButton = GetDlgItem(window, DLG_SIDE_FIRST + i);
 			SendMessage(sideButton, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_FIRST_SIDE + i, 0));
-			ShowWindow(sideButton, gSideNames[i][0]);
+			ShowWindow(sideButton, i < gNbSides);
 		}
 		// SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
 		// for (int i=0; *gSideNames[i]; ++i)

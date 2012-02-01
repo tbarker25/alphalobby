@@ -10,21 +10,8 @@
 #define RELOAD_MAPS_MODS 3
 
 #include "unitsync.h"
+#include "data.h"
 
-typedef enum OptionType{
-  opt_error = 0, opt_bool = 1, opt_list = 2, opt_number = 3,
-  opt_string = 4, opt_section = 5
-} OptionType;
-
-typedef struct Option2 {
-	OptionType type;
-	char *key, *name, *val;
-	size_t nbListItems;
-	struct OptionListItem {
-		char *name, *key;
-	}listItems[0];
-	char extraData[1024];
-}Option2;
 
 uint32_t GetMapHash(const char *mapName);
 uint32_t GetModHash(const char *modName);
@@ -38,7 +25,6 @@ const char * _GetSpringVersion(void);
 uint32_t GetSyncStatus(void);
 void ForEachAiName(void (*func)(const char *, void *), void *arg);
 int UnitSync_GetSkirmishAIOptionCount(const char *name);
-void UnitSync_GetOptions(int len; Option2 options[len], int len);
 void CALLBACK UnitSync_AddReplaysToListView(HWND listViewWindow);
 void UnitSync_Cleanup(void);
 void Sync_Init(void);

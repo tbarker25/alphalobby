@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <malloc.h>
 #include <ctype.h>
-#include "zlib.h"
+#include "gzip.h"
 #include "md5.h"
 
 
@@ -90,44 +90,6 @@ typedef struct SessionContext {
 	void *packageBytes; size_t packageLen;
 	char *error;
 }SessionContext;
-
-#define ALLOC_AND_INFLATE_GZIP(_out, _in, _len)\
-	char (_out)[*(uint32_t *)((_in) + (_len) - 4)];\
-	inflateGzip(_in, _len, _out, sizeof(_out));
-
-
-#define GET_DECOMPRESSED_SIZE(_gzBytes, _len) (*(uint32_t *)((_gzBytes) + (_len) - 4))
-static void inflateGzip(void *src, size_t srcLen, void *dst, size_t dstLen)
-{
-	z_stream stream = {
-		.avail_in = srcLen,
-		.next_in = src,
-		.avail_out = dstLen,
-		.next_out =  dst,
-	};
-	inflateInit2(&stream, 15 + 16);
-	inflate(&stream, Z_FINISH);
-	inflateEnd(&stream);
-	assert(!stream.avail_out && !stream.avail_in);
-}
-
-static void *deflateGzip(void *src, size_t *len)
-{
-	z_stream stream = {
-		.avail_in = *len,
-		.next_in = src,
-	};
-	deflateInit2(&stream, 9, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
-	size_t dstLen = deflateBound(&stream, *len);
-	void *dst = malloc(dstLen);
-	stream.avail_out = dstLen;
-	stream.next_out = dst;
-	deflate(&stream, Z_FINISH);
-	*len = dstLen - stream.avail_out;
-	deflateEnd(&stream);
-	return dst;
-}
-
 
 static SessionContext sessions[10];
 int nbDownloads;
@@ -579,7 +541,7 @@ static void _handlePackage(RequestContext *req)
 		};
 		
 		size_t len = (nbFilesInPackage + 7) / 8;
-		newReq->buffer = deflateGzip(bitArrays[i], &len);
+		newReq->buffer = DeflateGzip(bitArrays[i], &len);
 		
 		HINTERNET handle = WinHttpOpenRequest(newReq->con->handle, L"POST", objectName, NULL, WINHTTP_NO_REFERER, NULL, 0);
 		WinHttpSendRequest(handle, NULL, 0, (void *)newReq->buffer, len, len, (DWORD_PTR)newReq);

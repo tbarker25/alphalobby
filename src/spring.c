@@ -104,27 +104,27 @@ void LaunchSpring(void)
 		
 		
 		if (battleStatus & AI_MASK) {
-			const Bot *bot = &s->bot;
-			int hostId=relayHostOffset;
-			while (hostId < b->nbParticipants
-					&& b->users[hostId] != (UserOrBot *)bot->owner)
-				++hostId;
-			assert(b->users[hostId] == (UserOrBot *)bot->owner);
-			char *version = strchr(bot->dll, '|');
-			APPEND_LINE("[AI%d]{ShortName=%.*s;Team=%d;Host=%d;Version=%s;", i, version - bot->dll, bot->dll, FROM_TEAM_MASK(battleStatus), hostId, version+1);
+			// const Bot *bot = &s->bot;
+			// int hostId=relayHostOffset;
+			// while (hostId < b->nbParticipants
+					// && b->users[hostId] != (UserOrBot *)bot->owner)
+				// ++hostId;
+			// assert(b->users[hostId] == (UserOrBot *)bot->owner);
+			// char *version = strchr(bot->dll, '|');
+			// APPEND_LINE("[AI%d]{ShortName=%.*s;Team=%d;Host=%d;Version=%s;", i, version - bot->dll, bot->dll, FROM_TEAM_MASK(battleStatus), hostId, version+1);
 			
-			if (bot->options) {
-				APPEND_LINE("[Options]{");
-				for (int i=0; i<bot->nbOptions; ++i)
-					if (bot->options[i].val)
-						APPEND_LINE("%s=%s;", bot->options[i].key, bot->options[i].val);
-				*buffEnd++ = '}';
-			}
-			if (!(teamBitfield & 1 << FROM_TEAM_MASK(battleStatus))) {
-				teamBitfield &= ~(1 << FROM_TEAM_MASK(battleStatus));
-				APPEND_LINE("}[TEAM%d]{TeamLeader=%d;AllyTeam=%d;RGBColor=%g %g %g;Side=%s;", FROM_TEAM_MASK(battleStatus), hostId, FROM_ALLY_MASK(battleStatus), bot->red/255.f, bot->green/255.f, bot->blue/255.f, gSideNames[FROM_SIDE_MASK(battleStatus)]);
-				DOSTARTPOS()
-			}
+			// if (bot->options) {
+				// APPEND_LINE("[Options]{");
+				// for (int i=0; i<bot->nbOptions; ++i)
+					// if (bot->options[i].val)
+						// APPEND_LINE("%s=%s;", bot->options[i].key, bot->options[i].val);
+				// *buffEnd++ = '}';
+			// }
+			// if (!(teamBitfield & 1 << FROM_TEAM_MASK(battleStatus))) {
+				// teamBitfield &= ~(1 << FROM_TEAM_MASK(battleStatus));
+				// APPEND_LINE("}[TEAM%d]{TeamLeader=%d;AllyTeam=%d;RGBColor=%g %g %g;Side=%s;", FROM_TEAM_MASK(battleStatus), hostId, FROM_ALLY_MASK(battleStatus), bot->red/255.f, bot->green/255.f, bot->blue/255.f, gSideNames[FROM_SIDE_MASK(battleStatus)]);
+				// DOSTARTPOS()
+			// }
 		} else {
 			const User *u = &s->user;
 			APPEND_LINE("[PLAYER%d]{Name=%s;CountryCode=%.2s;Rank=%d;Password=%s;Team=%d;",
