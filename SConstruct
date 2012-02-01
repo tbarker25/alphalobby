@@ -1,5 +1,5 @@
 env = Environment(tools=['mingw'])
-libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1 devil')
+libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1 devil shell32')
 libpath = '.'
 cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
 
@@ -36,7 +36,7 @@ ICONS2 += ' null:' * 48
 Depends(variant_dir + '/icons.h', rgba2c)
 icons = env.Command(variant_dir + '/icons.h', [], 'ImageMagick\\montage ' + ICONS2 + ' -background transparent -tile x1 -geometry 16x16 -depth 8 rgba:- | ' + variant_dir + '\\rgba2c.exe' + ' > $TARGET')
 
-files = Split('client.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c dialogboxes.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
+files = Split('gzip.c client.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c dialogboxes.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
 files = [variant_dir + '/' + s for s in files]
 
 resources = env.RES(variant_dir + '/res.rc')

@@ -158,11 +158,23 @@ typedef enum StartPosType {
 #define HOST_SP    0x05
 #define HOST_FLAG  0x01
 
-typedef struct Option {
-	char *key, *val, *def;
-	char _data[];
-}Option;
+typedef enum OptionType{
+  opt_error = 0, opt_bool = 1, opt_list = 2, opt_number = 3,
+  opt_string = 4, opt_section = 5
+} OptionType;
 
+typedef struct OptionListItem {
+	char *key, *name;
+}OptionListItem;
+
+typedef struct Option {
+	OptionType type;
+	char *key, *name, *val, *def;
+	struct Option *section;
+	
+	size_t nbListItems;
+	OptionListItem *listItems;
+}Option;
 
 #define INVALID_STARTPOS (StartPos){-1, -1}
 #define GET_STARTPOS(_team) (gBattleOptions.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&gBattleOptions.positions[_team] != -1\
@@ -180,7 +192,15 @@ typedef struct BattleOptions {
 extern size_t gNbModOptions, gNbMapOptions;
 extern Option *gModOptions, *gMapOptions;
 extern uint32_t gMapHash, gModHash;
-extern MapInfo gMapInfo;
+
+struct _LargeMapInfo {
+	MapInfo mapInfo;
+	char description[256];
+	char author[201];
+};
+
+extern struct _LargeMapInfo _gLargeMapInfo;
+#define gMapInfo (_gLargeMapInfo.mapInfo)
 
 extern char **gMaps, **gMods;
 extern size_t gNbMaps, gNbMods;
@@ -191,7 +211,8 @@ extern Battle *gMyBattle;
 extern uint32_t battleToJoin;
 extern BattleOption gBattleOptions;
 
-extern char gSideNames[16][128];
+extern uint8_t gNbSides;
+extern char gSideNames[16][32];
 
 extern uint32_t gUdpHelpPort;
 

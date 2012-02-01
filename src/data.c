@@ -34,15 +34,13 @@ size_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
 
-char gSideNames[16][128];
+uint8_t gNbSides;
+char gSideNames[16][32];
 
 char **gMaps, **gMods;
 size_t gNbMaps, gNbMods;
 
-MapInfo gMapInfo = {
-	.description = (char[256]){},
-	.author = (char[201]){},
-};
+struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 
 Battle * FindBattle(uint32_t id)
 {
@@ -133,49 +131,49 @@ void ResetData (void)
 
 void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll)
 {
-	Bot *bot = calloc(1, sizeof(*bot));
-	strcpy(bot->name, name);
-	bot->owner = owner;
-	bot->battleStatus = battleStatus | AI_MASK | MODE_MASK;
-	bot->color = color;
-	bot->dll = strdup(aiDll);
+	// Bot *bot = calloc(1, sizeof(*bot));
+	// strcpy(bot->name, name);
+	// bot->owner = owner;
+	// bot->battleStatus = battleStatus | AI_MASK | MODE_MASK;
+	// bot->color = color;
+	// bot->dll = strdup(aiDll);
 	
-	Battle *b = gMyBattle;
-	int i=b->nbParticipants - b->nbBots;
-	while (i<b->nbParticipants && strcmpi(b->users[i]->name, bot->name) < 0)
-		++i;
-	for (int j=b->nbParticipants; j>i; --j)
-		b->users[j] = b->users[j-1];
-	b->users[i] = (UserOrBot *)bot;
-	++b->nbParticipants;
-	++b->nbBots;
+	// Battle *b = gMyBattle;
+	// int i=b->nbParticipants - b->nbBots;
+	// while (i<b->nbParticipants && strcmpi(b->users[i]->name, bot->name) < 0)
+		// ++i;
+	// for (int j=b->nbParticipants; j>i; --j)
+		// b->users[j] = b->users[j-1];
+	// b->users[i] = (UserOrBot *)bot;
+	// ++b->nbParticipants;
+	// ++b->nbBots;
 	
-	Rebalance();
-	SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
-	BattleRoom_UpdateUser((void *)bot);
+	// Rebalance();
+	// SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+	// BattleRoom_UpdateUser((void *)bot);
 	
-	if (gBattleOptions.hostType == HOST_SP) {
-		bot->nbOptions = UnitSync_GetSkirmishAIOptionCount(aiDll);
-		bot->options = calloc(bot->nbOptions, sizeof(*bot->options));
-		UnitSync_GetOptions(bot->options, bot->nbOptions);
-	}
+	// if (gBattleOptions.hostType == HOST_SP) {
+		// bot->nbOptions = UnitSync_GetSkirmishAIOptionCount(aiDll);
+		// bot->options = calloc(bot->nbOptions, sizeof(*bot->options));
+		// UnitSync_GetOptions(bot->options, bot->nbOptions);
+	// }
 }
 
 void DelBot(const char *name)
 {
-	int i = gMyBattle->nbParticipants - gMyBattle->nbBots;
-	while (i < gMyBattle->nbParticipants && strcmpi(gMyBattle->users[i]->name, name) < 0)
-		++i;
-	BattleRoom_RemoveUser(gMyBattle->users[i]);
-	free(gMyBattle->users[i]->bot.dll);
-	free(gMyBattle->users[i]->bot.options);
-	free(gMyBattle->users[i]);
-	while (++i < gMyBattle->nbParticipants)
-		gMyBattle->users[i - 1] = gMyBattle->users[i];
-	--gMyBattle->nbParticipants;
-	--gMyBattle->nbBots;
-	Rebalance();
-	SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+	// int i = gMyBattle->nbParticipants - gMyBattle->nbBots;
+	// while (i < gMyBattle->nbParticipants && strcmpi(gMyBattle->users[i]->name, name) < 0)
+		// ++i;
+	// BattleRoom_RemoveUser(gMyBattle->users[i]);
+	// free(gMyBattle->users[i]->bot.dll);
+	// free(gMyBattle->users[i]->bot.options);
+	// free(gMyBattle->users[i]);
+	// while (++i < gMyBattle->nbParticipants)
+		// gMyBattle->users[i - 1] = gMyBattle->users[i];
+	// --gMyBattle->nbParticipants;
+	// --gMyBattle->nbBots;
+	// Rebalance();
+	// SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
 }
 
 void LeftBattle(void)

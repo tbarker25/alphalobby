@@ -63,24 +63,24 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 			ForEachAiName(appendAi, NULL);
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[AI_MENU ], L"Change ai");
 		}
-		if (s->bot.nbOptions)
-			AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		for (int i=0;i < s->bot.nbOptions; ++i) {
-			Option2 *opt = &s->bot.options[i];
-			switch (opt->type) {
-			case opt_list:
-				menus[++lastMenu] = CreatePopupMenu();
-				for (int j=0; j<opt->nbListItems; ++j)
-					AppendMenuA(menus[lastMenu], MF_CHECKED * (!strcmp(opt->listItems[j].key, opt->val)), AI_OPTIONS_FLAG | i | j<<8, opt->listItems[j].name);
-				AppendMenuA(menus[0], MF_POPUP, (UINT_PTR)menus[lastMenu], opt->name);
-				break;
-			case opt_bool: case opt_number:
-				AppendMenuA(menus[0], MF_CHECKED * (opt->type == opt_bool && opt->val[0] != '0'), AI_OPTIONS_FLAG | i, opt->name);
-				break;
-			default:
-				break;
-			}
-		}
+		// if (s->bot.nbOptions)
+			// AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
+		// for (int i=0;i < s->bot.nbOptions; ++i) {
+			// Option2 *opt = &s->bot.options[i];
+			// switch (opt->type) {
+			// case opt_list:
+				// menus[++lastMenu] = CreatePopupMenu();
+				// for (int j=0; j<opt->nbListItems; ++j)
+					// AppendMenuA(menus[lastMenu], MF_CHECKED * (!strcmp(opt->listItems[j].key, opt->val)), AI_OPTIONS_FLAG | i | j<<8, opt->listItems[j].name);
+				// AppendMenuA(menus[0], MF_POPUP, (UINT_PTR)menus[lastMenu], opt->name);
+				// break;
+			// case opt_bool: case opt_number:
+				// AppendMenuA(menus[0], MF_CHECKED * (opt->type == opt_bool && opt->val[0] != '0'), AI_OPTIONS_FLAG | i, opt->name);
+				// break;
+			// default:
+				// break;
+			// }
+		// }
 	} else if (&s->user != &gMyUser && gBattleOptions.hostType != HOST_SP) {
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
 		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
@@ -161,29 +161,29 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		break;
 	default:
 		if (clicked & AI_FLAG) {
-			size_t len = GetMenuStringA(menus[AI_MENU], clicked, NULL, 0, MF_BYCOMMAND);
-			free(s->bot.dll);
-			s->bot.dll = malloc(len+1);
-			GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
-			free(s->bot.options);
-			s->bot.nbOptions = UnitSync_GetSkirmishAIOptionCount(s->bot.dll);
-			s->bot.options = calloc(s->bot.nbOptions, sizeof(*s->bot.options));
-			UnitSync_GetOptions(s->bot.options, s->bot.nbOptions);
-		} else if (clicked & AI_OPTIONS_FLAG) {
-			Option2 *opt= &s->bot.options[clicked & 0xFF];
-			switch (opt->type) {
-			case opt_list:
-				strcpy(opt->val, opt->listItems[clicked >> 8 & 0xFF].key);
-				break;
-			case opt_number:
-				GetTextDlg(opt->name, opt->val, opt->val - opt->extraData + sizeof(opt->extraData));
-				break;
-			case opt_bool:
-				opt->val[0] ^= '0' ^ '1';
-				break;
-			default:
-				break;
-			}
+			// size_t len = GetMenuStringA(menus[AI_MENU], clicked, NULL, 0, MF_BYCOMMAND);
+			// free(s->bot.dll);
+			// s->bot.dll = malloc(len+1);
+			// GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
+			// free(s->bot.options);
+			// s->bot.nbOptions = UnitSync_GetSkirmishAIOptionCount(s->bot.dll);
+			// s->bot.options = calloc(s->bot.nbOptions, sizeof(*s->bot.options));
+			// UnitSync_GetOptions(s->bot.options, s->bot.nbOptions);
+		// } else if (clicked & AI_OPTIONS_FLAG) {
+			// Option2 *opt= &s->bot.options[clicked & 0xFF];
+			// switch (opt->type) {
+			// case opt_list:
+				// strcpy(opt->val, opt->listItems[clicked >> 8 & 0xFF].key);
+				// break;
+			// case opt_number:
+				// GetTextDlg(opt->name, opt->val, opt->val - opt->extraData + sizeof(opt->extraData));
+				// break;
+			// case opt_bool:
+				// opt->val[0] ^= '0' ^ '1';
+				// break;
+			// default:
+				// break;
+			// }
 		} else
 			SetBattleStatus(s,
 					(clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET),

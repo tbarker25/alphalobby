@@ -1,4 +1,4 @@
-#include <stdbool.h>
+#include "gzip.h"
 #include <assert.h>
 #include <IL/il.h>
 
@@ -18,7 +18,8 @@
 #include "sync.h"
 #include "settings.h"
 #include "imagelist.h"
-
+#include <stdbool.h>
+#include <Shlobj.h>
 
 #define PLAIN_API_STRUCTURE
 #define EXPORT2(type, name, args)\
@@ -37,20 +38,16 @@ static const struct {
 #undef EXPORT2
 };
 
+#define SYNCFILE_VERSION 0x01
+
 
 static void setMod(void);
 static void setMap(void);
 static void setModInfo(void);
 static void setBitmap(void);
-static void changeOption(int);
 static void _setScriptTags(char *script);
 
-//Init in syncThread, then only use in mainthread:
-static wchar_t writableDataDirectory[MAX_PATH];
-static size_t writableDataDirectoryLen;
-
 //Shared between threads:
-static uint16_t optionToChange; 
 static uint8_t taskReload, taskSetMinimap, taskSetInfo, taskSetBattleStatus;
 static HANDLE event;
 
@@ -167,10 +164,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			taskSetMinimap = 0;
 			setBitmap();
 			ENDCLOCK();
-		} else if ((i = __sync_fetch_and_and(&optionToChange, NULL))) {
-			STARTCLOCK();
-			changeOption(i);
-			ENDCLOCK();
 		} else {
 			STARTCLOCK();
 			ENDCLOCK();
@@ -210,7 +203,8 @@ static void setModInfo(void)
 		s += sprintf(s, R"(Size: %dx%d     Gravity: %d\par Tidal: %d     Wind: %d-%d\par)", gMapInfo.width / 512, gMapInfo.height / 512, gMapInfo.tidalStrength, gMapInfo.gravity, gMapInfo.minWind, gMapInfo.maxWind);
 	}
 	
-	int count = GetModOptionCount();
+	const Option *options = gModOptions;
+	int count = gNbModOptions;
 	if (count)
 		s += sprintf(s, R"(\par{\b Mod Options:}\par)");
 
@@ -218,51 +212,47 @@ static void setModInfo(void)
 	start:
 	{
 	
-	OptionType optionTypes[count];
-	char optionSections[count][256];
-	for (int i=0; i<count; ++i) {
-		optionTypes[i] = GetOptionType(i);
-		strcpy(optionSections[i], GetOptionSection(i));
-	}
 
-	int i=-1; char section[256] = "";
+	int i=-1;
 	goto entry;
 	
 	while (++i<count) {
-		if (optionTypes[i] != opt_section)
+		if (options[i].type != opt_section)
 			continue;
-		s += sprintf(s, R"(\par\b %s:\b0\par)", GetOptionName(i));
-		strcpy(section, GetOptionKey(i));
+		s += sprintf(s, R"(\par\b %s:\b0\par)", options[i].name);
+		char *section = options[i].key;
 		entry:
 		for (int j=0; j<count; ++j) {
-			if (optionTypes[j] == opt_section || _stricmp(section, optionSections[j]))
+			if (options[j].type == opt_section)
 				continue;
-			s += sprintf(s, R"( %s: {\v :<%d })", GetOptionName(j), flag | j);
+			if ((i != -1 ? &options[i] : NULL) != options[j].section)
+				continue;
+			s += sprintf(s, R"( %s: {\v :<%d })", options[j].name, flag | j);
 			
 			char *val = NULL;
-			
-			const Option *options = flag == MOD_OPTION_FLAG ? gModOptions : gMapOptions;
+
 			if (options)
 				val = options[j].val;
 
-			if (optionTypes[j] == opt_number)
+			if (options[j].type == opt_number)
 				s += sprintf(s, val);
-			else if (optionTypes[j] == opt_list) {
-				for (int k=0, nbListItems=GetOptionListCount(j); k < nbListItems; ++k) {
-					if (!strcmp(val, GetOptionListItemKey(j, k))) {
-						s += sprintf(s, GetOptionListItemName(j, k));
+			else if (options[j].type == opt_list) {
+				for (int k=0; k < options[j].nbListItems; ++k) {
+					if (!_stricmp(val, options[j].listItems[k].key)) {
+						s += sprintf(s, options[j].listItems[k].name);
 					}
 				}
-			} else if (optionTypes[j] == opt_bool)
+			} else if (options[j].type == opt_bool)
 				s += sprintf(s, val[0] != '0' ? "True" : "False");
 
 			s += sprintf(s, R"({\v >:}\par)");
 		}
 	}
 
-	if (flag == MOD_OPTION_FLAG && (count = GetMapOptionCount(currentMap))) {
+	if (flag == MOD_OPTION_FLAG && (count = gNbMapOptions)) {
 		s += sprintf(s, R"(\par{\b Map Options:}\par)");
 		flag = MAP_OPTION_FLAG;
+		options = gMapOptions;
 		goto start;
 	}
 	}
@@ -272,54 +262,7 @@ static void setModInfo(void)
 
 void setBitmap(void)
 {
-	#define res (1024 >> MAP_DETAIL)
-	#define INVALID_MAP ((void *)-1)
 
-	if (!minimapPixels) {
-		minimapPixels = (void *)GetMinimap(currentMap, MAP_DETAIL) ?: INVALID_MAP;
-	}
-
-	if (minimapPixels == INVALID_MAP) {
-		PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
-		return;
-	}
-
-	static uint32_t *pixels32;
-	if (!pixels32)
-		pixels32 = malloc(res * res * sizeof(*pixels32));
-	
-	for (int i=0; i<res*res; ++i)
-		pixels32[i] = (minimapPixels[i] & 0x001F) << 3 | (minimapPixels[i] & 0x7E0 ) << 5 | (minimapPixels[i] & 0xF800) << 8;
-	
-	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
-		for (int j=0; j<NUM_ALLIANCES; ++j) {
-			size_t color = (gMyUser.battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser.battleStatus) ? 1 : 2;
-			int xMin = gBattleOptions.startRects[j].left * res / START_RECT_MAX;
-			int xMax = gBattleOptions.startRects[j].right * res / START_RECT_MAX;
-			int yMin = gBattleOptions.startRects[j].top * res / START_RECT_MAX;
-			int yMax = gBattleOptions.startRects[j].bottom * res / START_RECT_MAX;
-			
-			for (int x=xMin; x<xMax; ++x) {
-				for (int y=yMin; y<yMax; ++y) {
-					uint8_t *p = &((uint8_t *)&pixels32[x+res*y])[color];
-					*p = *p < 0xFF - 50 ? *p + 50 : 0xFF;
-				}
-			}
-			for (int x=xMin; x<xMax; ++x) {
-				pixels32[x+res*yMin] = 0;
-				pixels32[x+res*(yMin+1)] = 0;
-				pixels32[x+res*(yMax-1)] = 0;
-				pixels32[x+res*(yMax-2)] = 0;
-			}
-			for (int y=yMin; y<yMax; ++y) {
-				pixels32[xMin+res*y] = 0;
-				pixels32[(xMin+1)+res*y] = 0;
-				pixels32[(xMax-1)+res*y] = 0;
-				pixels32[(xMax-2)+res*y] = 0;
-			}
-		}
-	}
-	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)CreateBitmap(res, res, 1, 32, pixels32));
 }
 
 
@@ -398,6 +341,105 @@ static void initOptions(size_t nbOptions, Option **oldOptions, size_t *oldNbOpti
 	free(optionsToFree);
 }
 
+static void initOptions2(size_t nbOptions, gzFile *fd)
+{
+	Option *options = calloc(10000, 1);
+	char *s = (void *)&options[nbOptions];
+	
+	for (int i=0; i<nbOptions; ++i) {
+		options[i].type = GetOptionType(i);
+		assert(options[i].type != opt_error);
+		options[i].key = s - (size_t)options;
+		s += sprintf(s, "%s", GetOptionKey(i)) + 1;
+		
+		options[i].name = s - (size_t)options;
+		s += sprintf(s, "%s", GetOptionName(i)) + 1;
+		
+		options[i].def = s - (size_t)options;
+		switch (GetOptionType(i)) {
+		case opt_bool:
+			*s++ = '0' + GetOptionBoolDef(i);
+			*s++ = 0;
+			break;
+		case opt_number:
+			s += sprintf(s, "%g", GetOptionNumberDef(i)) + 1;
+			break;
+		case opt_list:
+			s += sprintf(s, "%s", GetOptionListDef(i)) + 1;
+			options[i].nbListItems = GetOptionListCount(i);
+			options[i].listItems = (void *)(s - (size_t)options);
+			for (int j=0; j<options[i].nbListItems; ++j) {
+				s += sprintf(s, "%s", GetOptionListItemKey(i, j)) + 1;
+				s += sprintf(s, "%s", GetOptionListItemName(i, j)) + 1;
+			}
+			break;
+		default:
+			*s++ = 0;
+			break;
+		}
+	}
+
+	for (int i=0; i<nbOptions; ++i) {
+		for (int j=0; j<nbOptions; ++j) {
+			const char *section = GetOptionSection(i);
+			if (options[j].type == opt_section
+					&& !_stricmp(section, options[j].key + (size_t)options)) {
+				options[i].section = (void *)j + 1;
+			}
+		}
+	}
+	size_t optionsSize = s - (char *)options;
+	assert(optionsSize < 10000);
+	
+	gzwrite(fd, &optionsSize, 4);
+	gzwrite(fd, &nbOptions, 4);
+
+	gzwrite(fd, options, optionsSize);
+	free(options);
+}
+
+typedef struct OptionList {
+	Option *xs;
+	size_t len;
+}OptionList;
+
+static OptionList loadOptions(gzFile *fd)
+{
+	size_t optionsSize;
+	size_t nbOptions;
+	
+	gzread(fd, &optionsSize, 4);
+	gzread(fd, &nbOptions, 4);
+	
+	assert(optionsSize < 10000);
+	assert(nbOptions < 100);
+	
+	Option *options = calloc(optionsSize, 1);
+	gzread(fd, options, optionsSize);
+
+	for (int i=0; i<nbOptions; ++i) {
+		options[i].key += (size_t)options;
+		options[i].name += (size_t)options;
+		options[i].def += (size_t)options;
+		options[i].val = strdup(options[i].def);
+		if (options[i].section)
+			options[i].section = &options[*(size_t *)&options[i].section - 1];
+		
+		if (options[i].nbListItems) {
+			char *s = (char *)options[i].listItems + (size_t)options;
+			options[i].listItems = malloc(sizeof(*options[i].listItems) * options[i].nbListItems);
+			for (int j=0; j<options[i].nbListItems; ++j) {
+				options[i].listItems[j].key = s;
+				s = strchr(s, '\0') + 1;
+				options[i].listItems[j].name = s;
+				s = strchr(s, '\0') + 1;
+			}
+		}
+	}
+	
+	return (OptionList){options, nbOptions};
+}
+
 static void setMod(void)
 {
 	GetPrimaryModCount();
@@ -409,60 +451,162 @@ static void setMod(void)
 		currentMod[0] = 0;
 		return;
 	}
+	
 	GetPrimaryModArchiveCount(mod_index);
 	AddAllArchives(GetPrimaryModArchive(mod_index));
 	
-	for (int i=0, sideCount = GetSideCount(); i < 16; ++i) {
-		if (i >= sideCount) {
-			*gSideNames[i] = '\0';
-			continue;
-		}
-		strcpy(gSideNames[i], GetSideName(i));
-		
-		char vfsPath[128];
-		int n = sprintf(vfsPath, "SidePics/%s.png", gSideNames[i]);
-		int fd = OpenFileVFS(vfsPath);
-		if (!fd) {
-			memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
-			fd = OpenFileVFS(vfsPath);
-		}
-		if (!fd) {
-			continue;
-		}
-		
-		uint8_t buff[FileSizeVFS(fd)];
-		ReadFileVFS(fd, buff, sizeof(buff));
-		CloseFileVFS(fd);
-		ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
-		uint32_t data[16*16];
-		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, data);
-		ILint format = ilGetInteger(IL_IMAGE_FORMAT);
-		if (format == IL_RGB || format == IL_BGR) {
-			for (int i=16 * 16 - 1; i>=0; --i)
-				if (data[i] == data[0])
-					data[i] &= 0x00FFFFFF;
-		}
-		HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, data);
-		ImageList_Replace(gIconList, ICONS_FIRST_SIDE + i, bitmap, NULL);
-		DeleteObject(bitmap);
-	}	
-
+	
 	gModHash = GetPrimaryModChecksum(mod_index);
 	
-	initOptions(GetModOptionCount(), &gModOptions, &gNbModOptions);
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, currentMod);
+	
+	
+	gzFile fd = gzopen(filePath, "rb");
+	
+	if (!fd || gzgetc(fd) != SYNCFILE_VERSION) {
+		gzclose(fd);
+		remove(filePath);
+		
+		SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+		fd = gzopen(filePath, "wb");
+		gzputc(fd, SYNCFILE_VERSION);
+		
+		initOptions2(GetModOptionCount(), fd);
+		
+		uint8_t sideCount = GetSideCount();
+		gzputc(fd, sideCount);
+		char sideNames[sideCount][32];
+		memset(sideNames, '\0', sideCount*32);
+		for (uint8_t i=0; i<sideCount; ++i) {
+			assert(strlen(GetSideName(i)) < 32);
+			strcpy(sideNames[i], GetSideName(i));
+		}
+		gzwrite(fd, sideNames, sizeof(sideNames));
+		
+		uint32_t data[sideCount][16*16];
+		for (uint8_t i=0; i<sideCount; ++i) {
+			char vfsPath[128];
+			int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
+			int fd = OpenFileVFS(vfsPath);
+			if (!fd) {
+				memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
+				fd = OpenFileVFS(vfsPath);
+			}
+			if (!fd) {
+				continue;
+			}
+			
+			uint8_t buff[FileSizeVFS(fd)];
+			ReadFileVFS(fd, buff, sizeof(buff));
+			CloseFileVFS(fd);
+			ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
+			ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, data[i]);
+			ILint format = ilGetInteger(IL_IMAGE_FORMAT);
+			if (format == IL_RGB || format == IL_BGR) {
+				for (int j=16 * 16 - 1; j>=0; --j)
+					if (data[i][j] == data[i][0])
+						data[i][j] &= 0x00FFFFFF;
+			}
+		}
+		gzwrite(fd, data, sizeof(data));
+
+		gzclose(fd);
+		fd = gzopen(filePath, "rb");
+		char version = gzgetc(fd);
+		assert(version == SYNCFILE_VERSION);
+	}
+	
+	
+	
+
+	
+	OptionList modOptionList = loadOptions(fd);
+	gModOptions = modOptionList.xs;
+	gNbModOptions = modOptionList.len;
+	
+	gNbSides = gzgetc(fd);
+	gzread(fd, gSideNames, gNbSides * 32);
+	{
+		uint32_t data[gNbSides][16*16];
+		gzread(fd, data, sizeof(data));
+		for (int i=0; i<gNbSides; ++i) {
+			HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, data[i]);
+			ImageList_Replace(gIconList, ICONS_FIRST_SIDE + i, bitmap, NULL);
+			DeleteObject(bitmap);
+		}
+	}
+	
+	gzclose(fd);
+	return;
 }
+
 static void setMap(void)
 {
+	#define res (1024 >> MAP_DETAIL)
+	#define INVALID_MAP ((void *)-1)
 	gMapHash = GetMapChecksumFromName(currentMap);
-	minimapPixels = NULL;
 	if (!gMapHash) {
 		currentMap[0] = 0;
 		return;
 	}
-	GetMapInfoEx(currentMap, &gMapInfo, 1);
 	
-	initOptions(GetMapOptionCount(currentMap), &gMapOptions, &gNbMapOptions);
-	SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, currentMap);
+	
+	gzFile fd = gzopen(filePath, "rb");
+	
+	if (!fd || gzgetc(fd) != SYNCFILE_VERSION) {
+		gzclose(fd);
+		remove(filePath);
+		
+		SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+		fd = gzopen(filePath, "wb");
+		gzputc(fd, SYNCFILE_VERSION);
+		
+		struct _LargeMapInfo mapInfo = {.mapInfo = {.description = mapInfo.description, .author = mapInfo.author}};
+		
+		GetMapInfoEx(currentMap, &mapInfo.mapInfo, 1);
+		gzwrite(fd, &mapInfo, sizeof(mapInfo));
+		
+		initOptions2(GetMapOptionCount(currentMap), fd);
+		
+		uint16_t *minimapPixels2 = GetMinimap(currentMap, MAP_DETAIL);
+		assert(minimapPixels2);
+		gzwrite(fd, minimapPixels2, res*res*sizeof(minimapPixels2[0]));
+		
+		gzclose(fd);
+		
+		fd = gzopen(filePath, "rb");
+		char version = gzgetc(fd);
+		assert(version == SYNCFILE_VERSION);
+	}
+	
+	
+	
+	gzread(fd, &_gLargeMapInfo, sizeof(_gLargeMapInfo));
+	gMapInfo.description = _gLargeMapInfo.description;
+	gMapInfo.author = _gLargeMapInfo.author;
+	
+	OptionList optionList = loadOptions(fd);
+	gMapOptions = optionList.xs;
+	gNbMapOptions = optionList.len;
+
+	
+	static uint16_t *pixels;
+	static uint32_t *pixels32;
+	if (!pixels)
+		pixels = malloc(res * res * sizeof(*pixels));
+	if (!pixels32)
+		pixels32 = malloc(res * res * sizeof(*pixels32));
+		
+	gzread(fd, pixels,res*res * sizeof(pixels[0]));
+	for (int i=0; i<res*res; ++i)
+		pixels32[i] = (pixels[i] & 0x001F) << 3 | (pixels[i] & 0x7E0 ) << 5 | (pixels[i] & 0xF800) << 8;
+	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)CreateBitmap(res, res, 1, 32, pixels32));
+
+	gzclose(fd);
+	return;
 }
 
 void ChangeMod(const char *modName)
@@ -558,25 +702,21 @@ const char * _GetSpringVersion(void)
 	return GetSpringVersion();
 }
 
-void ChangeOption(uint16_t i)
-{
-	optionToChange = i;
-	SetEvent(event);
-}
-
-static void changeOption(int iWithFlags)
+void ChangeOption(uint16_t iWithFlags)
 {
 	const char *key = NULL;
 	char *val = NULL;
 	char *path = NULL;
 	int i = iWithFlags & (~MOD_OPTION_FLAG & ~MAP_OPTION_FLAG & ~STARTPOS_FLAG);
+	
+	Option *options;
 	if (iWithFlags & MOD_OPTION_FLAG) {
-		GetModOptionCount();
+		options = gModOptions;
 		val = gModOptions[i].val;
 		key = gModOptions[i].key;
 		path = "modoptions/";
 	} else if (iWithFlags & MAP_OPTION_FLAG) {
-		GetMapOptionCount(currentMap);
+		options = gMapOptions;
 		val = gMapOptions[i].val;
 		key = gMapOptions[i].key;
 		path = "mapoptions/";
@@ -593,14 +733,14 @@ static void changeOption(int iWithFlags)
 	} case opt_number: {
 		char *tmp = alloca(128);
 		tmp[0] = '\0';
-		if (GetTextDlg(GetOptionName(i), tmp, 128))
+		if (GetTextDlg(options[i].name, tmp, 128))
 			return;
 		val = tmp;
 		} break;
 	case opt_list: {
 		HMENU menu = CreatePopupMenu();
-		for (int j=0, nbListItems=GetOptionListCount(i); j < nbListItems; ++j)
-			AppendMenuA(menu, 0, j+1, GetOptionListItemName(i, j));
+		for (int j=0; j < options[i].nbListItems; ++j)
+			AppendMenuA(menu, 0, j+1, options[i].listItems[j].name);
 		SetLastError(0);
 		POINT point;
 		GetCursorPos(&point);
@@ -611,7 +751,7 @@ static void changeOption(int iWithFlags)
 		SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)func, (LPARAM)&clicked);
 		if (!clicked)
 			return;
-		val = strcpy(alloca(128), GetOptionListItemKey(i, clicked - 1));
+		val = strcpy(alloca(128), options[i].listItems[clicked - 1].key);
 		DestroyMenu(menu);
 		} break;
 	default:
@@ -663,27 +803,6 @@ int UnitSync_GetSkirmishAIOptionCount(const char *name)
 	return -1;
 }
 
-void UnitSync_GetOptions(int len; Option2 options[len], int len)
-{
-	for (int i=0; i<len; ++i) {
-		options[i].type = GetOptionType(i);
-		
-		void *s = options[i].extraData;
-		if (options[i].type == opt_list) {
-			options[i].nbListItems=GetOptionListCount(i);
-			s = &options[i].listItems[options[i].nbListItems];
-			for (int j=0; j < options[i].nbListItems; ++j) {
-				s = strpcpy((options[i].listItems[j].key=s), GetOptionListItemKey(i,j));
-				s = strpcpy((options[i].listItems[j].name=s), GetOptionListItemName(i, j));
-			}
-		}
-		s = strpcpy((options[i].key=s), GetOptionKey(i));
-		s = strpcpy((options[i].name=s), GetOptionName(i));
-		getOptionDef(i, s);
-		if (*(char *)s)
-			options[i].val = s;
-	}
-}
 
 void CALLBACK UnitSync_AddReplaysToListView(HWND listViewWindow)
 {
