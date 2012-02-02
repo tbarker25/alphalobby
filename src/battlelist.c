@@ -68,7 +68,7 @@ static void SortBattleList(int newOrder)
 			s1 = (void *)b1 + offsets[sortOrder];
 			s2 = (void *)b2 + offsets[sortOrder];
 		}
-		return _stricmp(s1, s2);
+		return stricmp(s1, s2);
 	}
 
 	ListView_SortItems(GetDlgItem(gBattleListWindow, DLG_LIST), CompareFunc, 0);

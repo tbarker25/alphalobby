@@ -219,7 +219,7 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 	gLastBattleStatus = LOCK_BS_MASK;
 
 	if (gModHash !=modHash)
-		ChangeMod(b->modName);
+		ChangedMod(b->modName);
 	if (gMapHash != b->mapHash)
 		ChangedMap(b->mapName);
 

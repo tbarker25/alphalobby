@@ -28,7 +28,10 @@ void Ring(void);
 void MainWindow_ChangeConnect(int isNowConnected);
 
 #define ExecuteInMainThread(_func)\
-	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (WPARAM)0)	
+	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (LPARAM)0)	
+
+#define ExecuteInMainThreadParam(_func, _param)\
+	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (LPARAM)_param)	
 
 void MyMessageBox(const char *caption, const char *text);
 

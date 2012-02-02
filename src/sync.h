@@ -2,6 +2,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #define MAP_DETAIL 0
+#define MAP_RESOLUTION (1024 >> MAP_DETAIL)
+#define MAP_SIZE (MAP_RESOLUTION * MAP_RESOLUTION)
 #define MOD_OPTION_FLAG  0x8000
 #define MAP_OPTION_FLAG  0x4000
 #define STARTPOS_FLAG    0x2000
@@ -17,7 +19,7 @@ uint32_t GetMapHash(const char *mapName);
 uint32_t GetModHash(const char *modName);
 void RedrawMinimapBoxes(void);
 void ReloadMapsAndMod(void);
-void ChangeMod(const char *modName);
+void ChangedMod(const char *modName);
 void ChangedMap(const char *mapName);
 void ChangeOption(uint16_t);
 void SetScriptTags(char *);
