@@ -41,18 +41,17 @@ static const struct {
 #define SYNCFILE_VERSION 0x01
 
 
-static void setMod(void);
-static void setMap(void);
+static void createModFile(const char *modName);
+static void createMapFile(const char *mapName);
 static void setModInfo(void);
-static void setBitmap(void);
 static void _setScriptTags(char *script);
 
 //Shared between threads:
-static uint8_t taskReload, taskSetMinimap, taskSetInfo, taskSetBattleStatus;
+static uint8_t taskReload, /* taskSetMinimap, */ /* taskSetInfo, */ taskSetBattleStatus;
 static HANDLE event;
 
 //malloc new value, swap atomically, and free old value:
-static const char *mapToSet, *modToSet;
+static const char *mapToSave, *modToSave;
 static char *scriptToSet;
 
 //Sync thread only:
@@ -85,11 +84,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 	
 	
 	void *s; uint16_t i;
-	if ((s = LoadSetting("last_map")))
-		mapToSet = strdup(s);
-	if ((s = LoadSetting("last_mod")))
-		modToSet = strdup(s);
-
 	event = CreateEvent(NULL, FALSE, 0, NULL);
 	taskReload=1;
 	while (1) {
@@ -98,10 +92,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			taskReload = 0;
 			Init(false, 0);
 			ENDCLOCK();
-			gModHash = 0;
-			currentMod[0] = 0;
-			gMapHash = 0;
-			currentMap[0] = 0;
 			
 			taskSetBattleStatus = 1;
 			
@@ -122,28 +112,20 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 				gMaps[i] = strdup(GetMapName(i));
 			
 			SendMessage(gBattleRoomWindow, WM_RESYNC, 0, 0);
-			ENDCLOCK();
-		} else if ((s = (void *)__sync_fetch_and_and(&modToSet, NULL))) {
-			// printf("mod %s %s\n", s, currentMod);
-			if (strcmp(currentMod, s)) {
-				strcpy(currentMod, s);
-				free(s);
-				STARTCLOCK();
-				RemoveAllArchives();
-				setMod();
-				taskSetInfo = 1;
-				PostMessage(gBattleRoomWindow, WM_CHANGEMOD, 0, 0);
-				ENDCLOCK();
-				taskSetBattleStatus = 1;
+			if (gMyBattle) {
+				ChangedMod(gMyBattle->modName);
+				ChangedMap(gMyBattle->mapName);
 			}
-		} else if ((s = (void *)__sync_fetch_and_and(&mapToSet, NULL))) {
+			ENDCLOCK();
+		} else if ((s = (void *)__sync_fetch_and_and(&modToSave, NULL))) {
 			STARTCLOCK();
-			strcpy(currentMap, s);
+			createModFile(s);
 			free(s);
-			setMap();
-			taskSetMinimap = 1;
-			taskSetInfo = 1;
-			taskSetBattleStatus = 1;
+			ENDCLOCK();
+		} else if ((s = (void *)__sync_fetch_and_and(&mapToSave, NULL))) {
+			STARTCLOCK();
+			createMapFile(s);
+			free(s);
 			ENDCLOCK();
 		} else if (taskSetBattleStatus) {
 			SetBattleStatus(&gMyUser, 0, 0);
@@ -152,17 +134,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			STARTCLOCK();
 			_setScriptTags(s);
 			free(s);
-			taskSetInfo = 1;
-			ENDCLOCK();
-		} else if (taskSetInfo) {
-			STARTCLOCK();
-			setModInfo();
-			taskSetInfo = 0;
-			ENDCLOCK();
-		} else if (taskSetMinimap) {
-			STARTCLOCK();
-			taskSetMinimap = 0;
-			setBitmap();
 			ENDCLOCK();
 		} else {
 			STARTCLOCK();
@@ -238,7 +209,7 @@ static void setModInfo(void)
 				s += sprintf(s, val);
 			else if (options[j].type == opt_list) {
 				for (int k=0; k < options[j].nbListItems; ++k) {
-					if (!_stricmp(val, options[j].listItems[k].key)) {
+					if (!stricmp(val, options[j].listItems[k].key)) {
 						s += sprintf(s, options[j].listItems[k].name);
 					}
 				}
@@ -260,12 +231,6 @@ static void setModInfo(void)
 	PostMessage(gBattleRoomWindow, WM_SETMODDETAILS, 0, (LPARAM)buff);
 }
 
-void setBitmap(void)
-{
-
-}
-
-
 void Sync_Init(void)
 {
 	CreateThread(NULL, 0, syncThread, NULL, 0, NULL);
@@ -273,10 +238,10 @@ void Sync_Init(void)
 
 void RedrawMinimapBoxes(void)
 {
-	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
-		taskSetMinimap = 1;
-		SetEvent(event);
-	}
+	// if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
+		// taskSetMinimap = 1;
+		// SetEvent(event);
+	// }
 }
 
 static void getOptionDef(int i, char *buff)
@@ -297,51 +262,7 @@ static void getOptionDef(int i, char *buff)
 	}
 }
 
-static void initOptions(size_t nbOptions, Option **oldOptions, size_t *oldNbOptions)
-{
-	Option *options = malloc(nbOptions * sizeof(*options));
-	for (int i=0; i<nbOptions; ++i) {
-		options[i].key = strdup(GetOptionKey(i));
-		switch (GetOptionType(i)) {
-		case opt_bool: {
-			options[i].val = malloc(2);
-			*(uint16_t *)options[i].val = '0' + GetOptionBoolDef(i);
-			break;
-		case opt_number:
-			options[i].val = malloc(128); //TODO, fix size here
-			sprintf(options[i].val, "%g", GetOptionNumberDef(i));
-			break;
-		case opt_list:
-			options[i].val = strdup(GetOptionListDef(i));
-			break;
-		default:
-			options[i].val = NULL;
-			break;
-		}
-		}
-		options[i].def = strdup(options[i].val);
-	}
-	
-	size_t nbOptionsToFree;
-	Option * optionsToFree;
-	void swapOptions(LPARAM unused)
-	{
-		nbOptionsToFree = *oldNbOptions;
-		*oldNbOptions = nbOptions;
-		optionsToFree = *oldOptions;
-		*oldOptions = options;
-	}
-	ExecuteInMainThread(swapOptions);
-	
-	for (int i=0; i<nbOptionsToFree; ++i) {
-		free(optionsToFree[i].key);
-		free(optionsToFree[i].val);
-		free(optionsToFree[i].def);
-	}
-	free(optionsToFree);
-}
-
-static void initOptions2(size_t nbOptions, gzFile *fd)
+static void initOptions(size_t nbOptions, gzFile *fd)
 {
 	Option *options = calloc(10000, 1);
 	char *s = (void *)&options[nbOptions];
@@ -383,7 +304,7 @@ static void initOptions2(size_t nbOptions, gzFile *fd)
 		for (int j=0; j<nbOptions; ++j) {
 			const char *section = GetOptionSection(i);
 			if (options[j].type == opt_section
-					&& !_stricmp(section, options[j].key + (size_t)options)) {
+					&& !stricmp(section, options[j].key + (size_t)options)) {
 				options[i].section = (void *)j + 1;
 			}
 		}
@@ -410,6 +331,8 @@ static OptionList loadOptions(gzFile *fd)
 	
 	gzread(fd, &optionsSize, 4);
 	gzread(fd, &nbOptions, 4);
+	if (nbOptions == 0)
+		return (OptionList){NULL, 0};
 	
 	assert(optionsSize < 10000);
 	assert(nbOptions < 100);
@@ -440,155 +363,183 @@ static OptionList loadOptions(gzFile *fd)
 	return (OptionList){options, nbOptions};
 }
 
-static void setMod(void)
+static void createMapFile(const char *mapName)
 {
-	GetPrimaryModCount();
-	int mod_index = GetPrimaryModIndex(currentMod);
-	if (mod_index < 0) {
-		for (int i=0; i<16; ++i)
-			*gSideNames[i] = 0;
-		gModHash = 0;
-		currentMod[0] = 0;
+	STARTCLOCK();
+	uint32_t mapHash = GetMapChecksumFromName(mapName);
+	if (!mapHash)
 		return;
-	}
+	
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
+	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	gzFile fd = gzopen(filePath, "wb");
+	gzputc(fd, SYNCFILE_VERSION);
+	gzwrite(fd, &mapHash, sizeof(mapHash));
+	struct _LargeMapInfo mapInfo = {.mapInfo = {.description = mapInfo.description, .author = mapInfo.author}};
+	
+	GetMapInfoEx(mapName, &mapInfo.mapInfo, 1);
+	gzwrite(fd, &mapInfo, sizeof(mapInfo));
+	initOptions(GetMapOptionCount(mapName), fd);
+	uint16_t *minimapPixels2 = GetMinimap(mapName, MAP_DETAIL);
+	assert(minimapPixels2);
+	gzwrite(fd, minimapPixels2, MAP_SIZE*sizeof(minimapPixels2[0]));
+	
+	gzclose(fd);
+	ExecuteInMainThreadParam(ChangedMap, mapName);
+	puts(mapName);
+}
+
+static void createModFile(const char *modName)
+{
+	RemoveAllArchives();
+	GetPrimaryModCount(); //todo investigate if we only need it on reinit
+	int mod_index = GetPrimaryModIndex(modName);
+	if (mod_index < 0)
+		return;
 	
 	GetPrimaryModArchiveCount(mod_index);
 	AddAllArchives(GetPrimaryModArchive(mod_index));
 	
-	
-	gModHash = GetPrimaryModChecksum(mod_index);
-	
 	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, currentMod);
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
+	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	gzFile fd = gzopen(filePath, "wb");
+	gzputc(fd, SYNCFILE_VERSION);
 	
+	uint32_t modHash = GetPrimaryModChecksum(mod_index);
+	gzwrite(fd, &modHash, sizeof(modHash));
+	
+	initOptions(GetModOptionCount(), fd);
+	
+	uint8_t sideCount = GetSideCount();
+	gzputc(fd, sideCount);
+	char sideNames[sideCount][32];
+	memset(sideNames, '\0', sideCount*32);
+	for (uint8_t i=0; i<sideCount; ++i) {
+		assert(strlen(GetSideName(i)) < 32);
+		strcpy(sideNames[i], GetSideName(i));
+	}
+	gzwrite(fd, sideNames, sizeof(sideNames));
+	
+	uint32_t sidePics[sideCount][16*16];
+	for (uint8_t i=0; i<sideCount; ++i) {
+		char vfsPath[128];
+		int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
+		int fd = OpenFileVFS(vfsPath);
+		if (!fd) {
+			memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
+			fd = OpenFileVFS(vfsPath);
+		}
+		if (!fd) {
+			continue;
+		}
+		
+		uint8_t buff[FileSizeVFS(fd)];
+		ReadFileVFS(fd, buff, sizeof(buff));
+		CloseFileVFS(fd);
+		ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
+		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, sidePics[i]);
+		ILint format = ilGetInteger(IL_IMAGE_FORMAT);
+		if (format == IL_RGB || format == IL_BGR) {
+			for (int j=16 * 16 - 1; j>=0; --j)
+				if (sidePics[i][j] == sidePics[i][0])
+					sidePics[i][j] &= 0x00FFFFFF;
+		}
+	}
+	gzwrite(fd, sidePics, sizeof(sidePics));
+	
+	gzclose(fd);
+	ExecuteInMainThreadParam(ChangedMod, modName);
+}
+
+void ChangedMod(const char *modName)
+{
+	puts("Change Mod");
+	if (!stricmp(currentMod, modName))
+		return;
+
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
 	
 	gzFile fd = gzopen(filePath, "rb");
 	
-	if (!fd || gzgetc(fd) != SYNCFILE_VERSION) {
+	if (fd && gzgetc(fd) != SYNCFILE_VERSION) {
 		gzclose(fd);
 		remove(filePath);
-		
-		SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
-		fd = gzopen(filePath, "wb");
-		gzputc(fd, SYNCFILE_VERSION);
-		
-		initOptions2(GetModOptionCount(), fd);
-		
-		uint8_t sideCount = GetSideCount();
-		gzputc(fd, sideCount);
-		char sideNames[sideCount][32];
-		memset(sideNames, '\0', sideCount*32);
-		for (uint8_t i=0; i<sideCount; ++i) {
-			assert(strlen(GetSideName(i)) < 32);
-			strcpy(sideNames[i], GetSideName(i));
-		}
-		gzwrite(fd, sideNames, sizeof(sideNames));
-		
-		uint32_t data[sideCount][16*16];
-		for (uint8_t i=0; i<sideCount; ++i) {
-			char vfsPath[128];
-			int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
-			int fd = OpenFileVFS(vfsPath);
-			if (!fd) {
-				memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
-				fd = OpenFileVFS(vfsPath);
-			}
-			if (!fd) {
-				continue;
-			}
-			
-			uint8_t buff[FileSizeVFS(fd)];
-			ReadFileVFS(fd, buff, sizeof(buff));
-			CloseFileVFS(fd);
-			ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
-			ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, data[i]);
-			ILint format = ilGetInteger(IL_IMAGE_FORMAT);
-			if (format == IL_RGB || format == IL_BGR) {
-				for (int j=16 * 16 - 1; j>=0; --j)
-					if (data[i][j] == data[i][0])
-						data[i][j] &= 0x00FFFFFF;
-			}
-		}
-		gzwrite(fd, data, sizeof(data));
-
-		gzclose(fd);
-		fd = gzopen(filePath, "rb");
-		char version = gzgetc(fd);
-		assert(version == SYNCFILE_VERSION);
+		fd = 0;
 	}
-	
-	
-	
+	if (!fd) {
+		gNbSides = 0;
+		gModHash = 0;
+		currentMod[0] = 0;
+		free(InterlockedExchangePointer(&modToSave, strdup(modName)));
+		SetEvent(event);
+		setModInfo();
+		return;
+	}
+	strcpy(currentMod, modName);
 
-	
+	gzread(fd, &gModHash, sizeof(gModHash));
 	OptionList modOptionList = loadOptions(fd);
+	free(gModOptions);
 	gModOptions = modOptionList.xs;
 	gNbModOptions = modOptionList.len;
 	
 	gNbSides = gzgetc(fd);
 	gzread(fd, gSideNames, gNbSides * 32);
 	{
-		uint32_t data[gNbSides][16*16];
-		gzread(fd, data, sizeof(data));
+		uint32_t sidePics[gNbSides][16*16];
+		gzread(fd, sidePics, sizeof(sidePics));
 		for (int i=0; i<gNbSides; ++i) {
-			HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, data[i]);
+			HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, sidePics[i]);
 			ImageList_Replace(gIconList, ICONS_FIRST_SIDE + i, bitmap, NULL);
 			DeleteObject(bitmap);
 		}
 	}
 	
 	gzclose(fd);
-	return;
+	
+	PostMessage(gBattleRoomWindow, WM_CHANGEMOD, 0, 0);
+	setModInfo();
+	taskSetBattleStatus = 1;
+	SetEvent(event);
 }
 
-static void setMap(void)
+void ChangedMap(const char *mapName)
 {
-	#define res (1024 >> MAP_DETAIL)
-	#define INVALID_MAP ((void *)-1)
-	gMapHash = GetMapChecksumFromName(currentMap);
-	if (!gMapHash) {
+	puts("changed map");
+	if (!stricmp(currentMap, mapName))
+		return;
+
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
+	
+	gzFile fd = gzopen(filePath, "rb");
+	if (fd && gzgetc(fd) != SYNCFILE_VERSION) {
+		gzclose(fd);
+		remove(filePath);
+		fd = 0;
+	}
+	if (!fd) {
+		gMapHash = 0;
 		currentMap[0] = 0;
+		PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
+		free(InterlockedExchangePointer(&mapToSave, strdup(mapName)));
+		SetEvent(event);
+		setModInfo();
 		return;
 	}
 	
-	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, currentMap);
-	
-	gzFile fd = gzopen(filePath, "rb");
-	
-	if (!fd || gzgetc(fd) != SYNCFILE_VERSION) {
-		gzclose(fd);
-		remove(filePath);
+	strcpy(currentMap, mapName);
 		
-		SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
-		fd = gzopen(filePath, "wb");
-		gzputc(fd, SYNCFILE_VERSION);
-		
-		struct _LargeMapInfo mapInfo = {.mapInfo = {.description = mapInfo.description, .author = mapInfo.author}};
-		
-		GetMapInfoEx(currentMap, &mapInfo.mapInfo, 1);
-		gzwrite(fd, &mapInfo, sizeof(mapInfo));
-		
-		initOptions2(GetMapOptionCount(currentMap), fd);
-		
-		uint16_t *minimapPixels2 = GetMinimap(currentMap, MAP_DETAIL);
-		assert(minimapPixels2);
-		gzwrite(fd, minimapPixels2, res*res*sizeof(minimapPixels2[0]));
-		
-		gzclose(fd);
-		
-		fd = gzopen(filePath, "rb");
-		char version = gzgetc(fd);
-		assert(version == SYNCFILE_VERSION);
-	}
-	
-	
-	
+	gzread(fd, &gMapHash, sizeof(gMapHash));
 	gzread(fd, &_gLargeMapInfo, sizeof(_gLargeMapInfo));
 	gMapInfo.description = _gLargeMapInfo.description;
 	gMapInfo.author = _gLargeMapInfo.author;
 	
 	OptionList optionList = loadOptions(fd);
+	free(gMapOptions);
 	gMapOptions = optionList.xs;
 	gNbMapOptions = optionList.len;
 
@@ -596,41 +547,29 @@ static void setMap(void)
 	static uint16_t *pixels;
 	static uint32_t *pixels32;
 	if (!pixels)
-		pixels = malloc(res * res * sizeof(*pixels));
+		pixels = malloc(MAP_SIZE * sizeof(*pixels));
 	if (!pixels32)
-		pixels32 = malloc(res * res * sizeof(*pixels32));
+		pixels32 = malloc(MAP_SIZE * sizeof(*pixels32));
 		
-	gzread(fd, pixels,res*res * sizeof(pixels[0]));
-	for (int i=0; i<res*res; ++i)
+	gzread(fd, pixels,MAP_SIZE * sizeof(pixels[0]));
+	for (int i=0; i<MAP_SIZE; ++i)
 		pixels32[i] = (pixels[i] & 0x001F) << 3 | (pixels[i] & 0x7E0 ) << 5 | (pixels[i] & 0xF800) << 8;
-	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)CreateBitmap(res, res, 1, 32, pixels32));
+	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)CreateBitmap(MAP_RESOLUTION, MAP_RESOLUTION, 1, 32, pixels32));
 
 	gzclose(fd);
-	return;
-}
-
-void ChangeMod(const char *modName)
-{
-	// printf("changing mod to %s\n", modName);
-	free(InterlockedExchangePointer(&modToSet, strdup(modName)));
-	SetEvent(event);
-}
-
-void ChangedMap(const char *mapName)
-{
-	// printf("changing map to %s\n", mapName);
-	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
-	free(InterlockedExchangePointer(&mapToSet, strdup(mapName)));
+	
+	// taskSetMinimap = 1;
+	setModInfo();
+	taskSetBattleStatus = 1;
 	SetEvent(event);
 }
 
 void ReloadMapsAndMod(void)
 {
-	if (gMyBattle) {
-		free(InterlockedExchangePointer(&modToSet, gMyBattle->modName ? strdup(gMyBattle->modName) : NULL));
-		free(InterlockedExchangePointer(&mapToSet, gMyBattle->mapName ? strdup(gMyBattle->mapName) : NULL));
-	}
-	
+	gModHash = 0;
+	currentMod[0] = 0;
+	gMapHash = 0;
+	currentMap[0] = 0;
 	taskReload = 1;
 	SetEvent(event);
 }
@@ -651,7 +590,7 @@ static void _setScriptTags(char *script)
 		if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
 			StartPosType startPosType = atoi(val);
 			if (startPosType != gBattleOptions.startPosType)
-				taskSetMinimap = 1;
+				;// taskSetMinimap = 1;
 			gBattleOptions.startPosType = startPosType;
 			PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
 			continue;
@@ -678,7 +617,8 @@ static void _setScriptTags(char *script)
 			printf("unrecognized script key %s=%s\n", key, val);
 		}
 	}
-	taskSetInfo = 1;
+	ExecuteInMainThread(setModInfo);
+	// taskSetInfo = 1;
 }
 
 void SetScriptTags(char *script)
@@ -766,8 +706,7 @@ void ChangeOption(uint16_t iWithFlags)
 		Option * opt = &(iWithFlags & MOD_OPTION_FLAG ? gModOptions : gMapOptions)[i];
 		free(opt->val);
 		opt->val = strdup(val);
-		taskSetInfo = 1;
-		SetEvent(event);
+		setModInfo();
 	} else if (gBattleOptions.hostType & HOST_FLAG) {
 		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", key, val);
 	}

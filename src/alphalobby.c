@@ -361,6 +361,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			&& (s = LoadSetting("password")))
 		Login(username, s);
 
+	if ((s = LoadSetting("last_map")))
+		ChangedMap(strdup(s));
+	if ((s = LoadSetting("last_mod")))
+		ChangedMod(strdup(s));
 	Sync_Init();
 	
 	

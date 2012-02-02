@@ -707,7 +707,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		//These map/mod are only visible in sp mode:
 		case MAKEWPARAM(DLG_MOD, CBN_SELCHANGE): {
 			GetWindowTextA((HWND)lParam, gMyBattle->modName, sizeof(gMyBattle->modName));
-			ChangeMod(gMyBattle->modName);
+			ChangedMod(gMyBattle->modName);
 		}	return 0;
 		case MAKEWPARAM(DLG_MAP, CBN_SELCHANGE): {
 			GetWindowTextA((HWND)lParam, gMyBattle->mapName, sizeof(gMyBattle->mapName));
@@ -885,7 +885,7 @@ void CreateSinglePlayerDlg(void)
 	GetDlgItemTextA(gBattleRoomWindow, DLG_MOD, gMyBattle->modName, sizeof(gMyBattle->modName));
 	GetDlgItemTextA(gBattleRoomWindow, DLG_MAP, gMyBattle->mapName, sizeof(gMyBattle->mapName));
 	
-	ChangeMod(gMyBattle->modName);
+	ChangedMod(gMyBattle->modName);
 	if (!gMapHash || gMapHash != GetMapHash(gMyBattle->mapName))
 		ChangedMap(gMyBattle->mapName);
 	gMyBattle->mapHash = gMapHash;

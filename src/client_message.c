@@ -32,7 +32,7 @@ void JoinBattle(uint32_t id, const char *password)
 	
 	Battle *b = FindBattle(id);
 	if (b) {
-		ChangeMod(b->modName);
+		ChangedMod(b->modName);
 		if (gMapHash != b->mapHash)
 			ChangedMap(b->mapName);
 	}
