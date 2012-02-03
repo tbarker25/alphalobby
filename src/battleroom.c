@@ -35,6 +35,8 @@
 
 HWND gBattleRoomWindow;
 
+static uint16_t *minimapPixels;
+
 enum PLAYER_LIST_COLUMNS {
 	COLUMN_STATUS,
 	COLUMN_RANK,
@@ -128,7 +130,7 @@ static const DialogItem dlgItems[] = {
 		.style = WS_VISIBLE | BS_AUTOCHECKBOX | WS_DISABLED,
 	}, [DLG_MINIMAP] = {
 		.class = WC_STATIC,
-		.style = WS_VISIBLE | SS_BITMAP | SS_REALSIZECONTROL,
+		.style = WS_VISIBLE | SS_OWNERDRAW,
 	}, [DLG_LEAVE] = {
 		.class = WC_BUTTON,
 		.name = L"Leave",
@@ -206,6 +208,73 @@ static const DialogItem dlgItems[] = {
 		.style = WS_VISIBLE | BS_PUSHBUTTON | BS_ICON,
 	}
 };
+
+void BattleRoom_ChangeMinimapBitmap(uint16_t *pixels)
+{
+	if (pixels)
+		minimapPixels = pixels;
+	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+}
+
+void BattleRoom_StartPositionsChanged(void)
+{
+	int size = 0;
+	SplitType splitType = SPLIT_FIRST - 1;
+	
+	if (gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME) {
+		;
+	} else if (gBattleOptions.startRects[0].top == 0 && gBattleOptions.startRects[0].bottom == 200) {
+		splitType = SPLIT_HORIZONTAL;
+		size = gBattleOptions.startRects[0].right - gBattleOptions.startRects[0].left;
+	} else if (gBattleOptions.startRects[0].left == 0 && gBattleOptions.startRects[0].right == 200) {
+		splitType = SPLIT_VERTICAL;
+		size = gBattleOptions.startRects[0].bottom - gBattleOptions.startRects[0].top;
+	}
+
+	for (int i=0; i<=SPLIT_LAST - SPLIT_FIRST; ++i)
+		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_HORZ + i, BM_SETCHECK, i == splitType - SPLIT_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
+	
+	SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_RANDOM, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
+	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_STARTBOX_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
+	if (splitType >= SPLIT_FIRST)
+		SendDlgItemMessage(gBattleRoomWindow, DLG_STARTBOX_SIZE, TBM_SETPOS, 1, size);
+	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+}
+#if 0
+	case WM_REDRAWMINIMAP: {
+		// int currentSplit = gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? -1
+				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT)) ? 0
+				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 1
+				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 2
+				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){200 - gBattleOptions.startRects[1].right, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 3 : -1;
+
+		return 0;
+	case WM_MOVESTARTPOSITIONS:
+		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
+		for (int i=0; i<16; ++i) {
+			SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
+		}
+		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME
+				|| !gMapInfo.width || !gMapInfo.height)
+			return 0;
+		RECT rect;
+		GetClientRect(minimap, &rect);
+		int mapWidth = gMapInfo.width, mapHeight = gMapInfo.height;
+		
+		if (!gMyBattle)
+			return 0;
+		int startBoxWidth = MAP_X(14);
+		FOR_EACH_PLAYER(s, gMyBattle) {
+			int i = FROM_TEAM_MASK(s->battleStatus);
+			StartPos pos = GET_STARTPOS(i);
+			HWND startPosControl = GetDlgItem(minimap, DLG_FIRST_STARTPOS + i);
+			SetWindowLongPtr(startPosControl, GWLP_USERDATA, (LONG_PTR)s);
+			SetWindowPos(startPosControl, NULL,
+					rect.right * pos.x / mapWidth - startBoxWidth/2, rect.bottom * pos.z / mapHeight - startBoxWidth/2, startBoxWidth, startBoxWidth, SWP_SHOWWINDOW);
+			SendMessage(startPosControl, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, GetColorIndex(s), 0));
+		}
+		} return 0;
+#endif
 
 void BattleRoom_Show(void)
 {
@@ -473,7 +542,7 @@ static void resizeAll(LPARAM lParam)
 	done:
 	EndDeferWindowPos(dwp);
 	resizePlayerListTabs();
-	SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+	BattleRoom_StartPositionsChanged();
 }
 
 static RECT boundingRect;
@@ -512,7 +581,7 @@ static LRESULT CALLBACK startPositionProc(HWND window, UINT msg, WPARAM wParam, 
 				gBattleOptions.positions[teamID] = (StartPos){w, h};
 			else
 				SendToServer("!SETSCRIPTTAGS game/team%d/startposx=%d\tgame/team%d/startposy=%d", teamID, w, teamID, h);
-			SendMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+			BattleRoom_StartPositionsChanged();
 		} else
 			CreateUserMenu((union UserOrBot *)GetWindowLongPtr(window, GWLP_USERDATA), window);
 		startPos = 0;
@@ -596,12 +665,91 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		return 0;
 	case WM_SIZE:
 		resizeAll(lParam);
-		if (!wParam)
-			break;
-		//FALLTHROUGH:
-	case WM_EXITSIZEMOVE:
-		InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+		// if (!wParam)
 		break;
+		//FALLTHROUGH:
+	// case WM_EXITSIZEMOVE:
+		// InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+		// break;
+	case WM_DRAWITEM: {
+		if (minimapPixels == BLANK_MINIMAP)
+			return 0;
+		assert(wParam == DLG_MINIMAP);
+		DRAWITEMSTRUCT *info = (void *)lParam;
+
+		FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
+		
+		int width = info->rcItem.right;
+		int height = info->rcItem.bottom;
+		
+		if (!gMapInfo.width || !gMapInfo.height || !width || !height)
+			return 1;
+		
+		if (height * gMapInfo.width > width * gMapInfo.height)
+			height = width * gMapInfo.height / gMapInfo.width;
+		else
+			width = height * gMapInfo.width / gMapInfo.height;
+		
+		int xOffset = (info->rcItem.right - width) / 2;
+		int yOffset = (info->rcItem.bottom - height) / 2;
+		
+	
+		uint32_t *pixels = malloc(width * height * 4);
+		for (int i=0; i<width * height; ++i) {
+			uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
+			pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
+		}
+		
+		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
+			for (int j=0; j<NUM_ALLIANCES; ++j) {
+				int xMin = gBattleOptions.startRects[j].left * width / START_RECT_MAX;
+				int xMax = gBattleOptions.startRects[j].right * width / START_RECT_MAX;
+				int yMin = gBattleOptions.startRects[j].top * height / START_RECT_MAX;
+				int yMax = gBattleOptions.startRects[j].bottom * height / START_RECT_MAX;
+
+				if ((gMyUser.battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser.battleStatus)) {
+					for (int x=xMin; x<xMax; ++x) {
+						for (int y=yMin; y<yMax; ++y) {
+							if ((pixels[x+width*y] & 0x00FF00) >= (0x00FF00 - 0x003000))
+								pixels[x+width*y] |= 0x00FF00;
+							else
+								pixels[x+width*y] += 0x003000;
+						}
+					}
+				} else {
+					for (int x=xMin; x<xMax; ++x) {
+						for (int y=yMin; y<yMax; ++y) {
+							if ((pixels[x+width*y] & 0xFF0000) >= (0xFF0000 - 0x300000))
+								pixels[x+width*y] |= 0xFF0000;
+							else
+								pixels[x+width*y] += 0x300000;
+						}
+					}
+				}
+				for (int x=xMin; x<xMax; ++x) {
+					pixels[x+width*yMin] = 0;
+					// pixels[x+width*(yMin+1)] = 0;
+					pixels[x+width*(yMax-1)] = 0;
+					// pixels[x+width*(yMax-2)] = 0;
+				}
+				for (int y=yMin; y<yMax; ++y) {
+					pixels[xMin+width*y] = 0;
+					// pixels[(xMin+1)+width*y] = 0;
+					pixels[(xMax-1)+width*y] = 0;
+					// pixels[(xMax-2)+width*y] = 0;
+				}
+			}
+		}
+		HBITMAP bitmap = CreateBitmap(width, height, 1, 32, pixels);
+		free(pixels);
+		
+		HDC dcSrc = CreateCompatibleDC(info->hDC);
+		SelectObject(dcSrc, bitmap);
+		BitBlt(info->hDC, xOffset, yOffset, width, height, dcSrc, 0, 0, SRCCOPY);
+
+		DeleteObject(bitmap);
+		// printf("is it? %d\n", ReleaseDC(info->hwndItem, dcSrc));
+	}	return 1;
 	case WM_NOTIFY: {
 		const LPNMHDR note = (void *)lParam;
 		if (note->code == TTN_GETDISPINFO) {
@@ -802,63 +950,6 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			for (int i=0; i<16; ++i)
 				SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
 		} break;
-	case WM_REDRAWMINIMAP: {
-		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
-		HBITMAP bitmap = (void *)SendMessage(minimap, STM_SETIMAGE, IMAGE_BITMAP, lParam);
-		DeleteObject(bitmap);
-		
-		int size = 0;
-		SplitType splitType = SPLIT_FIRST - 1;
-		
-		if (gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME) {
-			;
-		} else if (gBattleOptions.startRects[0].top == 0 && gBattleOptions.startRects[0].bottom == 200) {
-			splitType = SPLIT_HORIZONTAL;
-			size = gBattleOptions.startRects[0].right - gBattleOptions.startRects[0].left;
-		} else if (gBattleOptions.startRects[0].left == 0 && gBattleOptions.startRects[0].right == 200) {
-			splitType = SPLIT_VERTICAL;
-			size = gBattleOptions.startRects[0].bottom - gBattleOptions.startRects[0].top;
-		}
-
-		for (int i=0; i<=SPLIT_LAST - SPLIT_FIRST; ++i)
-			SendDlgItemMessage(window, DLG_SPLIT_HORZ + i, BM_SETCHECK, i == splitType - SPLIT_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
-		
-		SendDlgItemMessage(window, DLG_SPLIT_RANDOM, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
-		EnableWindow(GetDlgItem(window, DLG_STARTBOX_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
-		if (splitType >= SPLIT_FIRST)
-			SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_SETPOS, 1, size);
-		// int currentSplit = gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? -1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT)) ? 0
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 2
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){200 - gBattleOptions.startRects[1].right, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 3 : -1;
-
-		return 0;
-	case WM_MOVESTARTPOSITIONS:
-		minimap = GetDlgItem(window, DLG_MINIMAP);
-		for (int i=0; i<16; ++i) {
-			SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
-		}
-		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME
-				|| !gMapInfo.width || !gMapInfo.height)
-			return 0;
-		RECT rect;
-		GetClientRect(minimap, &rect);
-		int mapWidth = gMapInfo.width, mapHeight = gMapInfo.height;
-		
-		if (!gMyBattle)
-			return 0;
-		int startBoxWidth = MAP_X(14);
-		FOR_EACH_PLAYER(s, gMyBattle) {
-			int i = FROM_TEAM_MASK(s->battleStatus);
-			StartPos pos = GET_STARTPOS(i);
-			HWND startPosControl = GetDlgItem(minimap, DLG_FIRST_STARTPOS + i);
-			SetWindowLongPtr(startPosControl, GWLP_USERDATA, (LONG_PTR)s);
-			SetWindowPos(startPosControl, NULL,
-					rect.right * pos.x / mapWidth - startBoxWidth/2, rect.bottom * pos.z / mapHeight - startBoxWidth/2, startBoxWidth, startBoxWidth, SWP_SHOWWINDOW);
-			SendMessage(startPosControl, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, GetColorIndex(s), 0));
-		}
-		} return 0;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
 }

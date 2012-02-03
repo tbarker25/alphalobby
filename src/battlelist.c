@@ -268,5 +268,5 @@ _init_ (void)
 
 void BattleList_Reset(void)
 {
-
+	SendDlgItemMessage(gBattleListWindow, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 }

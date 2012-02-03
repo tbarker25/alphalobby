@@ -7,6 +7,7 @@
 #include "resource.h"
 
 #include <Commctrl.h>
+#include <assert.h>
 
 #include "alphalobby.h"
 #include "client.h"
@@ -48,7 +49,10 @@ enum {
 	ID_REPLAY,
 	ID_HOSTBATTLE,
 	ID_CHANNEL,
-	ID_OPTIONS
+	ID_OPTIONS,
+
+	ID_LOGINBOX,
+	ID_SERVERLOG,
 };
 	
 
@@ -144,8 +148,8 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
 
 		TBBUTTON tbButtons[] = {
-			{ ICONS_UNCONNECTED, ID_CONNECT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Disconnected" },
-			{ I_IMAGENONE,  0,   TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,                       {}, 0, 0},
+			{ ICONS_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
+			{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,      {}, 0, 0},
 			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
 			
 			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,
@@ -207,44 +211,60 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	case WM_ENTERSIZEMOVE:
 		dontMoveMinimap = 1;
 		return 0;
-	// case WM_NOTIFY: {
-		// const LPNMHDR note = (void *)lParam;
-		// if (note->idFrom == DLG_TAB && note->code == TCN_SELCHANGE)
-			// setTab(TabCtrl_GetCurSel(note->hwndFrom));
-	// }	break;
+	case WM_NOTIFY: {
+		NMHDR *info = (void *)lParam;
+		if (info->idFrom == DLG_TOOLBAR && info->code == TBN_DROPDOWN) {
+			NMTOOLBAR *info = (void *)lParam;
+			if (info->iItem != ID_CONNECT)
+				break;
+			HMENU menu = CreatePopupMenu();
+			AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
+			AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
+			#ifndef NDEBUG
+			AppendMenu(menu, 0, ID_SERVERLOG, L"Open Server Log");
+			#endif
+			ClientToScreen(window, (POINT *)&info->rcButton);
+			int clicked = TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, info->rcButton.left, info->rcButton.top + info->rcButton.bottom, window, NULL);
+			DestroyMenu(menu);
+			return TBDDRET_TREATPRESSED;
+		}
+	}	break;
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(DLG_PROGRESS_BUTTON, BN_CLICKED):
 			EndDownload((void *)GetWindowLongPtr((HWND)lParam, GWLP_USERDATA));
 			return 0;
-		case (ID_CONNECT):
-			if (IsConnected())
-				CreateLoginBox();
-			else
+		case ID_CONNECT:
+			if (GetConnectionState())
 				Disconnect();
+			else if (!Autologin())
+				CreateLoginBox();
 			return 0;
-		case (ID_BATTLEROOM):
+		case ID_LOGINBOX:
+			CreateLoginBox();
+			return 0;
+		case ID_BATTLEROOM:
 			SetCurrentTab(gBattleRoomWindow);
 			return 0;
-		case (ID_BATTLELIST):
+		case ID_BATTLELIST:
 			SetCurrentTab(gBattleListWindow);
 			return 0;
-		case (ID_SINGLEPLAYER):
+		case ID_SINGLEPLAYER:
 			JoinBattle(-1, NULL);
 			return 0;
-		case (ID_REPLAY):
+		case ID_REPLAY:
 			return 0;
-		case (ID_HOSTBATTLE):
+		case ID_HOSTBATTLE:
 			CreateHostBattleDlg();
 			return 0;
-		case (ID_OPTIONS):
+		case ID_OPTIONS:
 			return 0;
-		case (ID_CHANNEL):
+		case ID_CHANNEL:
 			ChannelList_Show();
 			return 0;
-		// case IDM_SERVER_LOG:
-			// FocusTab(GetServerChat());
-			// return 0;
+		case ID_SERVERLOG:
+			FocusTab(GetServerChat());
+			return 0;
 		// case IDM_ABOUT:
 			// CreateAboutDlg();
 			// return 0;
@@ -317,14 +337,15 @@ void MyMessageBox(const char *caption, const char *text)
 	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)strdup(text), (WPARAM)strdup(caption));
 }
 
-void MainWindow_ChangeConnect(int isNowConnected)
+void MainWindow_ChangeConnect(enum ConnectionState state)
 {
+	
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
 		(LPARAM)&(TBBUTTONINFO){
 			.cbSize = sizeof(TBBUTTONINFO),
 			.dwMask = TBIF_IMAGE | TBIF_TEXT,
-			.iImage = isNowConnected ? ICONS_CONNECTED : ICONS_UNCONNECTED,
-			.pszText = isNowConnected ? L"Connected" : L"Unconnected",
+			.iImage = (enum ICONS []){ICONS_OFFLINE, ICONS_CONNECTING, ICONS_ONLINE}[state],
+			.pszText = (const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state],
 		});
 }
 
@@ -361,10 +382,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			&& (s = LoadSetting("password")))
 		Login(username, s);
 
+	#ifndef NDEBUG
 	if ((s = LoadSetting("last_map")))
 		ChangedMap(strdup(s));
 	if ((s = LoadSetting("last_mod")))
 		ChangedMod(strdup(s));
+	gBattleOptions.startPosType = STARTPOS_CHOOSE_INGAME;
+	gBattleOptions.startRects[0] = (RECT){0, 0, 50, 200};
+	gBattleOptions.startRects[1] = (RECT){150, 0, 200, 200};
+	#endif
 	Sync_Init();
 	
 	

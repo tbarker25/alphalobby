@@ -284,7 +284,7 @@ X(LOGININFOEND, {
 		gMyUser.scriptPassword[i] = '0' + rand()%10;
 	gMyUser.scriptPassword[16] = '\0';
 	BattleList_OnEndLoginInfo();
-	MainWindow_ChangeConnect(1);
+	MainWindow_ChangeConnect(CONNECTION_ONLINE);
 	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
 })
 

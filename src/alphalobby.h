@@ -1,6 +1,7 @@
 #pragma once
 
 #include "wincommon.h"
+#include "client.h"
 
 enum {
 	WM_POLL_SERVER = WM_APP + 0x0100,
@@ -25,7 +26,7 @@ void Ring(void);
 #define RemoveTab(x) (ShowWindow(x, 0))
 #define GetTabIndex(x) -1
 
-void MainWindow_ChangeConnect(int isNowConnected);
+void MainWindow_ChangeConnect(enum ConnectionState);
 
 #define ExecuteInMainThread(_func)\
 	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)(_func), (LPARAM)0)	
