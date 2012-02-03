@@ -270,6 +270,7 @@ typedef struct tagBUTTON_SPLITINFO
 } BUTTON_SPLITINFO, * PBUTTON_SPLITINFO;
 
 // BUTTON MESSAGES
+#define BCN_FIRST               (0U-1250U)
 #define BCM_SETDROPDOWNSTATE     (BCM_FIRST + 0x0006)
 #define Button_SetDropDownState(hwnd, fDropDown) \
     (BOOL)SNDMSG((hwnd), BCM_SETDROPDOWNSTATE, (WPARAM)(fDropDown), 0)

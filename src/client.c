@@ -177,9 +177,8 @@ void Disconnect(void)
 	closesocket(sock);
 	sock = INVALID_SOCKET;
 	WSACleanup();
-	MainWindow_ChangeConnect(0);
+	MainWindow_ChangeConnect(CONNECTION_OFFLINE);
 	ResetData();
-	BattleList_Reset();
 }
 
 void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
@@ -192,6 +191,7 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 {
 	if (sock != INVALID_SOCKET)
 		Disconnect();
+	MainWindow_ChangeConnect(CONNECTION_CONNECTING);
 	
 	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
 		MyMessageBox("Could not connect to server.", "WSAStartup failed.\nPlease check your internet connection.");
@@ -224,9 +224,9 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	return 0;
 }
 
-int IsConnected(void)
+enum ConnectionState GetConnectionState(void)
 {
-	return sock == INVALID_SOCKET;
+	return sock != INVALID_SOCKET;
 }
 
 void Connect(void (*onFinish)(void))

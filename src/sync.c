@@ -289,8 +289,11 @@ static void initOptions(size_t nbOptions, gzFile *fd)
 			s += sprintf(s, "%s", GetOptionListDef(i)) + 1;
 			options[i].nbListItems = GetOptionListCount(i);
 			options[i].listItems = (void *)(s - (size_t)options);
+			s += options[i].nbListItems * sizeof(*options[i].listItems);
 			for (int j=0; j<options[i].nbListItems; ++j) {
+				((OptionListItem *)((void *)&options[i].listItems[j] + (size_t)options))->key = s - (size_t)options;
 				s += sprintf(s, "%s", GetOptionListItemKey(i, j)) + 1;
+				((OptionListItem *)((void *)&options[i].listItems[j] + (size_t)options))->name = s - (size_t)options;
 				s += sprintf(s, "%s", GetOptionListItemName(i, j)) + 1;
 			}
 			break;
@@ -349,13 +352,10 @@ static OptionList loadOptions(gzFile *fd)
 			options[i].section = &options[*(size_t *)&options[i].section - 1];
 		
 		if (options[i].nbListItems) {
-			char *s = (char *)options[i].listItems + (size_t)options;
-			options[i].listItems = malloc(sizeof(*options[i].listItems) * options[i].nbListItems);
+			options[i].listItems = ((void *)options[i].listItems + (size_t)options);
 			for (int j=0; j<options[i].nbListItems; ++j) {
-				options[i].listItems[j].key = s;
-				s = strchr(s, '\0') + 1;
-				options[i].listItems[j].name = s;
-				s = strchr(s, '\0') + 1;
+				options[i].listItems[j].key += (size_t)options;
+				options[i].listItems[j].name += (size_t)options;
 			}
 		}
 	}
@@ -524,7 +524,7 @@ void ChangedMap(const char *mapName)
 	if (!fd) {
 		gMapHash = 0;
 		currentMap[0] = 0;
-		PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)NULL);
+		BattleRoom_ChangeMinimapBitmap(BLANK_MINIMAP);
 		free(InterlockedExchangePointer(&mapToSave, strdup(mapName)));
 		SetEvent(event);
 		setModInfo();
@@ -545,16 +545,11 @@ void ChangedMap(const char *mapName)
 
 	
 	static uint16_t *pixels;
-	static uint32_t *pixels32;
 	if (!pixels)
 		pixels = malloc(MAP_SIZE * sizeof(*pixels));
-	if (!pixels32)
-		pixels32 = malloc(MAP_SIZE * sizeof(*pixels32));
-		
+	
 	gzread(fd, pixels,MAP_SIZE * sizeof(pixels[0]));
-	for (int i=0; i<MAP_SIZE; ++i)
-		pixels32[i] = (pixels[i] & 0x001F) << 3 | (pixels[i] & 0x7E0 ) << 5 | (pixels[i] & 0xF800) << 8;
-	PostMessage(gBattleRoomWindow, WM_REDRAWMINIMAP, 0, (LPARAM)CreateBitmap(MAP_RESOLUTION, MAP_RESOLUTION, 1, 32, pixels32));
+	BattleRoom_ChangeMinimapBitmap(pixels);
 
 	gzclose(fd);
 	
@@ -592,13 +587,13 @@ static void _setScriptTags(char *script)
 			if (startPosType != gBattleOptions.startPosType)
 				;// taskSetMinimap = 1;
 			gBattleOptions.startPosType = startPosType;
-			PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+			// PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
 			continue;
 		} else if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
 			int team = atoi(key + sizeof("game/team") - 1);
 			char type = key[sizeof("game/team/startpos") + (team > 10)];
 			((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
-			PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+			// PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
 		} else if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
 			for (int i=0; i<gNbModOptions; ++i) {
 				if (!strcmp(gModOptions[i].key, key + sizeof("game/modoptions/") - 1)) {
@@ -618,6 +613,7 @@ static void _setScriptTags(char *script)
 		}
 	}
 	ExecuteInMainThread(setModInfo);
+	ExecuteInMainThread(BattleRoom_StartPositionsChanged);
 	// taskSetInfo = 1;
 }
 
@@ -666,7 +662,7 @@ void ChangeOption(uint16_t iWithFlags)
 		goto send;
 	}
 	
-	switch (GetOptionType(i)) {
+	switch (options[i].type) {
 	case opt_bool: {
 		val = (char [2]){val[0] ^ ('0' ^ '1')};
 		break;

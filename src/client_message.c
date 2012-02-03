@@ -212,6 +212,21 @@ void RegisterAccount(const char *username, const char *password)
 	Connect(registerAccount);
 }
 
+bool Autologin(void)
+{
+	char username[MAX_NAME_LENGTH_NUL];
+	const char *s;
+	s = LoadSetting("username");
+	if (!s)
+		return false;
+	strcpy(myUserName, s);
+	s = LoadSetting("password");
+	if (!s)
+		return false;
+	strcpy(myPassword, s);
+	Connect(login);
+	return true;
+}
 
 void Login(const char *username, const char *password)
 // LOGIN username password cpu localIP {lobby name and version} [{userID}] [{compFlags}]

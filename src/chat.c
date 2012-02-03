@@ -574,7 +574,10 @@ void Chat_Init(void)
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	}));
-	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gMainWindow, (HMENU)DEST_SERVER, NULL, (void *)"TAS Server");
+
+	chatWindowData *data = malloc(sizeof(chatWindowData));
+	*data = (chatWindowData){"TAS Server", DEST_SERVER};
+	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_OVERLAPPEDWINDOW, 0, 0, 800, 800, NULL, NULL, NULL, (void *)data);
 }
 
 
