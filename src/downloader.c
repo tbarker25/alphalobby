@@ -166,7 +166,7 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
                               LPVOID lpvStatusInformation,
                               DWORD dwStatusInformationLength)
 {
-	printf("dwInternetStatus = %d %x\n", dwInternetStatus, dwInternetStatus);
+	printf("dwInternetStatus = %ld %lx\n", dwInternetStatus, dwInternetStatus);
 	if (*(int *)req & 1) {	//Magic number means its actually a session, handles are aligned on DWORD borders
 		SessionContext *ses = (void *)req;
 		if (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING) {

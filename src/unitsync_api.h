@@ -391,7 +391,7 @@ EXPORT2(unsigned short*, GetMinimap, (const char* filename, int miplevel))
  * @return Non-zero when the infomap was found with a non-zero size zero on error.
  * @see GetInfoMap
  */
-// EXPORT2(int         , GetInfoMapSize, (const char* mapName, const char* name, int* width, int* height))
+EXPORT2(int         , GetInfoMapSize, (const char* mapName, const char* name, int* width, int* height))
 /**
  * @brief Retrieves infomap data of a map.
  * @param mapName  The name of the map, e.g. "SmallDivide".
@@ -408,7 +408,7 @@ EXPORT2(unsigned short*, GetMinimap, (const char* filename, int miplevel))
  * this function to convert from one format to another. Currently only the
  * conversion from 16 bpp to 8 bpp is implemented.
  */
-// EXPORT2(int         , GetInfoMap, (const char* mapName, const char* name, unsigned char* data, int typeHint))
+EXPORT2(int         , GetInfoMap, (const char* mapName, const char* name, unsigned char* data, int typeHint))
 
 // TODO documentation
 EXPORT2(int         , GetSkirmishAICount, ())

@@ -35,7 +35,11 @@
 
 HWND gBattleRoomWindow;
 
-static uint16_t *minimapPixels;
+static const uint16_t *minimapPixels;
+static uint16_t metalMapHeight, metalMapWidth;
+static const uint8_t *metalMapPixels;
+static uint16_t heightMapHeight, heightMapWidth;
+static const uint8_t *heightMapPixels;
 
 enum PLAYER_LIST_COLUMNS {
 	COLUMN_STATUS,
@@ -171,15 +175,15 @@ static const DialogItem dlgItems[] = {
 	}, [DLG_MAPMODE_MINIMAP] = {
 		.class = WC_BUTTON,
 		.name = L"Minimap",
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
 	}, [DLG_MAPMODE_METAL] = {
 		.class = WC_BUTTON,
 		.name = L"Metal",
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
 	}, [DLG_MAPMODE_ELEVATION] = {
 		.class = WC_BUTTON,
-		.name = L"Resources",
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE,
+		.name = L"Elevation",
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
 	}, [DLG_CHANGE_MAP] = {
 		.class = WC_BUTTON,
 		.name = L"Change Map",
@@ -187,19 +191,19 @@ static const DialogItem dlgItems[] = {
 		
 	}, [DLG_SPLIT_VERT] = {
 		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE | BS_ICON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_SPLIT_HORZ] = {
 		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE | BS_ICON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_SPLIT_CORNER] = {
 		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE | BS_ICON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_SPLIT_EDGE] = {
 		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE | BS_ICON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_SPLIT_RANDOM] = {
 		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_RADIOBUTTON | BS_PUSHLIKE | BS_ICON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
 	}, [DLG_STARTBOX_SIZE] = {
 		.class = TRACKBAR_CLASS,
 		.style = WS_VISIBLE | WS_CHILD,
@@ -209,10 +213,20 @@ static const DialogItem dlgItems[] = {
 	}
 };
 
-void BattleRoom_ChangeMinimapBitmap(uint16_t *pixels)
+void BattleRoom_ChangeMinimapBitmap(const uint16_t *_minimapPixels,
+		uint16_t _metalMapWidth, uint16_t _metalMapHeight, const uint8_t *_metalMapPixels,
+		uint16_t _heightMapWidth, uint16_t _heightMapHeight, const uint8_t *_heightMapPixels)
 {
-	if (pixels)
-		minimapPixels = pixels;
+	minimapPixels = _minimapPixels;
+
+	metalMapWidth = _metalMapWidth;
+	metalMapHeight = _metalMapHeight;
+	metalMapPixels = _metalMapPixels;
+	
+	heightMapWidth = _heightMapWidth;
+	heightMapHeight = _heightMapHeight;
+	heightMapPixels = _heightMapPixels;
+	
 	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 }
 
@@ -539,7 +553,6 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_CHANGE_MAP,        width - 2*XS - MAP_X(60),   TOP, MAP_X(60), COMMANDBUTTON_Y);
 	#undef TOP
 	
-	done:
 	EndDeferWindowPos(dwp);
 	resizePlayerListTabs();
 	BattleRoom_StartPositionsChanged();
@@ -662,6 +675,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		SendDlgItemMessage(window, DLG_SPLIT_CORNER, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER, 0));
 		SendDlgItemMessage(window, DLG_SPLIT_RANDOM, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RANDOM, 0));
 		
+		SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
 		return 0;
 	case WM_SIZE:
 		resizeAll(lParam);
@@ -672,7 +686,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		// InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 		// break;
 	case WM_DRAWITEM: {
-		if (minimapPixels == BLANK_MINIMAP)
+		if (!minimapPixels)
 			return 0;
 		assert(wParam == DLG_MINIMAP);
 		DRAWITEMSTRUCT *info = (void *)lParam;
@@ -695,9 +709,22 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		
 	
 		uint32_t *pixels = malloc(width * height * 4);
-		for (int i=0; i<width * height; ++i) {
-			uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
-			pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
+		if (SendDlgItemMessage(window, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
+			for (int i=0; i<width * height; ++i) {
+				uint8_t heightPixel = heightMapPixels[i % width * heightMapWidth / width + i / width * heightMapHeight / height * heightMapWidth];
+				pixels[i] = heightPixel | heightPixel << 8 | heightPixel << 16;
+			}
+		} else if (SendDlgItemMessage(window, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
+			for (int i=0; i<width * height; ++i) {
+				uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
+				uint8_t metalPixel = metalMapPixels[i % width * metalMapWidth / width + i / width * metalMapHeight / height * metalMapWidth];
+				pixels[i] = (p & 0x001B) << 1 | (p & 0x700 ) << 3 | (p & 0xE000) << 6 | metalPixel >> 2 | metalPixel << 8;
+			}
+		} else {
+			for (int i=0; i<width * height; ++i) {
+				uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
+				pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
+			}
 		}
 		
 		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
@@ -876,6 +903,9 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			return 0;
 		case MAKEWPARAM(DLG_SIDE_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SIDE_LAST, BN_CLICKED):
 			SetBattleStatus(&gMyUser, TO_SIDE_MASK(LOWORD(wParam) - DLG_SIDE_FIRST), SIDE_MASK);
+			return 0;
+		case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
+			InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 			return 0;
 		}
 		break;

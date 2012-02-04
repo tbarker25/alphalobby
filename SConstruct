@@ -1,7 +1,7 @@
 env = Environment(tools=['mingw'])
 libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1 devil shell32')
 libpath = '.'
-cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
+cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686 -Wall -Werror'
 
 version = ARGUMENTS.get('VERSION', '(development build)')
 cppdefines = {'UNICODE' : 1, 'VERSION' : version}

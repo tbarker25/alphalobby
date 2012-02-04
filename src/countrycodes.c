@@ -1,8 +1,7 @@
-
 #include "common.h"
 #include "countryCodes.h"
 
-const char countryCodes[][2] = {
+typeof(countryCodes) countryCodes = {
 	{'?', '?'},
 	{'A', 'D'},
 	{'A', 'E'},
@@ -44,7 +43,6 @@ const char countryCodes[][2] = {
 	{'C', 'D'},
 	{'C', 'F'},
 	{'C', 'G'},
-	{'C', 'S'},
 	{'C', 'H'},
 	{'C', 'I'},
 	{'C', 'K'},
@@ -53,6 +51,7 @@ const char countryCodes[][2] = {
 	{'C', 'N'},
 	{'C', 'O'},
 	{'C', 'R'},
+	{'C', 'S'},
 	{'C', 'U'},
 	{'C', 'V'},
 	{'C', 'X'},
@@ -247,7 +246,7 @@ const char countryCodes[][2] = {
 	{'Z', 'W'},
 };
 
-const char *countryNames[] = {
+typeof(countryNames) countryNames = {
 	"Unknown Country",
 	"Andorra",
 	"United Arab Emirates",
@@ -297,7 +296,7 @@ const char *countryNames[] = {
 	"China",
 	"Colombia",
 	"Costa Rica",
-	"Serbia and Montenegro"
+	"Serbia and Montenegro",
 	"Cuba",
 	"Cape Verde",
 	"Christmas Island",

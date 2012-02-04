@@ -53,6 +53,8 @@ enum {
 
 	ID_LOGINBOX,
 	ID_SERVERLOG,
+	ID_LOBBY_PREFERENCES,
+	ID_SPRING_SETTINGS,
 };
 	
 
@@ -163,10 +165,10 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
 			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
 			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
-			{ I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Channels"},
-			{ I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
-			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+			// { I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Channels"},
+			// { I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
 			#endif
+			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
 		};
 
 		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
@@ -215,18 +217,31 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		NMHDR *info = (void *)lParam;
 		if (info->idFrom == DLG_TOOLBAR && info->code == TBN_DROPDOWN) {
 			NMTOOLBAR *info = (void *)lParam;
-			if (info->iItem != ID_CONNECT)
-				break;
 			HMENU menu = CreatePopupMenu();
-			AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
-			AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
-			#ifndef NDEBUG
-			AppendMenu(menu, 0, ID_SERVERLOG, L"Open Server Log");
-			#endif
+			
+			switch (info->iItem) {
+			case ID_CONNECT:
+				AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
+				SetMenuDefaultItem(menu, ID_CONNECT, 0);
+				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
+				AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
+				#ifndef NDEBUG
+				AppendMenu(menu, 0, ID_SERVERLOG, L"Open Server Log");
+				#endif
+				break;
+			case ID_OPTIONS:
+				AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby Options");
+				AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring Options");
+				break;
+			default:
+				// assert(0);
+				return 0;
+			}
+			
 			ClientToScreen(window, (POINT *)&info->rcButton);
-			int clicked = TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, info->rcButton.left, info->rcButton.top + info->rcButton.bottom, window, NULL);
+			TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, info->rcButton.left, info->rcButton.top + info->rcButton.bottom, window, NULL);
 			DestroyMenu(menu);
-			return TBDDRET_TREATPRESSED;
+			return TBDDRET_DEFAULT;
 		}
 	}	break;
 	case WM_COMMAND:
@@ -265,6 +280,15 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		case ID_SERVERLOG:
 			FocusTab(GetServerChat());
 			return 0;
+		case ID_SPRING_SETTINGS:
+			CreateProcess(L"springsettings.exe", L"springsettings.exe", NULL, NULL, 0, 0, NULL,NULL,
+				&(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
+				&(PROCESS_INFORMATION){}
+			);
+			return 0;
+		case ID_LOBBY_PREFERENCES:
+			CreatePreferencesDlg();
+			return 0;
 		// case IDM_ABOUT:
 			// CreateAboutDlg();
 			// return 0;
@@ -295,17 +319,8 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		// case IDM_RELOAD_MAPS_MODS:
 			// ReloadMapsAndMod();
 			// return 0;
-		// case IDM_LOBBY_PREFERENCES:
-			// CreatePreferencesDlg();
-			// return 0;
-		// case IDM_SPRING_SETTINGS:
-			// CreateProcess(L"springsettings.exe", L"springsettings.exe", NULL, NULL, 0, 0, NULL,NULL,
-				// &(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
-				// &(PROCESS_INFORMATION){}
-			// );
-			// return 0;
 		}
-		return 0;
+		break;
 	case WM_MAKE_MESSAGEBOX:
 		MessageBoxA(window, (char *)wParam, (char *)lParam, 0);
 		free((void *)wParam);
@@ -345,7 +360,7 @@ void MainWindow_ChangeConnect(enum ConnectionState state)
 			.cbSize = sizeof(TBBUTTONINFO),
 			.dwMask = TBIF_IMAGE | TBIF_TEXT,
 			.iImage = (enum ICONS []){ICONS_OFFLINE, ICONS_CONNECTING, ICONS_ONLINE}[state],
-			.pszText = (const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state],
+			.pszText = (wchar_t *)(const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state],
 		});
 }
 
