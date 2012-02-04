@@ -5,6 +5,7 @@
 
 #include "wincommon.h"
 #include <winsock2.h>
+#include <Shlwapi.h>
 
 #include "alphalobby.h"
 #include "battlelist.h"
@@ -30,6 +31,7 @@ extern uint8_t gLastClientStatus;
 const char **gRelayManagers;
 int gRelayManagersCount;
 
+static DWORD timeJoinedBattle;
 static char *command;
 
 #define RECV_SIZE 8192
@@ -151,7 +153,8 @@ void SendToServer(const char *format, ...)
 	}
 	size_t len = vsprintf(buff + commandStart, format, args) + commandStart;
 	va_end(args);
-	if (commandStart)
+	
+	if (commandStart)  //Use lowercase for relay host
 		for (char *s = &buff[commandStart]; *s && *s != ' '; ++s)
 			*s |= 0x20; //tolower
 	#ifndef NDEBUG

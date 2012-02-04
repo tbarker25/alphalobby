@@ -1,5 +1,4 @@
 
-
 X(ACCEPTED, {
 	copyNextWord(gMyUser.name);
 	strcpy(gMyUser.alias, gMyUser.name);
@@ -188,6 +187,7 @@ X(JOIN, {
 X(JOINBATTLE, {
 	Battle *b = FindBattle(getNextInt());
 	JoinedBattle(b, getNextInt());
+	timeJoinedBattle = GetTickCount();
 })
 
 X(JOINBATTLEFAILED, {
@@ -368,9 +368,36 @@ X(SAIDBATTLE, {
 X(SAIDBATTLEEX, {
 	const char *username = getNextWord();
 	const char *text = command;
-	if (gMyBattle && !strcmp(username, gMyBattle->founder->name)
-			&& !memcmp("* Hi ", text, 5) && !memcmp(gMyUser.name, text+5, strlen(gMyUser.name)) && !memcmp(" (", text + 5 + strlen(gMyUser.name), 2))
-		gBattleOptions.hostType = HOST_SPADS;
+	
+	// Check for autohost
+	// welcome message is configurable, but chanceOfAutohost should usually be between 5 and 8.
+	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
+	if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && GetTickCount() - timeJoinedBattle < 10000) {
+		int chanceOfAutohost = 0;
+		chanceOfAutohost += GetTickCount() - timeJoinedBattle < 2000;
+		chanceOfAutohost += text[0] == '*' && text[1] == ' ';
+		chanceOfAutohost += StrStrIA(text, "hi ") != NULL;
+		chanceOfAutohost += StrStrIA(text, "welcome ") != NULL;
+		chanceOfAutohost += strstr(text, gMyUser.name) != NULL;
+		chanceOfAutohost += strstr(text, username) != NULL;
+		chanceOfAutohost += strstr(text, "!help") != NULL;
+		
+		bool saidSpads = strstr(text, "SPADS") != NULL;
+		bool saidSpringie = strstr(text, "Springie") != NULL;
+		chanceOfAutohost += saidSpads;
+		chanceOfAutohost += saidSpringie;
+		
+		if (chanceOfAutohost > 3) {
+			if (saidSpads)
+				gBattleOptions.hostType = HOST_SPADS;
+			else if (saidSpringie)
+				gBattleOptions.hostType = HOST_SPRINGIE;
+			else {
+				gLastAutoMessage = GetTickCount();
+				SendToServer("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
+			}
+		}
+	}
 
 	Chat_Said(GetBattleChat(), username, CHAT_EX, text);
 })
@@ -384,6 +411,8 @@ X(SAIDEX, {
 
 X(SAIDPRIVATE, {
 	const char *username = getNextWord();
+	
+	// Get list of relayhost managers
 	if (!strcmp(username, "RelayHostManagerList") && !memcmp(command, "managerlist ", sizeof("managerlist ") - 1)) {
 		strsplit(&command, " ");
 		for (const char *c; (c = strsplit(&command, " \t\n"));) {
@@ -393,28 +422,54 @@ X(SAIDPRIVATE, {
 				gRelayManagers[gRelayManagersCount++] = u->name;
 			}
 		}
+	
+	// If we are starting a relayhost game, then manager sends the name of the host to join:
 	} else if (!strcmp(username, relayManager)) {
 		strcpy(relayHoster, command);
 		*relayManager = '\0';
+	
+	// Relayhoster sending a users script password:
 	} else if (!strcmp(username, relayHoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)) {
 		command += sizeof("JOINEDBATTLE ") - 1;
 		getNextWord();
 		User *u = FindUser(getNextWord());
 		if (u)
 			copyNextWord(u->scriptPassword);
+			
+	// Zero-K juggler sends matchmaking command "!join <host>"
 	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)) {
 		User *u = FindUser(command + sizeof("!join ") - 1);
 		if (u && u->battle)
 			JoinBattle(u->battle->id, NULL);
-	} else {
+			
+	// Check for pms that identify an autohost
+	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(username, command, strlen(username))) {
+
+		// Response to "!springie":
+		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
+		if (!memcmp(command + strlen(username), " (Springie ", sizeof(" (Springie ") - 1)
+				&& strstr(command, " running for "))
+			gBattleOptions.hostType = HOST_SPRINGIE;
+		
+		// Response to "!version":
+		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
+		else if (!memcmp(command + strlen(username), " is running SPADS v", sizeof(" is running SPADS v") - 1)
+				&& strstr(command, ", with following components:"))
+			gBattleOptions.hostType = HOST_SPADS;
+		else
+			goto normal;
+		
+	//Normal chat message:
+	} else normal: {
 		User *u = FindUser(username);
 		if (!u || u->ignore)
 			return;
 		HWND window = GetPrivateChat(u);
 		Chat_Said(window, username, 0, command);
-		if (!gMyBattle || strcmp(username, gMyBattle->founder->name) || GetTickCount() - gLastAutoMessage > 1000)
+		if (!gMyBattle || strcmp(username, gMyBattle->founder->name) || GetTickCount() - gLastAutoMessage > 2000)
 			FocusTab(window);
 	}
+	
 })
 
 X(SAYPRIVATE, {

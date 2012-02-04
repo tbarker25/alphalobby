@@ -55,7 +55,6 @@ static const char *mapToSave, *modToSave;
 static char *scriptToSet;
 
 //Sync thread only:
-static uint16_t *minimapPixels;
 static char currentMod[MAX_TITLE];
 static char currentMap[MAX_TITLE];
 
@@ -83,7 +82,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 	}
 	
 	
-	void *s; uint16_t i;
+	void *s;
 	event = CreateEvent(NULL, FALSE, 0, NULL);
 	taskReload=1;
 	while (1) {
@@ -191,7 +190,6 @@ static void setModInfo(void)
 		if (options[i].type != opt_section)
 			continue;
 		s += sprintf(s, R"(\par\b %s:\b0\par)", options[i].name);
-		char *section = options[i].key;
 		entry:
 		for (int j=0; j<count; ++j) {
 			if (options[j].type == opt_section)
@@ -242,24 +240,6 @@ void RedrawMinimapBoxes(void)
 		// taskSetMinimap = 1;
 		// SetEvent(event);
 	// }
-}
-
-static void getOptionDef(int i, char *buff)
-{
-	switch (GetOptionType(i)) {
-	case opt_bool:
-		*(uint16_t *)buff = '0' + GetOptionBoolDef(i);
-		break;
-	case opt_number:
-		sprintf(buff, "%g", GetOptionNumberDef(i));
-		break;
-	case opt_list:
-		strcpy(buff, GetOptionListDef(i));
-		break;
-	default:
-		// buff[0] = '\0';
-		break;
-	}
 }
 
 static void initOptions(size_t nbOptions, gzFile *fd)
@@ -381,25 +361,41 @@ static void createMapFile(const char *mapName)
 	GetMapInfoEx(mapName, &mapInfo.mapInfo, 1);
 	gzwrite(fd, &mapInfo, sizeof(mapInfo));
 	initOptions(GetMapOptionCount(mapName), fd);
-	uint16_t *minimapPixels2 = GetMinimap(mapName, MAP_DETAIL);
-	assert(minimapPixels2);
-	gzwrite(fd, minimapPixels2, MAP_SIZE*sizeof(minimapPixels2[0]));
+	
+	uint16_t *minimapPixels = GetMinimap(mapName, MAP_DETAIL);
+	assert(minimapPixels);
+	gzwrite(fd, minimapPixels, MAP_SIZE*sizeof(*minimapPixels));
+	
+	for (int i=0; i<2; ++i) {
+		const char *mapType = i ? "metal" : "height";
+		int w=0, h=0;
+		int ok = GetInfoMapSize(mapName, mapType, &w, &h);
+		assert(ok);
+		void *mapData = calloc(1, w * h);
+		gzwrite(fd, (uint16_t []){w, h}, 4);
+		int ok2 = GetInfoMap(mapName, mapType, mapData, bm_grayscale_8);
+		assert(ok2);
+		gzwrite(fd, mapData, w * h);
+		free(mapData);
+	}
 	
 	gzclose(fd);
 	ExecuteInMainThreadParam(ChangedMap, mapName);
 	puts(mapName);
+	ENDCLOCK();
 }
 
 static void createModFile(const char *modName)
 {
+	STARTCLOCK();
 	RemoveAllArchives();
 	GetPrimaryModCount(); //todo investigate if we only need it on reinit
-	int mod_index = GetPrimaryModIndex(modName);
-	if (mod_index < 0)
+	int modIndex = GetPrimaryModIndex(modName);
+	if (modIndex < 0)
 		return;
 	
-	GetPrimaryModArchiveCount(mod_index);
-	AddAllArchives(GetPrimaryModArchive(mod_index));
+	GetPrimaryModArchiveCount(modIndex);
+	AddAllArchives(GetPrimaryModArchive(modIndex));
 	
 	char filePath[MAX_PATH];
 	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
@@ -407,7 +403,7 @@ static void createModFile(const char *modName)
 	gzFile fd = gzopen(filePath, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
 	
-	uint32_t modHash = GetPrimaryModChecksum(mod_index);
+	uint32_t modHash = GetPrimaryModChecksum(modIndex);
 	gzwrite(fd, &modHash, sizeof(modHash));
 	
 	initOptions(GetModOptionCount(), fd);
@@ -423,12 +419,14 @@ static void createModFile(const char *modName)
 	gzwrite(fd, sideNames, sizeof(sideNames));
 	
 	uint32_t sidePics[sideCount][16*16];
+	bool isBMP = false;
 	for (uint8_t i=0; i<sideCount; ++i) {
 		char vfsPath[128];
 		int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
 		int fd = OpenFileVFS(vfsPath);
 		if (!fd) {
 			memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
+			isBMP = true;
 			fd = OpenFileVFS(vfsPath);
 		}
 		if (!fd) {
@@ -440,10 +438,11 @@ static void createModFile(const char *modName)
 		CloseFileVFS(fd);
 		ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
 		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, sidePics[i]);
-		ILint format = ilGetInteger(IL_IMAGE_FORMAT);
-		if (format == IL_RGB || format == IL_BGR) {
-			for (int j=16 * 16 - 1; j>=0; --j)
-				if (sidePics[i][j] == sidePics[i][0])
+		
+		//Set white as transpareny for BMP:
+		if (isBMP) {
+			for (int j=0; j<16 * 16; ++j)
+				if (sidePics[i][j] == 0xFFFFFFFF)
 					sidePics[i][j] &= 0x00FFFFFF;
 		}
 	}
@@ -451,11 +450,12 @@ static void createModFile(const char *modName)
 	
 	gzclose(fd);
 	ExecuteInMainThreadParam(ChangedMod, modName);
+	ENDCLOCK();
 }
 
 void ChangedMod(const char *modName)
 {
-	puts("Change Mod");
+	STARTCLOCK();
 	if (!stricmp(currentMod, modName))
 		return;
 
@@ -504,11 +504,12 @@ void ChangedMod(const char *modName)
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
+	ENDCLOCK();
 }
 
 void ChangedMap(const char *mapName)
 {
-	puts("changed map");
+	STARTCLOCK();
 	if (!stricmp(currentMap, mapName))
 		return;
 
@@ -524,7 +525,7 @@ void ChangedMap(const char *mapName)
 	if (!fd) {
 		gMapHash = 0;
 		currentMap[0] = 0;
-		BattleRoom_ChangeMinimapBitmap(BLANK_MINIMAP);
+		BattleRoom_ChangeMinimapBitmap(NULL, 0, 0, NULL, 0, 0, NULL);
 		free(InterlockedExchangePointer(&mapToSave, strdup(mapName)));
 		SetEvent(event);
 		setModInfo();
@@ -543,13 +544,30 @@ void ChangedMap(const char *mapName)
 	gMapOptions = optionList.xs;
 	gNbMapOptions = optionList.len;
 
-	
+	//Texture pixels:
 	static uint16_t *pixels;
 	if (!pixels)
 		pixels = malloc(MAP_SIZE * sizeof(*pixels));
 	
 	gzread(fd, pixels,MAP_SIZE * sizeof(pixels[0]));
-	BattleRoom_ChangeMinimapBitmap(pixels);
+	
+	//Heightmap pixels:
+	static uint8_t *heightMapPixels;
+	free(heightMapPixels);
+	uint16_t h[2];
+	gzread(fd, h, 4);
+	heightMapPixels = malloc(h[0] * h[1]);
+	gzread(fd, heightMapPixels, h[0] *  h[1]);
+	
+	//Metalmap pixels:	
+	static uint8_t *metalMapPixels;
+	free(metalMapPixels);
+	uint16_t d[2];
+	gzread(fd, d, 4);
+	metalMapPixels = malloc(d[0] * d[1]);
+	gzread(fd, metalMapPixels, d[0] *  d[1]);
+	
+	BattleRoom_ChangeMinimapBitmap(pixels, d[0], d[1], metalMapPixels, h[0], h[1], heightMapPixels);
 
 	gzclose(fd);
 	
@@ -557,6 +575,7 @@ void ChangedMap(const char *mapName)
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
+	ENDCLOCK();
 }
 
 void ReloadMapsAndMod(void)

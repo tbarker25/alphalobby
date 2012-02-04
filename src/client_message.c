@@ -214,7 +214,6 @@ void RegisterAccount(const char *username, const char *password)
 
 bool Autologin(void)
 {
-	char username[MAX_NAME_LENGTH_NUL];
 	const char *s;
 	s = LoadSetting("username");
 	if (!s)

@@ -559,7 +559,7 @@ void SaveLastChatWindows(void)
 		SendDlgItemMessage(channelWindows[i], DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 		if (GetTabIndex(channelWindows[i]) >= 0) {
 			chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
-			len += sprintf("%s%s", len ? ";" : "", data->name);
+			len += sprintf(&autojoinChannels[len], "%s%s", len ? ";" : "", data->name);
 		}
 	}
 	free(gSettings.autojoin);

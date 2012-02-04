@@ -157,6 +157,7 @@ typedef enum StartPosType {
 #define HOST_LOCAL 0x03
 #define HOST_SP    0x05
 #define HOST_FLAG  0x01
+#define HOST_SPRINGIE 0x10
 
 typedef enum OptionType{
   opt_error = 0, opt_bool = 1, opt_list = 2, opt_number = 3,
