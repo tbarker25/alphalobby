@@ -38,7 +38,7 @@ static const struct {
 #undef EXPORT2
 };
 
-#define SYNCFILE_VERSION 0x01
+#define SYNCFILE_VERSION 0x02
 
 
 static void createModFile(const char *modName);
