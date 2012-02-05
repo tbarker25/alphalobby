@@ -350,10 +350,11 @@ static void createMapFile(const char *mapName)
 	if (!mapHash)
 		return;
 	
-	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
-	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
-	gzFile fd = gzopen(filePath, "wb");
+	char tmpFilePath[MAX_PATH];
+	GetTempPathA(MAX_PATH, tmpFilePath);
+	GetTempFileNameA(tmpFilePath, NULL, 0, tmpFilePath);
+	
+	gzFile fd = gzopen(tmpFilePath, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
 	gzwrite(fd, &mapHash, sizeof(mapHash));
 	struct _LargeMapInfo mapInfo = {.mapInfo = {.description = mapInfo.description, .author = mapInfo.author}};
@@ -380,8 +381,15 @@ static void createMapFile(const char *mapName)
 	}
 	
 	gzclose(fd);
+
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
+	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+
 	ExecuteInMainThreadParam(ChangedMap, mapName);
-	puts(mapName);
+	
+	
 	ENDCLOCK();
 }
 
@@ -397,10 +405,11 @@ static void createModFile(const char *modName)
 	GetPrimaryModArchiveCount(modIndex);
 	AddAllArchives(GetPrimaryModArchive(modIndex));
 	
-	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
-	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
-	gzFile fd = gzopen(filePath, "wb");
+	char tmpFilePath[MAX_PATH];
+	GetTempPathA(MAX_PATH, tmpFilePath);
+	GetTempFileNameA(tmpFilePath, NULL, 0, tmpFilePath);
+	
+	gzFile fd = gzopen(tmpFilePath, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
 	
 	uint32_t modHash = GetPrimaryModChecksum(modIndex);
@@ -449,6 +458,12 @@ static void createModFile(const char *modName)
 	gzwrite(fd, sidePics, sizeof(sidePics));
 	
 	gzclose(fd);
+	
+	char filePath[MAX_PATH];
+	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
+	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+	
 	ExecuteInMainThreadParam(ChangedMod, modName);
 	ENDCLOCK();
 }
