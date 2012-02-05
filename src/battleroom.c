@@ -153,11 +153,10 @@ static const DialogItem dlgItems[] = {
 
 	}, [DLG_VOTEBOX] = {
 		.class = WC_BUTTON,
-		.name = L"Vote",
+		.name = L"Poll",
 		.style = WS_VISIBLE | BS_GROUPBOX,
 	}, [DLG_VOTETEXT] = {
 		.class = WC_STATIC,
-		.name = L"Do you want to change the map to Delta Siege Dry?",
 		.style = WS_VISIBLE | WS_DISABLED,
 	}, [DLG_VOTEYES] = {
 		.class = WC_BUTTON,
@@ -520,7 +519,7 @@ static void resizeAll(LPARAM lParam)
 	#define VOTETEXT_WIDTH (MAP_X(2 * 50 + 4))
 	#define VOTEBUTTON_WIDTH ((VOTETEXT_WIDTH - MAP_X(14)) / 2)
 	MOVE_ID(DLG_VOTEBOX,	CHAT_WIDTH, VOTEBOX_TOP, VOTETEXT_WIDTH, VOTETEXT_HEIGHT + MAP_Y(3*7 + 11));
-	MOVE_ID(DLG_VOTETEXT,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + MAP_Y(11), MAP_X(2 * 50 + 7 + 4), VOTETEXT_HEIGHT);
+	MOVE_ID(DLG_VOTETEXT,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + MAP_Y(11), MAP_X(2 * 50), VOTETEXT_HEIGHT);
 	MOVE_ID(DLG_VOTEYES,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
 	MOVE_ID(DLG_VOTENO,		CHAT_WIDTH + MAP_X(10) + VOTEBUTTON_WIDTH, VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
 
@@ -907,6 +906,21 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
 			InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 			return 0;
+		
+		case MAKEWPARAM(DLG_VOTEYES, BN_CLICKED): {
+			bool voteYes = 1;
+			goto vote;
+		case MAKEWPARAM(DLG_VOTENO, BN_CLICKED):
+			voteYes = 0;
+			vote:
+			if (gBattleOptions.hostType == HOST_SPADS)
+				SendToServer("SAYPRIVATE !vote %c %s", voteYes ? 'y' : 'n', gMyBattle->founder);
+			else if (gBattleOptions.hostType == HOST_SPRINGIE)
+				SendToServer("SAYBATTLE !vote %c", '2' - (char)voteYes);
+			EnableWindow(GetDlgItem(window, DLG_VOTEYES), 0);
+			EnableWindow(GetDlgItem(window, DLG_VOTENO), 0);
+			EnableWindow(GetDlgItem(window, DLG_VOTETEXT), 0);
+		}	return 0;
 		}
 		break;
 	case WM_RESYNC: {
@@ -982,6 +996,14 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		} break;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
+}
+
+void BattleRoom_VoteStarted(const char *topic)
+{
+	SetDlgItemTextA(gBattleRoomWindow, DLG_VOTETEXT, topic);
+	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTETEXT), (BOOL)topic);
+	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTEYES), (BOOL)topic);
+	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTENO), (BOOL)topic);
 }
 
 
