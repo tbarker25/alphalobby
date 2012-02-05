@@ -417,49 +417,57 @@ X(SAIDBATTLEEX, {
 	}
 	
 	
-	// Check for callvote:
-		// Springie examples:
-		// "Do you want to apply options " + wordFormat + "? !vote 1 = yes, !vote 2 = no"
-		// "Do you want to remove current boss " + ah.BossName + "? !vote 1 = yes, !vote 2 = no"
-	if (gBattleOptions.hostType == HOST_SPRINGIE
-	          && !memcmp("Do you want to ", command, sizeof("Do you want to ") - 1)) {
-		char *commandStart = command + sizeof("Do you want to ") - 1;
-		char *commandEnd = strchr(commandStart, '?');
-		if (commandEnd) {
-			commandStart[0] = toupper(commandStart[0]);
-			commandEnd[1] = '\0';
-			BattleRoom_VoteStarted(commandStart);
-			commandStart[0] = tolower(commandStart[0]);
-			commandEnd[1] = ' ';
+	if (gBattleOptions.hostType == HOST_SPRINGIE) {
+		
+		// Check for callvote:
+			// "Do you want to apply options " + wordFormat + "? !vote 1 = yes, !vote 2 = no"
+			// "Do you want to remove current boss " + ah.BossName + "? !vote 1 = yes, !vote 2 = no"
+		if (!memcmp("Do you want to ", command, sizeof("Do you want to ") - 1)) {
+			char *commandStart = command + sizeof("Do you want to ") - 1;
+			char *commandEnd = strchr(commandStart, '?');
+			if (commandEnd) {
+				commandStart[0] = toupper(commandStart[0]);
+				commandEnd[1] = '\0';
+				BattleRoom_VoteStarted(commandStart);
+				commandStart[0] = tolower(commandStart[0]);
+				commandEnd[1] = ' ';
+			}
 		}
+		// "Springie option 1 has 1 of 1 votes"
+		
+		// Check for endvote:
+		if (!memcmp("vote successful", command, sizeof("vote successful") - 1)
+				|| !memcmp("not enough votes", command, sizeof("not enough votes") - 1)
+				|| !memcmp(" poll cancelled", command, sizeof(" poll cancelled") - 1))
+			BattleRoom_VoteEnded();
 	}
 	
-	// Check for endvote:
-		//Springie example:
-		// "vote successful - changing map to DeltaSiegeDry"
-	if (gBattleOptions.hostType == HOST_SPRINGIE
-			&& !memcmp("vote successful - ", command, sizeof("vote successful - ") - 1)) {
-		BattleRoom_VoteEnded();
-	}
-	
-	
-	
-	// "Springie option 1 has 1 of 1 votes"
-	
-	// if (gBattleOptions.hostType == HOST_SPADS
-	          // && !memcmp(" called a vote for command ", strchr(command, ' ') ?: "", sizeof(" called a vote for command ") - 1)) {
-		// const char *commandStart = strchr(command, ' ') + sizeof(" called a vote for command ");
-		// printf("vote for \"%.*s\"\n", strchr(commandStart, '?') - commandStart, commandStart);
-		// BattleRoom_VoteStarted(commandStart);
-	// }
+	if (gBattleOptions.hostType == HOST_SPADS
+			&& command[0] == '*' && command[1] == ' ') {
 		
-		// Spads example:
-		// "$user called a vote for command \"".join(" ",@{$p_params})."\" [!vote y, !vote n, !vote b]"
-	
+		// Check for callvote:
+			// "$user called a vote for command \"".join(" ",@{$p_params})."\" [!vote y, !vote n, !vote b]"
+		if (!memcmp(" called a vote for command ", strchr(command + 2, ' ') ?: "", sizeof(" called a vote for command ") - 1)) {
+			char *commandStart = strchr(command, '"');
+			if (commandStart) {
+				++commandStart;
+				char *commandEnd = strchr(commandStart, '"');
+				if (commandEnd) {
+					commandStart[0] = toupper(commandStart[0]);
+					commandEnd[0] = '\0';
+					BattleRoom_VoteStarted(commandStart);
+					commandStart[0] = tolower(commandStart[0]);
+					commandEnd[0] = '"';
+				}
+			}
+		}
 		
-		// Springie example:
+		// Check for endvote:
+		if (!memcmp("* Vote for command \"", command, sizeof("* Vote for command \"") - 1)
+				|| !memcmp("* Vote cancelled by ", command, sizeof("* Vote cancelled by ") - 1))
+			BattleRoom_VoteEnded();
+	}			
 	
-
 	Chat_Said(GetBattleChat(), username, CHAT_EX, text);
 })
 
