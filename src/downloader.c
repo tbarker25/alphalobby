@@ -15,7 +15,7 @@
 #include <ctype.h>
 #include "gzip.h"
 #include "md5.h"
-
+#include "downloadtab.h"
 
 
 //determines minimum resolution of progressbar
@@ -27,23 +27,23 @@
 #define MAX_REQUESTS 10
 #define MIN_REQUEST_SIZE (512 * 1024) 
 
-enum DLG_ID {
-	DLG_PROGRESS,
-	DLG_PROGRESS_BUTTON_,
-	DLG_TAB_BUTTON,
-	DLG_LAST = DLG_TAB_BUTTON,
-};
+// enum DLG_ID {
+	// DLG_PROGRESS,
+	// DLG_PROGRESS_BUTTON_,
+	// DLG_TAB_BUTTON,
+	// DLG_LAST = DLG_TAB_BUTTON,
+// };
 
-static const DialogItem dlgItems[] = {
-	[DLG_PROGRESS] = {
-		.class = PROGRESS_CLASS,
-		.style = WS_VISIBLE | PBS_MARQUEE,
-	}, [DLG_PROGRESS_BUTTON_] = {
-		.class = WC_BUTTON,
-		.name = L"Cancel",
-		.style = WS_VISIBLE | BS_PUSHBUTTON,
-	}
-};
+// static const DialogItem dlgItems[] = {
+	// [DLG_PROGRESS] = {
+		// .class = PROGRESS_CLASS,
+		// .style = WS_VISIBLE | PBS_MARQUEE,
+	// }, [DLG_PROGRESS_BUTTON_] = {
+		// .class = WC_BUTTON,
+		// .name = L"Cancel",
+		// .style = WS_VISIBLE | BS_PUSHBUTTON,
+	// }
+// };
 
 typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
@@ -86,7 +86,7 @@ typedef struct SessionContext {
 	uint8_t totalFiles, currentFiles, fetchedFiles;
 	size_t fetchedBytes, totalBytes;
 	DWORD startTime;
-	HWND progressBar, button;
+	// HWND progressBar, button;
 	void *packageBytes; size_t packageLen;
 	char *error;
 }SessionContext;
@@ -108,13 +108,13 @@ static void _handlePackage(RequestContext *req);
 static void handleRepoList(RequestContext *req);
 static void handleRepo(RequestContext *req);
 
-void EndDownload(SessionContext *ses)
-{
-	if (!ses->status)
-		return;
-	ses->error = NULL;
-	WinHttpCloseHandle(ses->handle);
-}
+// void EndDownload(SessionContext *ses)
+// {
+	// if (!ses->status)
+		// return;
+	// ses->error = NULL;
+	// WinHttpCloseHandle(ses->handle);
+// }
 
 __attribute__((always_inline, optimize(("O3"))))
 static void getPathFromMD5(uint8_t *md5, wchar_t *path)
@@ -142,12 +142,12 @@ static void writeFile(wchar_t *path, const void *buffer, size_t len)
 	MoveFileEx(tmpPath, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 }
 
-static void initializeProgressBar(SessionContext *ses)
-{
-	HWND progressBar = ses->progressBar;
-	SetWindowLongPtr(progressBar, GWL_STYLE, GetWindowLong(progressBar, GWL_STYLE) & ~PBS_MARQUEE);
-	SendMessage(progressBar, PBM_SETRANGE32, 0, ses->totalBytes);
-}
+// static void initializeProgressBar(SessionContext *ses)
+// {
+	// HWND progressBar = ses->progressBar;
+	// SetWindowLongPtr(progressBar, GWL_STYLE, GetWindowLong(progressBar, GWL_STYLE) & ~PBS_MARQUEE);
+	// SendMessage(progressBar, PBM_SETRANGE32, 0, ses->totalBytes);
+// }
 
 DWORD WINAPI exeucuteOnFinishHelper(HINTERNET requestHandle)
 {
@@ -178,9 +178,9 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			free(ses->packageBytes);
 			--nbDownloads;
 			ses->status = 0;
-			SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->progressBar);
-			SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->button);
-			UpdateStatusBar();
+			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->progressBar);
+			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->button);
+			// UpdateStatusBar();
 			ReloadMapsAndMod();
 			if (ses->error)
 				MyMessageBox("Download Failed", ses->error);
@@ -208,8 +208,8 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			
 			if (req->ses->totalBytes) {
 				req->ses->fetchedBytes += dwStatusInformationLength;
-				SendMessage(req->ses->progressBar, PBM_SETPOS, req->ses->fetchedBytes, 0);
-				UpdateStatusBar();
+				// SendMessage(req->ses->progressBar, PBM_SETPOS, req->ses->fetchedBytes, 0);
+				// UpdateStatusBar();
 			}
 			
 			req->fetchedBytes += dwStatusInformationLength;
@@ -233,8 +233,8 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 				if (req->ses->totalFiles) {
 					req->ses->totalBytes += req->contentLength;
 					++req->ses->currentFiles;
-					if (req->ses->totalFiles == req->ses->currentFiles)
-						initializeProgressBar(req->ses);
+					// if (req->ses->totalFiles == req->ses->currentFiles)
+						// initializeProgressBar(req->ses);
 				}
 				goto read_data;
 			}
@@ -330,21 +330,21 @@ void handleMapSources(RequestContext *req)
 	}
 }
 
-void ForEachDownload(void (*func)(HWND, HWND, const wchar_t *))
-{
-	FOR_EACH(s, sessions) {
-		if (!s->status)
-			continue;
-		wchar_t *text;
-		if (s->fetchedBytes && s->totalFiles == s->currentFiles) {
-			SendMessage(s->progressBar, PBM_SETPOS, s->fetchedBytes, 0);
-			DWORD eta = (uint64_t)(GetTickCount() - s->startTime) * (s->totalBytes - s->fetchedBytes) / s->fetchedBytes / 1000;
-			swprintf((text = alloca(128)), L"%s - %ld:%02ld remaining - %.2fMB of %.2fMB - %.2fKB/s", s->name, eta / 60, eta % 60, s->fetchedBytes * 1E-6f, s->totalBytes * 1E-6f, (float)s->fetchedBytes / (GetTickCount() - s->startTime + 1));
-		} else 
-			text = s->name;
-		func(s->progressBar, s->button, text);
-	}
-}
+// void ForEachDownload(void (*func)(HWND, HWND, const wchar_t *))
+// {
+	// FOR_EACH(s, sessions) {
+		// if (!s->status)
+			// continue;
+		// wchar_t *text;
+		// if (s->fetchedBytes && s->totalFiles == s->currentFiles) {
+			// SendMessage(s->progressBar, PBM_SETPOS, s->fetchedBytes, 0);
+			// DWORD eta = (uint64_t)(GetTickCount() - s->startTime) * (s->totalBytes - s->fetchedBytes) / s->fetchedBytes / 1000;
+			// swprintf((text = alloca(128)), L"%s - %ld:%02ld remaining - %.2fMB of %.2fMB - %.2fKB/s", s->name, eta / 60, eta % 60, s->fetchedBytes * 1E-6f, s->totalBytes * 1E-6f, (float)s->fetchedBytes / (GetTickCount() - s->startTime + 1));
+		// } else 
+			// text = s->name;
+		// func(s->progressBar, s->button, text);
+	// }
+// }
 
 
 static void downloadPackage(SessionContext *ses)
@@ -428,14 +428,15 @@ void DownloadFile(const char *name, int isMap)
 	
 	*ses = (SessionContext){
 		.status = DL_ACTIVE | isMap * DL_MAP,
-		.progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dlgItems[DLG_PROGRESS]),
-		.button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dlgItems[DLG_PROGRESS_BUTTON_]),
+		// .progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dlgItems[DLG_PROGRESS]),
+		// .button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dlgItems[DLG_PROGRESS_BUTTON_]),
 		.handle = handle,
 	};
 	swprintf(ses->name, L"%hs", name);
-	SetWindowLongPtr(ses->button, GWLP_USERDATA, (LONG_PTR)ses);
-	SendMessage(ses->progressBar, PBM_SETMARQUEE, 1, 0);
-	UpdateStatusBar();
+	UpdateDownload(ses->name, NULL);
+	// SetWindowLongPtr(ses->button, GWLP_USERDATA, (LONG_PTR)ses);
+	// SendMessage(ses->progressBar, PBM_SETMARQUEE, 1, 0);
+	// UpdateStatusBar();
 	
 	WinHttpSetOption(handle, WINHTTP_OPTION_CONTEXT_VALUE, &ses, sizeof(ses));
 	

@@ -167,6 +167,8 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			return 0;
 		
 		int count = ListView_GetItemCount(list);
+		if (!count)
+			return 0;
 		data->lastIndex %= count;
 		LVITEM itemInfo = {LVIF_PARAM, data->lastIndex};
 		do {
@@ -246,8 +248,8 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 				SendToServer("GETINGAMETIME");
 			else if (!strcmp(code, "split")) {
 				char *splitType = strsplit(&s, " ");
-				SplitType type = !strcmp(splitType, "h") ? SPLIT_HORIZONTAL
-						 : !strcmp(splitType, "v") ? SPLIT_VERTICAL
+				SplitType type = !strcmp(splitType, "h") ? SPLIT_HORZ
+						 : !strcmp(splitType, "v") ? SPLIT_VERT
 						 : !strcmp(splitType, "c1") ? SPLIT_CORNERS1
 						 : !strcmp(splitType, "c2") ? SPLIT_CORNERS2
 						 : SPLIT_LAST+1;

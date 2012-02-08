@@ -1,14 +1,14 @@
 env = Environment(tools=['mingw'])
 libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt Shlwapi zlib1 devil shell32')
 libpath = '.'
-cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686 -Wall -Werror'
+cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
 
 version = ARGUMENTS.get('VERSION', '(development build)')
 cppdefines = {'UNICODE' : 1, 'VERSION' : version}
 
 if version == '(development build)':
 	variant_dir = 'debug'
-	cflags += ' -g -O0'
+	cflags += ' -g -O0  -Wall -Werror'
 else:
 	cppdefines['NDEBUG'] = 1
 	variant_dir = 'release'
@@ -28,7 +28,7 @@ ICONS+=' null: user_unsync user_away user_unsync_away user_ignore user_unsync_ig
 ICONS+=" closed open host spectator host_spectator ingame"
 ICONS+=" rank0 rank1 rank2 rank3 rank4 rank5 rank6 rank7"
 ICONS+=" connecting battlelist replays options"
-ICONS+=" horizontal_split vertical_split edge_split corner_split random_split"
+ICONS+=" split_vert split_horz split_corner1 split_corner2 split_rand"
 ICONS+=" flags/*"
 ICONS2 = ' '.join('icons/' + f + '.png' if f != 'null:' else 'null:' for f in ICONS.split())
 ICONS2 += ' null:' * 48
@@ -36,7 +36,7 @@ ICONS2 += ' null:' * 48
 Depends(variant_dir + '/icons.h', rgba2c)
 icons = env.Command(variant_dir + '/icons.h', [], 'ImageMagick\\montage ' + ICONS2 + ' -background transparent -tile x1 -geometry 16x16 -depth 8 rgba:- | ' + variant_dir + '\\rgba2c.exe' + ' > $TARGET')
 
-files = Split('gzip.c client.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c dialogboxes.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
+files = Split('gzip.c client.c downloadtab.c client_message.c data.c alphalobby.c common.c sync.c settings.c wincommon.c userlist.c battlelist.c battleroom.c downloader.c imagelist.c layoutmetrics.c dialogboxes.c chat.c md5.c res.o countrycodes.c battletools.c spring.c usermenu.c')
 files = [variant_dir + '/' + s for s in files]
 
 resources = env.RES(variant_dir + '/res.rc')

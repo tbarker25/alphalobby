@@ -236,6 +236,7 @@ void Sync_Init(void)
 
 void RedrawMinimapBoxes(void)
 {
+	// ExecuteInMainThread(BattleRoom_StartPositionsChanged);
 	// if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
 		// taskSetMinimap = 1;
 		// SetEvent(event);

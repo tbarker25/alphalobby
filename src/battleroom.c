@@ -54,11 +54,11 @@ enum PLAYER_LIST_COLUMNS {
 enum DLG_ID {
 	DLG_CHAT,
 	DLG_ALLY_LABEL,
+	DLG_PLAYER_LIST,
 	DLG_ALLY,
 	DLG_SIDE_LABEL,
 	DLG_SIDE_FIRST,
 	DLG_SIDE_LAST = DLG_SIDE_FIRST+4,
-	DLG_PLAYER_LIST,
 	DLG_SPECTATE,
 	DLG_AUTO_UNSPEC,
 	DLG_READY,
@@ -68,12 +68,10 @@ enum DLG_ID {
 	DLG_BATTLE_INFO,
 
 
-	DLG_SPLIT_HORZ,
-	DLG_SPLIT_VERT,
-	DLG_SPLIT_CORNER,
-	DLG_SPLIT_EDGE,
-	DLG_STARTBOX_SIZE,
-	DLG_SPLIT_RANDOM,
+	DLG_SPLIT_FIRST,
+	DLG_SPLIT_LAST = DLG_SPLIT_FIRST + SPLIT_LAST,
+	
+	DLG_SPLIT_SIZE,
 	
 	DLG_MAPMODE_LABEL,
 	DLG_MAPMODE_MINIMAP,
@@ -187,23 +185,12 @@ static const DialogItem dlgItems[] = {
 		.class = WC_BUTTON,
 		.name = L"Change Map",
 		.style = WS_VISIBLE | BS_PUSHBUTTON,
-		
-	}, [DLG_SPLIT_VERT] = {
+
+	}, [DLG_SPLIT_FIRST ... DLG_SPLIT_LAST] = {
 		.class = WC_BUTTON,
 		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
-	}, [DLG_SPLIT_HORZ] = {
-		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
-	}, [DLG_SPLIT_CORNER] = {
-		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
-	}, [DLG_SPLIT_EDGE] = {
-		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
-	}, [DLG_SPLIT_RANDOM] = {
-		.class = WC_BUTTON,
-		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
-	}, [DLG_STARTBOX_SIZE] = {
+
+	}, [DLG_SPLIT_SIZE] = {
 		.class = TRACKBAR_CLASS,
 		.style = WS_VISIBLE | WS_CHILD,
 	}, [DLG_STARTPOS] = {
@@ -231,37 +218,36 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *_minimapPixels,
 
 void BattleRoom_StartPositionsChanged(void)
 {
-	int size = 0;
-	SplitType splitType = SPLIT_FIRST - 1;
+	int size;
+	SplitType splitType = -1;
 	
-	if (gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME) {
-		;
-	} else if (gBattleOptions.startRects[0].top == 0 && gBattleOptions.startRects[0].bottom == 200) {
-		splitType = SPLIT_HORIZONTAL;
-		size = gBattleOptions.startRects[0].right - gBattleOptions.startRects[0].left;
-	} else if (gBattleOptions.startRects[0].left == 0 && gBattleOptions.startRects[0].right == 200) {
-		splitType = SPLIT_VERTICAL;
-		size = gBattleOptions.startRects[0].bottom - gBattleOptions.startRects[0].top;
+	
+	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
+		if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
+			splitType = SPLIT_VERT;
+			size = gBattleOptions.startRects[0].right;
+		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT))) {
+			splitType = SPLIT_HORZ;
+			size = gBattleOptions.startRects[0].bottom;
+		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT))) {
+			splitType = SPLIT_CORNERS1;
+			size = gBattleOptions.startRects[0].right;
+		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 200 - gBattleOptions.startRects[1].bottom, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
+			splitType = SPLIT_CORNERS2;
+			size = gBattleOptions.startRects[0].right;
+		}
 	}
 
-	for (int i=0; i<=SPLIT_LAST - SPLIT_FIRST; ++i)
-		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_HORZ + i, BM_SETCHECK, i == splitType - SPLIT_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
+	for (int i=0; i<=SPLIT_LAST; ++i)
+		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + i, BM_SETCHECK, i == splitType ? BST_CHECKED : BST_UNCHECKED, 0);
 	
-	SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_RANDOM, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_STARTBOX_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
-	if (splitType >= SPLIT_FIRST)
-		SendDlgItemMessage(gBattleRoomWindow, DLG_STARTBOX_SIZE, TBM_SETPOS, 1, size);
+	SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
+	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
+	if (splitType >= 0)
+		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
 	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 }
 #if 0
-	case WM_REDRAWMINIMAP: {
-		// int currentSplit = gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? -1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT)) ? 0
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 1
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 2
-				// : !memcmp(&gBattleOptions.startRects[0], &(RECT){200 - gBattleOptions.startRects[1].right, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT)) ? 3 : -1;
-
-		return 0;
 	case WM_MOVESTARTPOSITIONS:
 		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
 		for (int i=0; i<16; ++i) {
@@ -536,13 +522,9 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(77), MAP_X(70), TEXTBOX_Y);
 	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH + MAP_X(10), VOTEBOX_BOTTOM + MAP_Y(92), MAP_X(80), TEXTBOX_Y);
 
-		
-	MOVE_ID(DLG_SPLIT_HORZ, minimapX + XS, YS, MAP_Y(14), MAP_Y(14));
-	MOVE_ID(DLG_SPLIT_VERT, minimapX + 2*XS + YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVE_ID(DLG_SPLIT_CORNER, minimapX + 3*XS + 2*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVE_ID(DLG_SPLIT_EDGE, minimapX + 4*XS + 3*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVE_ID(DLG_SPLIT_RANDOM, minimapX + 5*XS + 4*YH, YS, MAP_Y(14), MAP_Y(14));
-	MOVE_ID(DLG_STARTBOX_SIZE, minimapX + 6*XS + 5*YH, YS, width - minimapX - 7*XS - 5*YH, YH);
+	for (int i=0; i<=SPLIT_LAST; ++i)
+		MOVE_ID(DLG_SPLIT_FIRST + i, minimapX + (1 + i) * XS + i * YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_SIZE, minimapX + 6*XS + 5*YH, YS, width - minimapX - 7*XS - 5*YH, YH);
 	
 	#define TOP (INFO_HEIGHT - MAP_Y(14 + S))
 	MOVE_ID(DLG_MAPMODE_LABEL,     minimapX + XS, TOP + MAP_Y(3),   MAP_X(20), TEXTBOX_Y);
@@ -666,13 +648,13 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 		SendDlgItemMessage(window, DLG_BATTLE_INFO, EM_SETEVENTMASK, 0, ENM_LINK);
 		
-		SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_SETRANGE, 1, MAKELONG(0, 200));
+		SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_SETRANGE, 1, MAKELONG(0, 200));
 		
-		SendDlgItemMessage(window, DLG_SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_HORZ, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_EDGE, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_EDGE, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_CORNER, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_RANDOM, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RANDOM, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_HORZ, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS1, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER1, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS2, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER2, 0));
+		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RAND, 0));
 		
 		SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
 		return 0;
@@ -851,6 +833,15 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 	} case WM_DESTROY:
 		gBattleRoomWindow = NULL;
 		break;
+	case WM_HSCROLL:
+		if (GetDlgCtrlID((HWND)lParam) == DLG_SPLIT_SIZE) {
+			if (wParam == SB_ENDSCROLL)
+				for (int i=0; i<=SPLIT_LAST; ++i)
+					if (SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + i, BM_GETCHECK, 0, 0))
+						SetSplit(i, SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
+				// SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0)
+		}
+		return 0;
 	case WM_CLOSE:
 		close:
 		DisableBattleroomButton();
@@ -872,11 +863,8 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 				ChangeMap(gMaps[mapIndex - 1]);
 			DestroyMenu(menu);
 		}	return 0;
-		case MAKEWPARAM(DLG_SPLIT_HORZ, BN_CLICKED):
-			SetSplit(SPLIT_HORIZONTAL, SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_GETPOS, 0, 0));
-			return 0;
-		case MAKEWPARAM(DLG_SPLIT_VERT, BN_CLICKED):
-			SetSplit(SPLIT_VERTICAL, SendDlgItemMessage(window, DLG_STARTBOX_SIZE, TBM_GETPOS, 0, 0));
+		case MAKEWPARAM(DLG_SPLIT_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SPLIT_LAST, BN_CLICKED):
+			SetSplit(LOWORD(wParam) - DLG_SPLIT_FIRST, SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
 			return 0;
 		//These map/mod are only visible in sp mode:
 		case MAKEWPARAM(DLG_MOD, CBN_SELCHANGE): {
@@ -969,7 +957,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SendMessage(sideButton, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_FIRST_SIDE + i, 0));
 			ShowWindow(sideButton, i < gNbSides);
 		}
-		// SendDlgItemMessage(window, DLG_SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
+		// SendDlgItemMessage(window, DLG_SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
 		// for (int i=0; *gSideNames[i]; ++i)
 			// SendMessage(sideBox, CBEM_INSERTITEMA, 0,
 					// (LPARAM)&(COMBOBOXEXITEMA){

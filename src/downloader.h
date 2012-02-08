@@ -10,6 +10,4 @@ void DownloadFile(const char *name, int isMap);
 #define DownloadMod(modName)\
 	DownloadFile(modName, 0)
 	
-void ForEachDownload(void (*func)(HWND progressBar, HWND button, const wchar_t *text));
-void EndDownload(struct SessionContext *ses);
 
