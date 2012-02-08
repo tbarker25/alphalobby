@@ -50,7 +50,7 @@ X(ADDSTARTRECT, {
 	rect->top = getNextInt();
 	rect->right = getNextInt();
 	rect->bottom = getNextInt();
-	RedrawMinimapBoxes();
+	BattleRoom_StartPositionsChanged();
 })
 
 X(AGREEMENT, {
@@ -313,7 +313,7 @@ X(REMOVEBOT, {
 
 X(REMOVESTARTRECT, {
 	memset(&gBattleOptions.startRects[getNextInt()], 0, sizeof(typeof(*gBattleOptions.startRects)));
-	RedrawMinimapBoxes();
+	BattleRoom_StartPositionsChanged();
 })
 
 X(REMOVEUSER, {

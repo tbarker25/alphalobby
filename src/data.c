@@ -266,6 +266,6 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 	BattleRoom_StartPositionsChanged();
 
 	if (&s->user == &gMyUser && (lastBS ^ bs) & (MODE_MASK | ALLY_MASK))
-		RedrawMinimapBoxes();
+		BattleRoom_StartPositionsChanged();
 
 }

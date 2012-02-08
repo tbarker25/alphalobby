@@ -23,6 +23,7 @@
 #include "sync.h"
 #include "md5.h"
 #include "imagelist.h"
+#include "downloadtab.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
 
@@ -38,7 +39,8 @@ enum {
 	DLG_TOOLBAR,
 	DLG_BATTLELIST,
 	DLG_BATTLEROOM,
-	DLG_LAST = DLG_BATTLEROOM,
+	DLG_DOWNLOADTAB,
+	DLG_LAST = DLG_DOWNLOADTAB,
 };
 
 enum {
@@ -50,7 +52,8 @@ enum {
 	ID_HOSTBATTLE,
 	ID_CHANNEL,
 	ID_OPTIONS,
-
+	ID_DOWNLOADS,
+	
 	ID_LOGINBOX,
 	ID_SERVERLOG,
 	ID_LOBBY_PREFERENCES,
@@ -63,12 +66,12 @@ static const DialogItem dlgItems[] = {
 		.class = TOOLBARCLASSNAME,
 		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
 	}, [DLG_BATTLELIST] = {
-		.name = L"Battle List",
 		.class = WC_BATTLELIST,
 		.style = WS_VISIBLE,
 	}, [DLG_BATTLEROOM] = {
 		.class = WC_BATTLEROOM,
-		.name = L"Battle Room",
+	}, [DLG_DOWNLOADTAB] = {
+		.class = WC_DOWNLOADTAB,
 	}
 };
 
@@ -93,7 +96,7 @@ void SetCurrentTab(HWND newTab)
 					WPARAM state = 0;
 					if (isNewTab)
 						state |= TBSTATE_CHECKED;
-					#ifndef NDEBUG
+					#ifdef NDEBUG
 					if (isNewTab || isBattleList || gMyBattle)
 					#endif
 						state |= TBSTATE_ENABLED;
@@ -169,6 +172,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			// { I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
 			#endif
 			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+			{ I_IMAGENONE,     ID_DOWNLOADS,      TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
 		};
 
 		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
@@ -176,6 +180,8 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
 		
 		SetCurrentTab(GetDlgItem(window, DLG_BATTLELIST));
+		// SetCurrentTab(GetDlgItem(window, DLG_DOWNLOADTAB));
+		// DownloadFile("Bal", 0);
 	}	break;
 	case WM_DESTROY: {
 		Disconnect();
@@ -246,9 +252,6 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	}	break;
 	case WM_COMMAND:
 		switch (wParam) {
-		case MAKEWPARAM(DLG_PROGRESS_BUTTON, BN_CLICKED):
-			EndDownload((void *)GetWindowLongPtr((HWND)lParam, GWLP_USERDATA));
-			return 0;
 		case ID_CONNECT:
 			if (GetConnectionState())
 				Disconnect();

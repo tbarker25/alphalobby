@@ -16,9 +16,6 @@ enum {
 
 extern HWND gMainWindow;
 
-#define UpdateStatusBar()
-#define SetStatus()
-
 void Ring(void);
 
 #define AddTab(x) (x)
