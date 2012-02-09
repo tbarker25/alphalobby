@@ -35,7 +35,7 @@
 // #define PRIVATE_CHAT_ID 0x2002
 
 static HWND channelWindows[128];
-HWND _gServerChatWindow;
+static HWND serverChatWindow;
 
 #define MARGIN (MAP_X(115))
 
@@ -128,6 +128,7 @@ void ChatWindow_AddUser(HWND window, User *u)
 			});
 	updateUser(window, u, item);
 }
+
 
 static const char *chatStrings[] = {"SAYBATTLE", "SAYPRIVATE ", "SAY "};
 static const char *chatStringsEx[] = {"SAYBATTLEEX", "SAYPRIVATE ", "SAYEX "};
@@ -548,12 +549,16 @@ HWND GetPrivateChat(User *u)
 	return u->chatWindow;
 }
 
-// HWND GetServerChat(void)
-// {
-	// if (!_gServerChatWindow)
-		// _gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gMainWindow, (HMENU)DEST_SERVER, NULL, (void *)"TAS Server");
-	// return _gServerChatWindow;
-// }
+HWND GetServerChat(void)
+{
+	if (!serverChatWindow) {
+		chatWindowData *data = malloc(sizeof(chatWindowData));
+		*data = (chatWindowData){"TAS Server", DEST_SERVER};
+		serverChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gChatWindow, (HMENU)0, NULL, (void *)data);
+		ChatWindow_AddTab(serverChatWindow);
+	}
+	return serverChatWindow;
+}
 
 void SaveLastChatWindows(void)
 {
@@ -571,7 +576,7 @@ void SaveLastChatWindows(void)
 	gSettings.autojoin = strdup(autojoinChannels);
 }
 
-void Chat_Init(void)
+static void __attribute__((constructor)) init (void)
 {
 	RegisterClass((&(WNDCLASS){
 		.lpszClassName = WC_CHATBOX,
@@ -579,11 +584,6 @@ void Chat_Init(void)
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	}));
-
-	chatWindowData *data = malloc(sizeof(chatWindowData));
-	*data = (chatWindowData){"TAS Server", DEST_SERVER};
-	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gChatWindow, NULL, NULL, (void *)data);
-	ChatWindow_AddTab(_gServerChatWindow);
 }
 
 

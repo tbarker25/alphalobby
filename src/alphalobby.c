@@ -28,11 +28,11 @@
 
 #define WC_ALPHALOBBY L"AlphaLobby"
 
-// #ifndef NDEBUG
-// #define TBSTATE_DISABLED TBSTATE_ENABLED
-// #else
+#ifndef NDEBUG
+#define TBSTATE_DISABLED TBSTATE_ENABLED
+#else
 #define TBSTATE_DISABLED 0
-// #endif
+#endif
 
 HWND gMainWindow;
 
@@ -399,13 +399,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (windowPlacement)
 		sscanf(windowPlacement, "%ld,%ld,%ld,%ld", &left, &top, &width, &height);
 
-	
+	Sync_Init();
 	CreateWindowEx(0, WC_ALPHALOBBY, L"AlphaLobby", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		left, top, width, height,
 		NULL, (HMENU)0, NULL, NULL);
-
-	Chat_Init();
-	Sync_Init();
+	
+	GetServerChat();
 
 	char username[MAX_NAME_LENGTH_NUL], *s;
 	if (gSettings.flags & SETTING_AUTOCONNECT
