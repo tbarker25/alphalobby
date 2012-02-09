@@ -13,6 +13,7 @@
 #include "battleroom.h"
 #include "battletools.h"
 #include "chat.h"
+#include "chat_window.h"
 #include "client_message.h"
 #include "countrycodes.h"
 #include "data.h"

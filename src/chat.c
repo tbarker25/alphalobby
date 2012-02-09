@@ -17,6 +17,7 @@
 #include "alphalobby.h"
 #include "settings.h"
 #include "chat.h"
+#include "chat_window.h"
 #include "resource.h"
 #include "sync.h"
 #include "userlist.h"
@@ -56,7 +57,7 @@ typedef struct chatWindowData {
 	ChatDest type;
 }chatWindowData;
 
-static DialogItem dlgItems[] = {
+static DialogItem dialogItems[] = {
 	[DLG_LOG] = {
 		.class = RICHEDIT_CLASS,
 		.exStyle = WS_EX_WINDOWEDGE,
@@ -106,17 +107,17 @@ static void updateUser(HWND window, User *u, int item)
 
 void UpdateUser(User *u)
 {
-	int i=0x2000;
-	HWND window = GetServerChat();
-	do {
-		window = GetDlgItem(window, DLG_LIST);
-		int item = SendMessage(window, LVM_FINDITEM, -1,
-			(LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
-		if (item >= 0)
-			updateUser(window, u, item);
-	} while ((window = GetDlgItem(gMainWindow, i++)));
-	if (gMyBattle && u->battle == gMyBattle)
-		BattleRoom_UpdateUser((void *)u);
+	// int i=0x2000;
+	// HWND window = GetServerChat();
+	// do {
+		// window = GetDlgItem(window, DLG_LIST);
+		// int item = SendMessage(window, LVM_FINDITEM, -1,
+			// (LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
+		// if (item >= 0)
+			// updateUser(window, u, item);
+	// } while ((window = GetDlgItem(gMainWindow, i++)));
+	// if (gMyBattle && u->battle == gMyBattle)
+		// BattleRoom_UpdateUser((void *)u);
 }
 
 void ChatWindow_AddUser(HWND window, User *u)
@@ -234,7 +235,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 				User *u = FindUser(username);
 				if (u) {
 					SendToServer("SAYPRIVATE %s %s", u->name, s);
-					FocusTab(GetPrivateChat(u));
+					ChatWindow_SetActiveTab(GetPrivateChat(u));
 				} else {
 					char buff[128];
 					sprintf(buff, "Could not send message: %s is not logged in.", username);
@@ -288,20 +289,20 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
 		if (data->name)
 			SetWindowTextA(window, data->name);
-		HWND logWindow = CreateDlgItem(window, &dlgItems[DLG_LOG], DLG_LOG);
+		HWND logWindow = CreateDlgItem(window, &dialogItems[DLG_LOG], DLG_LOG);
 		SendMessage(logWindow, EM_EXLIMITTEXT, 0, INT_MAX);
 		SendMessage(logWindow, EM_AUTOURLDETECT, TRUE, 0);
 		SendMessage(logWindow, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
 		SetWindowSubclass(logWindow, logProc, 0, 0);
 
-		HWND inputBox = CreateDlgItem(window, &dlgItems[DLG_INPUT], DLG_INPUT);
+		HWND inputBox = CreateDlgItem(window, &dialogItems[DLG_INPUT], DLG_INPUT);
 		inputBoxData_t *inputBoxData = calloc(1, sizeof(*inputBoxData));
 		inputBoxData->buffTail = inputBoxData->textBuff;
 		
 		SetWindowSubclass(inputBox, (void *)inputBoxProc, (UINT_PTR)data->type, (DWORD_PTR)inputBoxData);
 		
 		if (data->type >= DEST_CHANNEL) {
-			HWND list = CreateDlgItem(window, &dlgItems[DLG_LIST], DLG_LIST);
+			HWND list = CreateDlgItem(window, &dialogItems[DLG_LIST], DLG_LIST);
 			for (int i=0; i<=COLUMN_LAST; ++i)
 				SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&(LVCOLUMN){});
 			ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
@@ -363,7 +364,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			DestroyMenu(menu);
 			if (clicked == 1)
 				addtab:
-				FocusTab(GetPrivateChat(u));
+				ChatWindow_SetActiveTab(GetPrivateChat(u));
 			else if (clicked == 2) {
 				u->ignore ^= 1;
 				UpdateUser(u);
@@ -521,9 +522,11 @@ HWND GetChannelChat(const char *name)
 {
 	for (int i=0; i<lengthof(channelWindows); ++i) {
 		if (!channelWindows[i]) {
+			chatWindowData *data = malloc(sizeof(chatWindowData));
+			*data = (chatWindowData){strdup(name), DEST_CHANNEL};
 			channelWindows[i] = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 0, 0,
-			gMainWindow, (HMENU)DEST_CHANNEL, NULL, (void *)name);
+			gChatWindow, (HMENU)DEST_CHANNEL, NULL, (void *)data);
 			return channelWindows[i];
 		}
 		chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
@@ -538,9 +541,9 @@ HWND GetPrivateChat(User *u)
 	if (!u->chatWindow) {
 		chatWindowData *data = malloc(sizeof(chatWindowData));
 		*data = (chatWindowData){u->name, DEST_PRIVATE};
-		u->chatWindow = CreateWindow(WC_CHATBOX, NULL, WS_OVERLAPPEDWINDOW,
+		u->chatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 400, 400,
-			NULL, /* (HMENU)DEST_PRIVATE */ NULL, NULL, (void *)data);
+			gChatWindow, (HMENU)DEST_PRIVATE, NULL, (void *)data);
 	}
 	return u->chatWindow;
 }
@@ -579,7 +582,8 @@ void Chat_Init(void)
 
 	chatWindowData *data = malloc(sizeof(chatWindowData));
 	*data = (chatWindowData){"TAS Server", DEST_SERVER};
-	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_OVERLAPPEDWINDOW, 0, 0, 800, 800, NULL, NULL, NULL, (void *)data);
+	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gChatWindow, NULL, NULL, (void *)data);
+	ChatWindow_SetActiveTab(_gServerChatWindow);
 }
 
 

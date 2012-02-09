@@ -24,8 +24,15 @@
 #include "md5.h"
 #include "imagelist.h"
 #include "downloadtab.h"
+#include "chat_window.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
+
+// #ifndef NDEBUG
+// #define TBSTATE_DISABLED TBSTATE_ENABLED
+// #else
+#define TBSTATE_DISABLED 0
+// #endif
 
 HWND gMainWindow;
 
@@ -39,6 +46,7 @@ enum {
 	DLG_TOOLBAR,
 	DLG_BATTLELIST,
 	DLG_BATTLEROOM,
+	DLG_CHAT,
 	DLG_DOWNLOADTAB,
 	DLG_LAST = DLG_DOWNLOADTAB,
 };
@@ -50,7 +58,7 @@ enum {
 	ID_SINGLEPLAYER,
 	ID_REPLAY,
 	ID_HOSTBATTLE,
-	ID_CHANNEL,
+	ID_CHAT,
 	ID_OPTIONS,
 	ID_DOWNLOADS,
 	
@@ -61,7 +69,7 @@ enum {
 };
 	
 
-static const DialogItem dlgItems[] = {
+static const DialogItem dialogItems[] = {
 	[DLG_TOOLBAR] {
 		.class = TOOLBARCLASSNAME,
 		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
@@ -70,6 +78,9 @@ static const DialogItem dlgItems[] = {
 		.style = WS_VISIBLE,
 	}, [DLG_BATTLEROOM] = {
 		.class = WC_BATTLEROOM,
+	}, [DLG_CHAT] = {
+		.name = L"Chat Window",
+		.class = WC_CHATWINDOW,
 	}, [DLG_DOWNLOADTAB] = {
 		.class = WC_DOWNLOADTAB,
 	}
@@ -83,34 +94,32 @@ static void resizeCurrentTab(int16_t width, int16_t height)
 	SetWindowPos(currentTab, NULL, 0, toolbarRect.bottom, width, height - toolbarRect.bottom, 0);
 }
 
-void SetCurrentTab(HWND newTab)
+void MainWindow_SetActiveTab(HWND newTab)
 {
-	if (newTab != currentTab) {
-		ShowWindow(currentTab, 0);
-		ShowWindow(newTab, 1);
-		
-		HWND toolbar = GetDlgItem(gMainWindow, DLG_TOOLBAR);
-		for (int isNewTab=0; isNewTab<2; ++isNewTab) {
-			for (int isBattleList=0; isBattleList<2; ++isBattleList) {
-				if ((isNewTab ? newTab : currentTab) == (isBattleList ? gBattleListWindow : gBattleRoomWindow)) {
-					WPARAM state = 0;
-					if (isNewTab)
-						state |= TBSTATE_CHECKED;
-					#ifdef NDEBUG
-					if (isNewTab || isBattleList || gMyBattle)
-					#endif
-						state |= TBSTATE_ENABLED;
-					SendMessage(toolbar, TB_SETSTATE, isBattleList ? ID_BATTLELIST : ID_BATTLEROOM, state);
-				}
-			}
-		}
-		
-		currentTab = newTab;
-		
-		RECT rect;
-		GetClientRect(gMainWindow, &rect);
-		resizeCurrentTab(rect.right, rect.bottom);
+	if (newTab == currentTab)
+		return;
+	
+	void changeCheck(bool enable) {
+		int tabIndex = currentTab == gBattleListWindow  ? ID_BATTLELIST
+	                 : currentTab == gBattleRoomWindow  ? ID_BATTLEROOM
+		             : currentTab == gChatWindow        ? ID_CHAT
+					 : currentTab == gDownloadTabWindow ? ID_DOWNLOADS
+		             : -1;
+		WPARAM state = SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_GETSTATE, tabIndex, 0);
+		if (enable)
+			state |= TBSTATE_CHECKED;
+		else
+			state &= ~TBSTATE_CHECKED | TBSTATE_DISABLED;
+		SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
+		ShowWindow(currentTab, enable);
 	}
+	changeCheck(0);
+	currentTab = newTab;
+	changeCheck(1);
+	
+	RECT rect;
+	GetClientRect(gMainWindow, &rect);
+	resizeCurrentTab(rect.right, rect.bottom);
 }
 
 void Ring(void)
@@ -121,22 +130,20 @@ void Ring(void)
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */ 
 		           0x0000000C, /* FLASHW_TIMERNOFG */
 	});
-	SetCurrentTab(gBattleRoomWindow);
+	MainWindow_SetActiveTab(gBattleRoomWindow);
 }
 
-void DisableBattleroomButton(void)
+void MainWindow_DisableBattleroomButton(void)
 {
 	if (currentTab == gBattleRoomWindow)
-		SetCurrentTab(gBattleListWindow);
-	#ifndef NDEBUG
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, 0);
-	#endif
+		MainWindow_SetActiveTab(gBattleListWindow);
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
 }
 
-void EnableBattleroomButton(void)
+void MainWindow_EnableBattleroomButton(void)
 {
-	SetCurrentTab(gBattleRoomWindow);
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_CHECKED);
+	MainWindow_SetActiveTab(gBattleRoomWindow);
 }
 
 
@@ -145,42 +152,37 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	switch(msg) {
 	case WM_CREATE: {
 		gMainWindow = window;
-		Chat_Init();
-		CreateDlgItems(window, dlgItems, DLG_LAST+1);
+		CreateDlgItems(window, dialogItems, DLG_LAST+1);
 		
 		HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
 		SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
 		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
+		
 
 		TBBUTTON tbButtons[] = {
 			{ ICONS_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
-			{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP,      {}, 0, 0},
-			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle List"},
+			{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
+			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
 			
-			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,
-			#ifdef NDEBUG
-				                                  0,
-			#else
-				                                  TBSTATE_ENABLED,
-			#endif
-			                                                       BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Battle Room"},
+			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
 			#ifndef NDEBUG
-			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Single player"},
-			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Replays"},
-			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_ENABLED, BTNS_AUTOSIZE,                 {}, 0, (INT_PTR)L"Host Battle"},
-			// { I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Channels"},
-			// { I_IMAGENONE,       ID_CHANNEL,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
+			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
+			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
+			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
 			#endif
+			{ I_IMAGENONE,       ID_CHAT,         TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
+			// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
 			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
-			{ I_IMAGENONE,     ID_DOWNLOADS,      TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
+			{ I_IMAGENONE,       ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
 		};
+		
 
 		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
 		SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
 		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
 		
-		SetCurrentTab(GetDlgItem(window, DLG_BATTLELIST));
-		// SetCurrentTab(GetDlgItem(window, DLG_DOWNLOADTAB));
+		MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
+		// MainWindow_SetActiveTab(GetDlgItem(window, DLG_DOWNLOADTAB));
 		// DownloadFile("Bal", 0);
 	}	break;
 	case WM_DESTROY: {
@@ -231,16 +233,15 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 				SetMenuDefaultItem(menu, ID_CONNECT, 0);
 				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
 				AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
-				#ifndef NDEBUG
+				// #ifndef NDEBUG
 				AppendMenu(menu, 0, ID_SERVERLOG, L"Open Server Log");
-				#endif
+				// #endif
 				break;
 			case ID_OPTIONS:
 				AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby Options");
 				AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring Options");
 				break;
 			default:
-				// assert(0);
 				return 0;
 			}
 			
@@ -262,13 +263,16 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			CreateLoginBox();
 			return 0;
 		case ID_BATTLEROOM:
-			SetCurrentTab(gBattleRoomWindow);
+			MainWindow_SetActiveTab(gBattleRoomWindow);
 			return 0;
 		case ID_BATTLELIST:
-			SetCurrentTab(gBattleListWindow);
+			MainWindow_SetActiveTab(gBattleListWindow);
+			return 0;
+		case ID_DOWNLOADS:
+			MainWindow_SetActiveTab(gDownloadTabWindow);
 			return 0;
 		case ID_SINGLEPLAYER:
-			JoinBattle(-1, NULL);
+			// JoinBattle(-1, NULL);
 			return 0;
 		case ID_REPLAY:
 			return 0;
@@ -277,11 +281,11 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			return 0;
 		case ID_OPTIONS:
 			return 0;
-		case ID_CHANNEL:
-			ChannelList_Show();
+		case ID_CHAT:
+			MainWindow_SetActiveTab(gChatWindow);
 			return 0;
 		case ID_SERVERLOG:
-			FocusTab(GetServerChat());
+			ChatWindow_SetActiveTab(GetServerChat());
 			return 0;
 		case ID_SPRING_SETTINGS:
 			CreateProcess(L"springsettings.exe", L"springsettings.exe", NULL, NULL, 0, 0, NULL,NULL,
@@ -357,6 +361,13 @@ void MyMessageBox(const char *caption, const char *text)
 
 void MainWindow_ChangeConnect(enum ConnectionState state)
 {
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_CHAT,
+			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_HOSTBATTLE,
+			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
+	
+	// SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
+	// SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
 	
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
 		(LPARAM)&(TBBUTTONINFO){
@@ -370,6 +381,7 @@ void MainWindow_ChangeConnect(enum ConnectionState state)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	InitSettings();
+	
 	
 	srand(time(NULL));
 
@@ -389,10 +401,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if (windowPlacement)
 		sscanf(windowPlacement, "%ld,%ld,%ld,%ld", &left, &top, &width, &height);
 
+	
 	CreateWindowEx(0, WC_ALPHALOBBY, L"AlphaLobby", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 		left, top, width, height,
 		NULL, (HMENU)0, NULL, NULL);
 
+	Chat_Init();
+	Sync_Init();
 
 	char username[MAX_NAME_LENGTH_NUL], *s;
 	if (gSettings.flags & SETTING_AUTOCONNECT
@@ -409,8 +424,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	gBattleOptions.startRects[0] = (RECT){0, 0, 50, 200};
 	gBattleOptions.startRects[1] = (RECT){150, 0, 200, 200};
 	#endif
-	Sync_Init();
-	
 	
 	
     for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {

@@ -16,6 +16,7 @@
 #include "settings.h"
 #include "data.h"
 #include "chat.h"
+#include "chat_window.h"
 #include "md5.h"
 
 int lastStatusUpdate, gLastAutoMessage;
@@ -182,7 +183,7 @@ void JoinChannel(const char *chanName, int focus)
 		
 	SendToServer("JOIN %s", chanName);
 	if (focus)
-		FocusTab(GetChannelChat(chanName));
+		ChatWindow_SetActiveTab(GetChannelChat(chanName));
 }
 
 void RenameAccount(const char *newUsername)

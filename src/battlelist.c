@@ -16,6 +16,7 @@
 #include "listview.h"
 #include "layoutmetrics.h"
 
+#include "chat_window.h"
 #include "client_message.h"
 #include "resource.h"
 #include "data.h"
@@ -27,13 +28,29 @@ HWND gBattleListWindow;
 
 enum DLG_ID {
 	DLG_LIST,
-	DLG_LAST = DLG_LIST,
+	DLG_MAP,
+	DLG_BATTLE_INFO,
+	DLG_BATTLE_LIST,
+	DLG_JOIN,
+	DLG_LAST = DLG_JOIN,
 };
 
-static const DialogItem battleListDialogItems[] = {
+static const DialogItem dialogItems[] = {
 	[DLG_LIST] = {
 		.class = WC_LISTVIEW,
 		.style = WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS | LVS_SINGLESEL,
+	}, [DLG_MAP] = {
+		.class = WC_STATIC,
+		.style = WS_VISIBLE,
+	}, [DLG_BATTLE_INFO] = {
+		.class = WC_STATIC,
+		.style = WS_VISIBLE,
+	}, [DLG_BATTLE_LIST] = {
+		.class = WC_LISTVIEW,
+		.style = WS_VISIBLE | LVS_REPORT,
+	}, [DLG_JOIN] = {
+		.class = WC_BUTTON,
+		.style = WS_VISIBLE,
 	},
 };
 
@@ -94,7 +111,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 		return 0;
 	case WM_CREATE:
 		gBattleListWindow = window;
-		CreateDlgItems(window, battleListDialogItems, DLG_LAST + 1);
+		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 		
 		HWND listDlg = GetDlgItem(gBattleListWindow, DLG_LIST);
 		
@@ -172,7 +189,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 				DownloadMod(b->modName);
 				break;
 			default: {
-				FocusTab(GetPrivateChat((User *)clicked));
+				ChatWindow_SetActiveTab(GetPrivateChat((User *)clicked));
 			}	break;
 			}
 			DestroyMenu(userMenu);

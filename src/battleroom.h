@@ -29,3 +29,4 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *mapPixels,
 void BattleRoom_StartPositionsChanged(void);
 void BattleRoom_VoteStarted(const char *topic);
 #define BattleRoom_VoteEnded() (BattleRoom_VoteStarted(NULL))
+extern void BattleRoom_RedrawMinimap(void);
