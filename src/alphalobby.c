@@ -109,7 +109,7 @@ void MainWindow_SetActiveTab(HWND newTab)
 		if (enable)
 			state |= TBSTATE_CHECKED;
 		else
-			state &= ~TBSTATE_CHECKED | TBSTATE_DISABLED;
+			state &= ~TBSTATE_CHECKED;
 		SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
 		ShowWindow(currentTab, enable);
 	}
@@ -142,7 +142,7 @@ void MainWindow_DisableBattleroomButton(void)
 
 void MainWindow_EnableBattleroomButton(void)
 {
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_CHECKED);
+	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
 	MainWindow_SetActiveTab(gBattleRoomWindow);
 }
 
@@ -182,8 +182,6 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
 		
 		MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
-		// MainWindow_SetActiveTab(GetDlgItem(window, DLG_DOWNLOADTAB));
-		// DownloadFile("Bal", 0);
 	}	break;
 	case WM_DESTROY: {
 		Disconnect();
