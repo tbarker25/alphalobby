@@ -213,7 +213,7 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 				assert(req->ses->totalBytes);
 				BattleRoom_RedrawMinimap();
 				wchar_t text[128];
-				swprintf(text, L"%d of %d MB\n(%.2f%%)", req->ses->fetchedBytes / 1000000, req->ses->totalBytes / 1000000, (float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
+				swprintf(text, L"%.1f of %.1f MB  (%.2f%%)", (float)req->ses->fetchedBytes / 1000000, (float)req->ses->totalBytes / 1000000, (float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
 				UpdateDownload(req->ses->name, text);
 				// SendMessage(req->ses->progressBar, PBM_SETPOS, req->ses->fetchedBytes, 0);
 				// UpdateStatusBar();
@@ -423,12 +423,12 @@ void GetDownloadMessage(char *text)
 	text[0] = '\0';
 	FOR_EACH(s, sessions) {
 		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) {
-			text += sprintf(text, "Downloading map:\n%d of %d MB\n(%.2f%%)\n\n", s->fetchedBytes / 1000000, s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
+			text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n", (float)s->fetchedBytes / 1000000, (float)s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
 		}
 	}
 	FOR_EACH(s, sessions) {
 		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) {
-			sprintf(text, "Downloading mod:\n%d of %d MB\n(%.2f%%)\n", s->fetchedBytes / 1000000, s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
+			sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n", (float)s->fetchedBytes / 1000000, (float)s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
 		}
 	}
 }
