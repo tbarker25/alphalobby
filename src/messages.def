@@ -1,7 +1,7 @@
 
 X(ACCEPTED, {
 	copyNextWord(gMyUser.name);
-	strcpy(gMyUser.alias, gMyUser.name);
+	strcpy(gMyUser.alias, GetAliasOf(gMyUser.name));
 })
 
 

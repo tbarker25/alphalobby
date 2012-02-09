@@ -450,7 +450,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 		if ((u->battleStatus & MODE_MASK) && teamSizes[FROM_TEAM_MASK(u->battleStatus)] > 1)
 			s += swprintf(s, L"%d: ", FROM_TEAM_MASK(u->battleStatus)+1);
 		s += swprintf(s, L"%hs", u->name);
-		if (strcmp(u->name, u->alias))
+		if (strcmp(GetAliasOf(u->name), u->alias))
 			s += swprintf(s, L" (%hs)", u->alias);
 		SendMessage(playerList, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
 				.mask = LVIF_TEXT,
@@ -791,7 +791,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			static wchar_t buff[1024];
 			wchar_t *s=buff;
 			s += swprintf(s, L"%hs", u->name);
-			if (strcmp(u->name, u->alias))
+			if (strcmp(GetAliasOf(u->name), u->alias))
 				s += swprintf(s, L" (%hs)", u->alias);
 			if (!(u->battleStatus & AI_MASK))
 				s += swprintf(s, L"\nRank %d - %hs - %.2fGHz\n", FROM_RANK_MASK(u->clientStatus), countryNames[u->country], (float)u->cpu / 1000);

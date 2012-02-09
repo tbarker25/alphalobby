@@ -84,7 +84,7 @@ void ChatWindow_RemoveUser(HWND window, User *u)
 static void updateUser(HWND window, User *u, int item)
 {
 	char *name;
-	if (!strcmp(u->name, u->alias))
+	if (!strcmp(GetAliasOf(u->name), u->alias))
 		name = u->name;
 	else {
 		name = alloca(MAX_NAME_LENGTH * 2 + sizeof(" ()"));
@@ -371,7 +371,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			} else if (clicked == 3) {
 				char title[128], buff[MAX_NAME_LENGTH_NUL];
 				sprintf(title, "Set alias for %s", u->name);
-				if (!GetTextDlg(title, strcpy(buff, u->name), MAX_NAME_LENGTH_NUL)) {
+				if (!GetTextDlg(title, strcpy(buff, GetAliasOf(u->name)), MAX_NAME_LENGTH_NUL)) {
 					strcpy(u->alias, buff);
 				}
 			}
@@ -502,7 +502,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 		putText(window, username, color, !(type & CHAT_SYSTEM) * CFE_BOLD);
 		const User *u = FindUser(username);
 		const char *alias = u ? u->alias : "logged out";
-		if (strcmp(alias, username)) {
+		if (strcmp(alias, GetAliasOf(username))) {
 			sprintf(buff, " (%s)", alias);
 			putText(window, buff, ALIAS(color), 0);
 		}
@@ -583,7 +583,7 @@ void Chat_Init(void)
 	chatWindowData *data = malloc(sizeof(chatWindowData));
 	*data = (chatWindowData){"TAS Server", DEST_SERVER};
 	_gServerChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gChatWindow, NULL, NULL, (void *)data);
-	ChatWindow_SetActiveTab(_gServerChatWindow);
+	ChatWindow_AddTab(_gServerChatWindow);
 }
 
 
