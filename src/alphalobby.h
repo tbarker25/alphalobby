@@ -18,8 +18,6 @@ extern HWND gMainWindow;
 
 void Ring(void);
 
-#define AddTab(x) (x)
-#define FocusTab(x) (ShowWindow(x, 1))
 #define RemoveTab(x) (ShowWindow(x, 0))
 #define GetTabIndex(x) -1
 
@@ -33,6 +31,6 @@ void MainWindow_ChangeConnect(enum ConnectionState);
 
 void MyMessageBox(const char *caption, const char *text);
 
-void SetCurrentTab(HWND newTab);
-void EnableBattleroomButton(void);
-void DisableBattleroomButton(void);
+void MainWindow_SetActiveTab(HWND newTab);
+void MainWindow_EnableBattleroomButton(void);
+void MainWindow_DisableBattleroomButton(void);

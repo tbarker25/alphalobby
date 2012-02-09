@@ -14,6 +14,8 @@
 #include "alphalobby.h"
 #include "battleroom.h"
 #include "chat.h"
+#include "chat_window.h"
+
 #include "usermenu.h"
 #include "client_message.h"
 #include "chat.h"
@@ -40,6 +42,7 @@ static uint16_t metalMapHeight, metalMapWidth;
 static const uint8_t *metalMapPixels;
 static uint16_t heightMapHeight, heightMapWidth;
 static const uint8_t *heightMapPixels;
+
 
 enum PLAYER_LIST_COLUMNS {
 	COLUMN_STATUS,
@@ -94,7 +97,7 @@ enum DLG_ID {
 	DLG_FIRST_STARTPOS = DLG_STARTPOS,
 };
 
-static const DialogItem dlgItems[] = {
+static const DialogItem dialogItems[] = {
 	[DLG_CHAT] = {
 		.class = WC_CHATBOX,
 		.style = WS_VISIBLE,
@@ -216,6 +219,11 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *_minimapPixels,
 	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 }
 
+void BattleRoom_RedrawMinimap(void)
+{
+	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+}
+
 void BattleRoom_StartPositionsChanged(void)
 {
 	int size;
@@ -290,13 +298,13 @@ void BattleRoom_Show(void)
 	RECT rect;
 	GetClientRect(gBattleRoomWindow, &rect);
 	SendMessage(gBattleRoomWindow, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
-	EnableBattleroomButton();
+	MainWindow_EnableBattleroomButton();
 }
 
 void BattleRoom_Hide(void)
 {
 	ListView_DeleteAllItems(GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST));
-	DisableBattleroomButton();
+	MainWindow_DisableBattleroomButton();
 }
 
 static int findUser(const void *u)
@@ -605,10 +613,10 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 	switch(msg) {
 	case WM_CREATE:
 		gBattleRoomWindow = window;
-		CreateDlgItems(window, dlgItems, DLG_LAST + 1);
+		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 		for (int i=0; i<16; ++i) {
 			HWND minimap = GetDlgItem(window, DLG_MINIMAP);
-			HWND startPos = CreateDlgItem(minimap, &dlgItems[DLG_STARTPOS], DLG_FIRST_STARTPOS + i);
+			HWND startPos = CreateDlgItem(minimap, &dialogItems[DLG_STARTPOS], DLG_FIRST_STARTPOS + i);
 			SetWindowSubclass(startPos, startPositionProc, i, i);
 		}
 		for (int i=0; i<16; ++i) {
@@ -667,12 +675,18 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		// InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 		// break;
 	case WM_DRAWITEM: {
-		if (!minimapPixels)
-			return 0;
 		assert(wParam == DLG_MINIMAP);
 		DRAWITEMSTRUCT *info = (void *)lParam;
 
 		FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
+		
+		if (!minimapPixels) {
+			extern void GetDownloadMessage(const char *text);
+			char text[256];
+			GetDownloadMessage(text);
+			DrawTextA(info->hDC, text, -1, &info->rcItem, DT_CENTER);
+			return 0;
+		}
 		
 		int width = info->rcItem.right;
 		int height = info->rcItem.bottom;
@@ -804,19 +818,15 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)buff);
 
 			int i = _wtoi(buff + lengthof(L":<") - 1);
-			if (i == RELOAD_MAPS_MODS)
-				ReloadMapsAndMod();
-			else if (i == DOWNLOAD_MOD)
-				DownloadMod(gMyBattle->modName);
-			else if (i == DOWNLOAD_MAP)
-				DownloadMap(gMyBattle->mapName);
+			if (i & MOD_OPTION_FLAG)
+				ChangeModOption(i & ~MOD_OPTION_FLAG);
 			else
-				ChangeOption(i);
+				ChangeMapOption(i);
 		}	return 0;
 		case DLG_PLAYER_LIST: {
 			switch (note->code) {
 			case LVN_ITEMACTIVATE:
-				FocusTab(GetPrivateChat(getUserFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)));
+				ChatWindow_SetActiveTab(GetPrivateChat(getUserFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)));
 				return 1;
 			case NM_RCLICK: {
 				POINT pt =  ((LPNMITEMACTIVATE)lParam)->ptAction;
@@ -844,7 +854,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		return 0;
 	case WM_CLOSE:
 		close:
-		DisableBattleroomButton();
+		MainWindow_DisableBattleroomButton();
 		LeaveBattle();
 		return 0;
 	case WM_COMMAND:

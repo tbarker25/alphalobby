@@ -38,8 +38,6 @@ void SetSplit(SplitType type, int size)
 		return;
 	}
 	
-	if (startPosType != gBattleOptions.startPosType)
-		ChangeOption(STARTPOS_FLAG | startPosType);
 
 	switch (type) {
 	case SPLIT_HORZ:

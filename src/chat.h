@@ -5,6 +5,7 @@
 struct User;
 
 extern HWND _gServerChatWindow;
+extern HWND gChatWindow;
 
 void Chat_Init(void);
 void Chat_Said(HWND window, const char *username, ChatType type, const char *text);

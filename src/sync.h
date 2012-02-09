@@ -5,11 +5,6 @@
 #define MAP_RESOLUTION (1024 >> MAP_DETAIL)
 #define MAP_SIZE (MAP_RESOLUTION * MAP_RESOLUTION)
 #define MOD_OPTION_FLAG  0x8000
-#define MAP_OPTION_FLAG  0x4000
-#define STARTPOS_FLAG    0x2000
-#define DOWNLOAD_MOD     1
-#define DOWNLOAD_MAP     2
-#define RELOAD_MAPS_MODS 3
 
 #include "unitsync.h"
 #include "data.h"
@@ -21,7 +16,9 @@ void RedrawMinimapBoxes(void);
 void ReloadMapsAndMod(void);
 void ChangedMod(const char *modName);
 void ChangedMap(const char *mapName);
-void ChangeOption(uint16_t);
+#define ChangeMapOption(x) (_ChangeOption((x), 0))
+#define ChangeModOption(x) (_ChangeOption((x), 1))
+void _ChangeOption(uint8_t index, int isModOption);
 void SetScriptTags(char *);
 const char * _GetSpringVersion(void);
 uint32_t GetSyncStatus(void);

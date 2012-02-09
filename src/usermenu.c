@@ -9,6 +9,8 @@
 #include "dialogboxes.h"
 #include "settings.h"
 #include "client_message.h"
+#include "chat_window.h"
+
 
 void CreateUserMenu(union UserOrBot *s, HWND window)
 {
@@ -122,7 +124,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	case 0:
 		break;
 	case CHAT:
-		FocusTab(GetPrivateChat(&s->user));
+		ChatWindow_SetActiveTab(GetPrivateChat(&s->user));
 		break;
 	case IGNORED:
 		s->user.ignore ^= 1;

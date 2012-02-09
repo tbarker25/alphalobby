@@ -34,7 +34,7 @@
 	// DLG_LAST = DLG_TAB_BUTTON,
 // };
 
-// static const DialogItem dlgItems[] = {
+// static const DialogItem dialogItems[] = {
 	// [DLG_PROGRESS] = {
 		// .class = PROGRESS_CLASS,
 		// .style = WS_VISIBLE | PBS_MARQUEE,
@@ -178,6 +178,8 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			free(ses->packageBytes);
 			--nbDownloads;
 			ses->status = 0;
+			BattleRoom_RedrawMinimap();
+			RemoveDownload(ses->name);
 			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->progressBar);
 			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->button);
 			// UpdateStatusBar();
@@ -208,6 +210,11 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			
 			if (req->ses->totalBytes) {
 				req->ses->fetchedBytes += dwStatusInformationLength;
+				assert(req->ses->totalBytes);
+				BattleRoom_RedrawMinimap();
+				wchar_t text[128];
+				swprintf(text, L"%d of %d MB\n(%.2f%%)", req->ses->fetchedBytes / 1000000, req->ses->totalBytes / 1000000, (float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
+				UpdateDownload(req->ses->name, text);
 				// SendMessage(req->ses->progressBar, PBM_SETPOS, req->ses->fetchedBytes, 0);
 				// UpdateStatusBar();
 			}
@@ -409,6 +416,23 @@ static void downloadFile(SessionContext *ses)
 	WinHttpSendRequest(handle, L"Content-Type: application/soap+xml; charset=utf-8", -1, req->charParam, messageLength, messageLength, (DWORD_PTR)req);
 }
 
+void GetDownloadMessage(char *text)
+{
+	if (gMyBattle == NULL)
+		return;
+	text[0] = '\0';
+	FOR_EACH(s, sessions) {
+		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) {
+			text += sprintf(text, "Downloading map:\n%d of %d MB\n(%.2f%%)\n\n", s->fetchedBytes / 1000000, s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
+		}
+	}
+	FOR_EACH(s, sessions) {
+		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) {
+			sprintf(text, "Downloading mod:\n%d of %d MB\n(%.2f%%)\n", s->fetchedBytes / 1000000, s->totalBytes / 1000000, (float)100 * s->fetchedBytes / (s->totalBytes?:1));
+		}
+	}
+}
+
 void DownloadFile(const char *name, int isMap)
 {
 	SessionContext *ses = NULL;
@@ -428,12 +452,12 @@ void DownloadFile(const char *name, int isMap)
 	
 	*ses = (SessionContext){
 		.status = DL_ACTIVE | isMap * DL_MAP,
-		// .progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dlgItems[DLG_PROGRESS]),
-		// .button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dlgItems[DLG_PROGRESS_BUTTON_]),
+		// .progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dialogItems[DLG_PROGRESS]),
+		// .button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dialogItems[DLG_PROGRESS_BUTTON_]),
 		.handle = handle,
 	};
 	swprintf(ses->name, L"%hs", name);
-	UpdateDownload(ses->name, NULL);
+	UpdateDownload(ses->name, L"Initializing");
 	// SetWindowLongPtr(ses->button, GWLP_USERDATA, (LONG_PTR)ses);
 	// SendMessage(ses->progressBar, PBM_SETMARQUEE, 1, 0);
 	// UpdateStatusBar();

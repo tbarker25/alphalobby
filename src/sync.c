@@ -53,6 +53,7 @@ static HANDLE event;
 //malloc new value, swap atomically, and free old value:
 static const char *mapToSave, *modToSave;
 static char *scriptToSet;
+static bool haveTriedToDownload;
 
 //Sync thread only:
 static char currentMod[MAX_TITLE];
@@ -111,10 +112,14 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 				gMaps[i] = strdup(GetMapName(i));
 			
 			SendMessage(gBattleRoomWindow, WM_RESYNC, 0, 0);
-			if (gMyBattle) {
-				ChangedMod(gMyBattle->modName);
-				ChangedMap(gMyBattle->mapName);
+			void resetMapAndMod(void) {
+				if (gMyBattle) {
+					ChangedMod(gMyBattle->modName);
+					ChangedMap(gMyBattle->mapName);
+				}
 			}
+			ExecuteInMainThread(resetMapAndMod);
+			haveTriedToDownload = 1;
 			ENDCLOCK();
 		} else if ((s = (void *)__sync_fetch_and_and(&modToSave, NULL))) {
 			STARTCLOCK();
@@ -154,18 +159,6 @@ static void setModInfo(void)
 	char *buff = malloc(8192), *s=buff+sprintf(buff, R"({\rtf )");
 	s += sprintf(s, R"(\b %s\par %s\b0\par)", *currentMod ? currentMod : gMyBattle ? gMyBattle->modName : "", *currentMap ? currentMap : gMyBattle ? gMyBattle->mapName : "");
 
-
-	if (!gModHash || !gMapHash)
-		s += sprintf(s, R"(\par)");
-	if (!gModHash)
-		s += sprintf(s, R"({\v :<)" STRINGIFY(DOWNLOAD_MOD) R"(}(download mod){\v >:}\par)");
-	
-	if (!gMapHash)
-		s += sprintf(s, R"({\v :<)" STRINGIFY(DOWNLOAD_MAP) R"(}(download map){\v >:}\par)");
-	
-	if (!gModHash || !gMapHash)
-		s += sprintf(s, R"({\v :<)" STRINGIFY(RELOAD_MAPS_MODS) R"(}(reload maps and mods){\v >:}\par)");
-	
 	if (gMapHash) {
 		s += sprintf(s, R"(\par\i %s\i0\par )", gMapInfo.description);
 		if (*gMapInfo.author)
@@ -178,52 +171,51 @@ static void setModInfo(void)
 	if (count)
 		s += sprintf(s, R"(\par{\b Mod Options:}\par)");
 
-	int flag = MOD_OPTION_FLAG;
 	start:
-	{
-	
+		{
+		
 
-	int i=-1;
-	goto entry;
-	
-	while (++i<count) {
-		if (options[i].type != opt_section)
-			continue;
-		s += sprintf(s, R"(\par\b %s:\b0\par)", options[i].name);
-		entry:
-		for (int j=0; j<count; ++j) {
-			if (options[j].type == opt_section)
+		int i=-1;
+		goto entry;
+		
+		while (++i<count) {
+			if (options[i].type != opt_section)
 				continue;
-			if ((i != -1 ? &options[i] : NULL) != options[j].section)
-				continue;
-			s += sprintf(s, R"( %s: {\v :<%d })", options[j].name, flag | j);
-			
-			char *val = NULL;
+			s += sprintf(s, R"(\par\b %s:\b0\par)", options[i].name);
+			entry:
+			for (int j=0; j<count; ++j) {
+				if (options[j].type == opt_section)
+					continue;
+				if ((i != -1 ? &options[i] : NULL) != options[j].section)
+					continue;
+				s += sprintf(s, R"( %s: {\v :<%d })", options[j].name, options == gModOptions ? MOD_OPTION_FLAG | j : j);
+				
+				char *val = NULL;
 
-			if (options)
-				val = options[j].val;
+				if (options)
+					val = options[j].val;
 
-			if (options[j].type == opt_number)
-				s += sprintf(s, val);
-			else if (options[j].type == opt_list) {
-				for (int k=0; k < options[j].nbListItems; ++k) {
-					if (!stricmp(val, options[j].listItems[k].key)) {
-						s += sprintf(s, options[j].listItems[k].name);
+				if (options[j].type == opt_number)
+					s += sprintf(s, val);
+				else if (options[j].type == opt_list) {
+					for (int k=0; k < options[j].nbListItems; ++k) {
+						if (!stricmp(val, options[j].listItems[k].key)) {
+							s += sprintf(s, options[j].listItems[k].name);
+						}
 					}
-				}
-			} else if (options[j].type == opt_bool)
-				s += sprintf(s, val[0] != '0' ? "True" : "False");
+				} else if (options[j].type == opt_bool)
+					s += sprintf(s, val[0] != '0' ? "True" : "False");
 
-			s += sprintf(s, R"({\v >:}\par)");
+				s += sprintf(s, R"({\v >:}\par)");
+			}
 		}
-	}
 
-	if (flag == MOD_OPTION_FLAG && (count = gNbMapOptions)) {
-		s += sprintf(s, R"(\par{\b Map Options:}\par)");
-		flag = MAP_OPTION_FLAG;
-		options = gMapOptions;
-		goto start;
-	}
+		if (options == gModOptions && gNbMapOptions) {
+			count = gNbMapOptions;
+			s += sprintf(s, R"(\par{\b Map Options:}\par)");
+			options = gMapOptions;
+			goto start;
+		}
 	}
 	sprintf(s, R"(\par})");
 	PostMessage(gBattleRoomWindow, WM_SETMODDETAILS, 0, (LPARAM)buff);
@@ -245,6 +237,7 @@ void RedrawMinimapBoxes(void)
 
 static void initOptions(size_t nbOptions, gzFile *fd)
 {
+	assert(nbOptions < 256);
 	Option *options = calloc(10000, 1);
 	char *s = (void *)&options[nbOptions];
 	
@@ -348,8 +341,11 @@ static void createMapFile(const char *mapName)
 {
 	STARTCLOCK();
 	uint32_t mapHash = GetMapChecksumFromName(mapName);
-	if (!mapHash)
+	if (!mapHash) {
+		if (!haveTriedToDownload)
+			DownloadMap(mapName);
 		return;
+	}
 	
 	char tmpFilePath[MAX_PATH];
 	GetTempPathA(MAX_PATH, tmpFilePath);
@@ -400,8 +396,11 @@ static void createModFile(const char *modName)
 	RemoveAllArchives();
 	GetPrimaryModCount(); //todo investigate if we only need it on reinit
 	int modIndex = GetPrimaryModIndex(modName);
-	if (modIndex < 0)
+	if (modIndex < 0) {
+		if (!haveTriedToDownload)
+			DownloadMod(modName);
 		return;
+	}
 	
 	GetPrimaryModArchiveCount(modIndex);
 	AddAllArchives(GetPrimaryModArchive(modIndex));
@@ -486,6 +485,7 @@ void ChangedMod(const char *modName)
 		fd = 0;
 	}
 	if (!fd) {
+		haveTriedToDownload = 0;
 		gNbSides = 0;
 		gModHash = 0;
 		currentMod[0] = 0;
@@ -539,6 +539,7 @@ void ChangedMap(const char *mapName)
 		fd = 0;
 	}
 	if (!fd) {
+		haveTriedToDownload = 0;
 		gMapHash = 0;
 		currentMap[0] = 0;
 		BattleRoom_ChangeMinimapBitmap(NULL, 0, 0, NULL, 0, 0, NULL);
@@ -673,29 +674,12 @@ const char * _GetSpringVersion(void)
 	return GetSpringVersion();
 }
 
-void ChangeOption(uint16_t iWithFlags)
+void _ChangeOption(uint8_t i, int isModOption)
 {
-	const char *key = NULL;
-	char *val = NULL;
-	char *path = NULL;
-	int i = iWithFlags & (~MOD_OPTION_FLAG & ~MAP_OPTION_FLAG & ~STARTPOS_FLAG);
-	
-	Option *options;
-	if (iWithFlags & MOD_OPTION_FLAG) {
-		options = gModOptions;
-		val = gModOptions[i].val;
-		key = gModOptions[i].key;
-		path = "modoptions/";
-	} else if (iWithFlags & MAP_OPTION_FLAG) {
-		options = gMapOptions;
-		val = gMapOptions[i].val;
-		key = gMapOptions[i].key;
-		path = "mapoptions/";
-	} else if (iWithFlags & STARTPOS_FLAG) {
-		key = "startpostype";
-		val = (char[2]){'0' + i};
-		goto send;
-	}
+	Option *options  = isModOption ? gModOptions : gMapOptions;
+	const char *path = isModOption ? "modoptions/" : "mapoptions/";
+	const char *key  = options[i].key;
+	const char *val  = options[i].val;
 	
 	switch (options[i].type) {
 	case opt_bool: {
@@ -729,14 +713,11 @@ void ChangeOption(uint16_t iWithFlags)
 		return;
 	}
 
-
-	send:
 	if (gBattleOptions.hostType == HOST_SPADS) {
 		SpadsMessageF("!bSet %s %s", key, val);
 	} else if (gBattleOptions.hostType == HOST_SP) {
-		Option * opt = &(iWithFlags & MOD_OPTION_FLAG ? gModOptions : gMapOptions)[i];
-		free(opt->val);
-		opt->val = strdup(val);
+		free(options[i].val);
+		options[i].val = strdup(val);
 		setModInfo();
 	} else if (gBattleOptions.hostType & HOST_FLAG) {
 		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", key, val);

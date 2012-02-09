@@ -10,6 +10,7 @@
 #include <Shlobj.h>
 #include "client_message.h"
 #include "data.h"
+#include "chat_window.h"
 
 #include "chat.h"
 #include "settings.h"
@@ -81,7 +82,7 @@ void OpenDefaultChannels(void)
 	
 	while ((s=strsplit(&s2, ";"))) {
 		if (*s == '*')
-			FocusTab(GetServerChat());
+			ChatWindow_SetActiveTab(GetServerChat());
 		else
 			JoinChannel(s, 0);
 	}
