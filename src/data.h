@@ -252,3 +252,5 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t battleStatus, uint32_t color);
 
 #define GetNumPlayers(_b)\
 	((_b)->nbParticipants - (_b)->nbSpectators - (_b)->nbBots)
+
+#define GetAliasOf(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))

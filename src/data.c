@@ -106,7 +106,7 @@ User * NewUser(uint32_t id, const char *name)
 		++nbUsers;
 		users[i] = calloc(1, sizeof(User));
 		users[i]->id = id;
-		strcpy(users[i]->alias, name);
+		strcpy(users[i]->alias, GetAliasOf(name));
 	}
 	SetWindowTextA(users[i]->chatWindow, name);
 	return users[i];
