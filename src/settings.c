@@ -28,6 +28,7 @@ static const KeyPair defaultSettings[] = {
 	{"spring_path", "spring.exe"},
 	{"flags", (void *)0x17, 1},
 	{"autojoin", "main"},
+	{"selected_packages", NULL},
 };
 
 static KeyPair getLine(FILE *fd)
@@ -109,7 +110,9 @@ void InitSettings(void)
 	}
 	
 	for(int i=0; i<lengthof(defaultSettings); ++i)
-		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val : strdup(defaultSettings[i].val);
+		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
+		                         : defaultSettings[i].val ? strdup(defaultSettings[i].val)
+								 : NULL;
 	
 	fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
@@ -119,8 +122,10 @@ void InitSettings(void)
 			if (!strcmp(defaultSettings[i].key, s.key)) {
 				if (defaultSettings[i].isInt)
 					((intptr_t *)&gSettings)[i] = atoi(s.val);
-				else
+				else {
+					free(((char **)&gSettings)[i]);
 					((char **)&gSettings)[i] = strdup(s.val);
+				}
 			}
 	fclose(fd);
 }
@@ -135,7 +140,7 @@ void SaveAliases(void)
 	fclose(aliasFile);
 }
 
-#pragma GCC diagnostic ignored "-Wformat"
+// #pragma GCC diagnostic ignored "-Wformat"
 void SaveSetting(const char *key, const char *val)
 {
 	printf("saving %s=%s\n", key, val);
@@ -167,16 +172,20 @@ void SaveSetting(const char *key, const char *val)
 	if (key && *val)
 		fprintf(tmpConfig, "%s=%s\n", key, val);
 
-	for(int i=0; i<lengthof(defaultSettings); ++i)
-		fprintf(tmpConfig, defaultSettings[i].isInt ? "%s=%d\n" : "%s=%s\n", defaultSettings[i].key, ((void **)&gSettings)[i]);
-
+	for (int i=0; i<lengthof(defaultSettings); ++i) {
+		if (defaultSettings[i].isInt)
+			fprintf(tmpConfig, "%s=%d\n", defaultSettings[i].key, ((int *)&gSettings)[i]);
+		else if (((void **)&gSettings)[i])
+			fprintf(tmpConfig, "%s=%s\n", defaultSettings[i].key, ((char **)&gSettings)[i]);
+	}
+	
 	fclose(tmpConfig);
 
 	#ifdef NDEBUG
 		MoveFileEx(tmpConfigName, configPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	#else
 	if (!MoveFileEx(tmpConfigName, configPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
-		printf("err = %d\n", GetLastError());
+		printf("err = %ld\n", GetLastError());
 		assert(0);
 	}
 	#endif

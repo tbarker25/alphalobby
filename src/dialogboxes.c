@@ -435,6 +435,130 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
     }
 	return 0;
 }
+#include <zlib.h>
+#include <assert.h>
+
+static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+	case WM_INITDIALOG: {
+		if (gSettings.selected_packages) {
+			size_t len = strlen(gSettings.selected_packages);
+			char buffer[len];
+			char *start = buffer;
+			for (int i=0; i<len; ++i) {
+				buffer[i] = gSettings.selected_packages[i];
+				if (buffer[i] != ';')
+					continue;
+				buffer[i] = '\0';
+				SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+				start = buffer + i + 1;
+			}
+			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+		}
+	
+		char path[MAX_PATH];
+		WIN32_FIND_DATAA findFileData;
+		char *pathEnd = path + sprintf(path, "%.*lsrepos\\*", gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
+	
+		HANDLE find = FindFirstFileA(path, &findFileData);
+		do {
+			if (findFileData.cFileName[0] == '.')
+				continue;
+			sprintf(pathEnd, "%s\\versions.gz", findFileData.cFileName);
+			gzFile file = gzopen(path, "rb");
+			
+			char buff[1024];
+			char root[1024] = {};
+			HTREEITEM rootItems[5] = {};
+			
+			while (gzgets(file, buff, sizeof(buff))) {
+				*strchr(buff, ',') = '\0';
+				
+				size_t rootLevel = 0;
+				int start = 0;
+				int i=0;
+				for (; buff[i]; ++i) {
+					if (root[i] != buff[i])
+						break;
+					if (buff[i] == ':') {
+						++rootLevel;
+						start = i + 1;
+					}
+				}
+
+				for ( ; ; ++i) {
+					root[i] = buff[i];
+					if (buff[i] && buff[i] != ':')
+						continue;
+					root[i] = '\0';
+					
+					TVINSERTSTRUCTA info = {rootItems[rootLevel], buff[i] ? TVI_SORT : 0};
+					info.item = (TVITEMA){TVIF_TEXT, .pszText = &root[start], .cChildren = !buff[i]};
+					rootItems[++rootLevel] = (HTREEITEM)SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_INSERTITEMA, 0, (LPARAM)&info);
+					
+					if (!buff[i])
+						break;
+					root[i] = buff[i];
+					start = i + 1;
+				}
+			}
+			gzclose(file);
+		
+		} while (FindNextFileA(find, &findFileData));
+		FindClose(find);
+		
+	}	return 0;
+	case WM_NOTIFY: {
+		NMHDR *info = (NMHDR *)lParam;
+		if (info->idFrom == IDC_RAPID_AVAILABLE
+				&& (info->code == NM_DBLCLK || info->code == NM_RETURN)) {
+			
+			#define TVGN_NEXTSELECTED       0x000B
+			HTREEITEM item = (HTREEITEM)SendMessage(info->hwndFrom, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
+			char itemText1[256];
+			char itemText2[256];
+			char *textA = itemText1;
+			char *textB = NULL;
+			while (item) {
+				TVITEMA itemInfo = {TVIF_HANDLE | TVIF_TEXT, item,
+						.pszText = textA,
+						.cchTextMax = 256};
+				SendMessageA(info->hwndFrom, TVM_GETITEMA, 0, (LPARAM)&itemInfo);
+				if (textB)
+					sprintf(textA + strlen(textA), ":%s", textB);
+				else
+					textB = itemText2;
+				char *swap;
+				swap = textA;
+				textA = textB;
+				textB = swap;
+				item = (HTREEITEM)SendMessage(info->hwndFrom, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)item);
+			}
+			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)textB);
+		}
+	}	return 0;
+	case WM_COMMAND:
+		switch (wParam) {
+		case MAKEWPARAM(IDOK, BN_CLICKED): {
+			HWND listBox = GetDlgItem(window, IDC_RAPID_SELECTED);
+			int nbPackages = SendMessageA(listBox, LB_GETCOUNT, 0, 0);
+			char text[1024];
+			char *s = text;
+			for (int i=0; i<nbPackages; ++i) {
+				*s++ = ';';
+				s += SendMessageA(listBox, LB_GETTEXT, i, (LPARAM)s);
+			}
+			gSettings.selected_packages = strdup(text + 1);
+		}	//FALLTHROUGH:
+		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
+			EndDialog(window, 0);
+			return 0;
+		} break;
+    }
+	return 0;
+}
+
 
 void CreateAgreementDlg(FILE *agreement)
 {
@@ -488,3 +612,7 @@ void CreateReplayDlg(void)
 }
 
 
+void CreateRapidDlg(void)
+{
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), gMainWindow, rapidDlgProc);
+}
