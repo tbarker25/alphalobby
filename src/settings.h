@@ -22,6 +22,7 @@ extern struct Settings {
 	char *spring_path;
 	int flags;
 	char *autojoin;
+	char *selected_packages;
 } gSettings;
 
 void OpenDefaultChannels(void);

@@ -17,3 +17,4 @@ void CreateColorDlg(union UserOrBot *);
 void CreateSinglePlayerDlg(void);
 void CreateAboutDlg(void);
 void CreateReplayDlg(void);
+void CreateRapidDlg(void);

@@ -405,7 +405,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		NULL, (HMENU)0, NULL, NULL);
 	
 	GetServerChat();
-
+	CreateRapidDlg();
+	
 	char username[MAX_NAME_LENGTH_NUL], *s;
 	if (gSettings.flags & SETTING_AUTOCONNECT
 			&& (s = LoadSetting("username")) && strcpy(username, s)
