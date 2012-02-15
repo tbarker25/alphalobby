@@ -49,6 +49,7 @@ typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
 	DL_ACTIVE                 = 0x01,
 	DL_MAP                    = 0x02,
+	DL_USE_SHORT_NAME         = 0x20,
 	
 	DL_ONLY_ALLOW_ONE_REQUEST = 0x04,
 	DL_HAVE_ONE_REQUEST       = 0x08,
@@ -89,10 +90,10 @@ typedef struct SessionContext {
 	// HWND progressBar, button;
 	void *packageBytes; size_t packageLen;
 	char *error;
+	void (*onFinish)(void);
 }SessionContext;
 
 static SessionContext sessions[10];
-int nbDownloads;
 
 
 #define THREAD_ONFINISH_FLAG 0x80000000
@@ -106,7 +107,7 @@ static void downloadFile(SessionContext *ses);
 static void _handlePackage(RequestContext *req);
 #define handlePackage DEFINE_THREADED(_handlePackage)
 static void handleRepoList(RequestContext *req);
-static void handleRepo(RequestContext *req);
+static void handleRepo(const wchar_t *path, SessionContext *ses);
 
 // void EndDownload(SessionContext *ses)
 // {
@@ -166,27 +167,23 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
                               LPVOID lpvStatusInformation,
                               DWORD dwStatusInformationLength)
 {
-	printf("dwInternetStatus = %ld %lx\n", dwInternetStatus, dwInternetStatus);
 	if (*(int *)req & 1) {	//Magic number means its actually a session, handles are aligned on DWORD borders
 		SessionContext *ses = (void *)req;
 		if (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING) {
-			puts("WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING 1");
 			if (ses->handle != hRequest)
 				return;
-			puts("WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING 2");
+			if (ses->onFinish)
+				ses->onFinish();
 
 			free(ses->packageBytes);
-			--nbDownloads;
 			ses->status = 0;
-			BattleRoom_RedrawMinimap();
-			RemoveDownload(ses->name);
-			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->progressBar);
-			// SendMessage(gMainWindow, WM_DESTROY_WINDOW, 0, (LPARAM)ses->button);
-			// UpdateStatusBar();
-			ReloadMapsAndMod();
+			if (ses->name) {
+				BattleRoom_RedrawMinimap();
+				RemoveDownload(ses->name);
+				ReloadMapsAndMod();
+			}
 			if (ses->error)
 				MyMessageBox("Download Failed", ses->error);
-			puts("WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING 3");
 		}
 		return;
 	}
@@ -194,9 +191,7 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 
 	switch (dwInternetStatus) {
 		case WINHTTP_CALLBACK_STATUS_READ_COMPLETE:
-			puts("WINHTTP_CALLBACK_STATUS_READ_COMPLETE 1");
 			if (dwStatusInformationLength <= 0) {
-				puts("WINHTTP_CALLBACK_STATUS_READ_COMPLETE 3");
 				if ((intptr_t)req->onFinish & THREAD_ONFINISH_FLAG)
 					CreateThread(NULL, 1, exeucuteOnFinishHelper, hRequest, 0, 0);
 				else {
@@ -204,7 +199,6 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 						req->onFinish(req);
 					WinHttpCloseHandle(hRequest);
 				}
-				puts("WINHTTP_CALLBACK_STATUS_READ_COMPLETE 4");
 				return;
 			}
 			
@@ -215,15 +209,12 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 				wchar_t text[128];
 				swprintf(text, L"%.1f of %.1f MB  (%.2f%%)", (float)req->ses->fetchedBytes / 1000000, (float)req->ses->totalBytes / 1000000, (float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
 				UpdateDownload(req->ses->name, text);
-				// SendMessage(req->ses->progressBar, PBM_SETPOS, req->ses->fetchedBytes, 0);
-				// UpdateStatusBar();
 			}
 			
 			req->fetchedBytes += dwStatusInformationLength;
 			read_data:
 			WinHttpReadData(hRequest, req->buffer + req->fetchedBytes, min(req->contentLength - req->fetchedBytes, CHUNK_SIZE), NULL);
 			
-			puts("WINHTTP_CALLBACK_STATUS_READ_COMPLETE 2");
 			break;
 		case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE: {
 			wchar_t buff[128]; DWORD buffSize = sizeof(buff);
@@ -247,15 +238,12 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 			}
 		}	// FALLTHROUGH:
 		case WINHTTP_CALLBACK_STATUS_REQUEST_ERROR: closeHandle:
-			puts("WINHTTP_CALLBACK_STATUS_REQUEST_ERROR 1");
 			WinHttpCloseHandle(hRequest);
-			puts("WINHTTP_CALLBACK_STATUS_REQUEST_ERROR 2");
 			return;
 		case WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE:
 			WinHttpReceiveResponse(hRequest, NULL);
 			return;
 		case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
-			puts("WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING 1");
 			if (!--req->con->requests) {
 				WinHttpCloseHandle(req->con->handle);
 				free(req->con);
@@ -266,7 +254,6 @@ void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
 
 			free(req->buffer);
 			free(req);
-			puts("WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING 2");
 			return;
 	}
 }
@@ -353,52 +340,172 @@ void handleMapSources(RequestContext *req)
 	// }
 // }
 
+// void downloadSelectedPackages(void)
+// {
+	// if (gSettings.selected_packages) {
+	// size_t len = strlen(gSettings.selected_packages);
+		// char buffer[len];
+		// char *start = buffer;
+		// for (int i=0; i<len; ++i) {
+			// buffer[i] = gSettings.selected_packages[i];
+			// if (buffer[i] != ';')
+				// continue;
+			// buffer[i] = '\0';
+			// SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+			// start = buffer + i + 1;
+		// }
+		// SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+	// }
+// }
+
+void Downloader_Init(void)
+{
+	
+	CreateDirectory(GetWritablePath_unsafe(L"maps"), NULL);
+	CreateDirectory(GetWritablePath_unsafe(L"mods"), NULL);
+	CreateDirectory(GetWritablePath_unsafe(L"packages"), NULL);
+	CreateDirectory(GetWritablePath_unsafe(L"pool"), NULL);
+	CreateDirectory(GetWritablePath_unsafe(L"repos"), NULL);
+	
+	for (int i=0; i<256; ++i) {
+		wchar_t path[MAX_PATH];
+		swprintf(path, GetWritablePath_unsafe(L"pool/%02x"), i);
+		CreateDirectory(path, NULL);
+	}
+	
+	HINTERNET handle = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC);
+	SessionContext *ses = &sessions[0];
+	
+	*ses = (SessionContext){
+		.status = DL_ACTIVE,
+		.handle = handle,
+		.onFinish = GetSelectedPackages,
+	};
+	WinHttpSetOption(handle, WINHTTP_OPTION_CONTEXT_VALUE, &ses, sizeof(ses));
+	WinHttpSetStatusCallback(handle, (void *)callback, WINHTTP_CALLBACK_FLAG_ALL_COMPLETIONS | WINHTTP_CALLBACK_FLAG_HANDLES | WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0);
+	
+	RequestContext *req = malloc(sizeof(RequestContext));
+	
+	*req = (RequestContext){
+		.ses = ses,
+		.con = makeConnect(ses, L"repos.caspring.org"),
+		.onFinish = handleRepoList,
+	};
+	sendRequest(req, L"repos.gz");
+}
+
 
 static void downloadPackage(SessionContext *ses)
 {
 	ses->error = "Couldn't retreive list of repositories from \"repos.caspring.org\".";
 	
-	//Check cached repos for files:
-	//saves approximately 2 seconds
 	WIN32_FIND_DATA findFileData;
-	struct {
-		RequestContext req;
-		wchar_t _extra[MAX_PATH];
-	} req = {{.ses = ses}};
-	wchar_t *pathEnd = req.req.wcharParam + swprintf(req.req.wcharParam, L"%.*srepos\\*", gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
+	wchar_t path[MAX_PATH];
+	wchar_t *pathEnd = path + swprintf(path, L"%.*srepos\\*", gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
 	
-	HANDLE find = FindFirstFile(req.req.wcharParam, &findFileData);
+	HANDLE find = FindFirstFile(path, &findFileData);
 	do {
 		if (findFileData.cFileName[0] == L'.')
 			continue;
 		swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
-		HANDLE file = CreateFile(req.req.wcharParam, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
-		if (file != INVALID_HANDLE_VALUE) {
-			DWORD fileSize = GetFileSize(file, NULL);
-			if (fileSize != INVALID_FILE_SIZE) {
-				uint8_t buffer[fileSize];
-				if (ReadFile(file, buffer, fileSize, (void *)&req.req.contentLength, NULL)) {
-					req.req.buffer = buffer;
-					handleRepo(&req.req);
-				}
-			}
-			CloseHandle(file);
-		}
+		handleRepo(path, ses);
 	} while (FindNextFile(find, &findFileData));
 	FindClose(find);
+}
 
-	//Cached repos don't contain package, download master repo list:
-	if (!ses->requests) {
-		RequestContext *req2 = malloc(sizeof(RequestContext));
+static void handleRepo2(const wchar_t *path);
+
+void GetSelectedPackages(void)
+{
+	for (int i=0; !gNbMods && i<10; ++i) {
+		if (i==9) {
+			assert(0);
+			return;
+		}
+		Sleep(1000); //hack, instead of waiting for unitsync to init.
+	}
+	WIN32_FIND_DATA findFileData;
+	wchar_t path[MAX_PATH];
+	wchar_t *pathEnd = path + swprintf(path, L"%.*srepos\\*", gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
 	
-		*req2 = (RequestContext){
-			.ses = ses,
-			.con = makeConnect(ses, L"repos.caspring.org"),
-			.onFinish = handleRepoList,
-		};
-		sendRequest(req2, L"repos.gz");
+	HANDLE find = FindFirstFile(path, &findFileData);
+	do {
+		if (findFileData.cFileName[0] == L'.')
+			continue;
+		swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
+		handleRepo2(path);
+	} while (FindNextFile(find, &findFileData));
+	FindClose(find);
+}
+
+static void handleRepo2(const wchar_t *path)
+{
+	HANDLE file = CreateFile(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (file == INVALID_HANDLE_VALUE)
+		return;
+	
+	DWORD fileSize = GetFileSize(file, NULL);
+	if (fileSize == INVALID_FILE_SIZE) {
+		assert(0);
+		CloseHandle(file);
+		return;
+	}
+	
+	uint8_t buffer[fileSize];
+	if (!ReadFile(file, buffer, sizeof(buffer), &fileSize, NULL)
+			|| fileSize != sizeof(buffer)) {
+		assert(0);
+		CloseHandle(file);
+		return;
+	}
+
+	CloseHandle(file);
+
+	ALLOC_AND_INFLATE_GZIP(buff, buffer, sizeof(buffer));
+	
+	
+	for (char *s=buff;;) {
+		char *end = memchr(s, '\n', buff - s + sizeof(buff) - 1);
+		// "ct:revision:830,facbc765308dae8cad3fe939422a9dd6,,Conflict Terra test-830\n"
+		
+		void doit(char *name)
+		{
+			size_t len = strlen(name);
+			if (!memcmp(name, s, len)) {
+				char *end2 = end ?: buff + sizeof(buff) - 1;
+				*end2 = '\0';
+				char *longName = end2;
+				while (longName[-1] != ',')
+					--longName;
+				for (int i=0; i<gNbMods; ++i)
+					if (!strcmp(gMods[i], longName)) 
+						return;
+				DownloadMod(longName);
+			}
+		}
+		
+		if (gSettings.selected_packages) {
+			size_t len = strlen(gSettings.selected_packages);
+			char buffer[len + 1];
+			buffer[len] = '\0';
+			char *start = buffer;
+			for (int i=0; i<len; ++i) {
+				buffer[i] = gSettings.selected_packages[i];
+				if (buffer[i] != ';')
+					continue;
+				buffer[i] = '\0';
+				doit(start);
+				start = buffer + i + 1;
+			}
+			doit(start);
+		}
+		
+		if (!end)
+			break;
+		s = end + 1;
 	}
 }
+
 
 static void downloadFile(SessionContext *ses)
 {
@@ -433,7 +540,7 @@ void GetDownloadMessage(char *text)
 	}
 }
 
-void DownloadFile(const char *name, int isMap)
+void DownloadFile(const char *name, enum DLTYPE type)
 {
 	SessionContext *ses = NULL;
 	wchar_t buff[128];
@@ -446,12 +553,10 @@ void DownloadFile(const char *name, int isMap)
 	if (!ses)
 		return;
 
-	++nbDownloads;
-	
 	HINTERNET handle = WinHttpOpen(NULL, WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, WINHTTP_FLAG_ASYNC);
 	
 	*ses = (SessionContext){
-		.status = DL_ACTIVE | isMap * DL_MAP,
+		.status = DL_ACTIVE | (type == DLTYPE_MAP ? DL_MAP : type == DLTYPE_SHORTMOD ? DL_USE_SHORT_NAME : 0),
 		// .progressBar = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dialogItems[DLG_PROGRESS]),
 		// .button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dialogItems[DLG_PROGRESS_BUTTON_]),
 		.handle = handle,
@@ -465,22 +570,10 @@ void DownloadFile(const char *name, int isMap)
 	WinHttpSetOption(handle, WINHTTP_OPTION_CONTEXT_VALUE, &ses, sizeof(ses));
 	
 	WinHttpSetStatusCallback(handle, (void *)callback, WINHTTP_CALLBACK_FLAG_ALL_COMPLETIONS | WINHTTP_CALLBACK_FLAG_HANDLES | WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0);
-	if (isMap)
+	if (type == DLTYPE_MAP)
 		downloadFile(ses);
 	else
 		downloadPackage(ses);
-		
-	//This can take 200ms or so (if all have to be created), do now while requests are in progress:
-	//Unsafe ok since this function called from main thread;
-	CreateDirectory(GetWritablePath_unsafe(L"maps"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"mods"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"packages"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"pool"), NULL);
-	for (int i=0; i<256; ++i) {
-		wchar_t path[MAX_PATH];
-		swprintf(path, GetWritablePath_unsafe(L"pool/%02x"), i);
-		CreateDirectory(path, NULL);
-	}
 }
 
 static void _handleStream(RequestContext *req)
@@ -677,53 +770,74 @@ static void _handlePackage(RequestContext *req)
 	--req->ses->totalFiles;
 }
 
-static void handleRepo(RequestContext *req)
+
+static void handleRepo(const wchar_t *path, SessionContext *ses)
 {
-	const char *name = utf16to8(req->ses->name);
+	HANDLE file = CreateFile(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (file == INVALID_HANDLE_VALUE)
+		return;
+	
+	DWORD fileSize = GetFileSize(file, NULL);
+	if (fileSize == INVALID_FILE_SIZE) {
+		assert(0);
+		CloseHandle(file);
+		return;
+	}
+	
+	uint8_t buffer[fileSize];
+	if (!ReadFile(file, buffer, sizeof(buffer), &fileSize, NULL)
+			|| fileSize != sizeof(buffer)) {
+		assert(0);
+		CloseHandle(file);
+		return;
+	}
+
+	CloseHandle(file);
+
+	const char *name = utf16to8(ses->name);
 	size_t len = strlen(name);
 	
-	ALLOC_AND_INFLATE_GZIP(buff, req->buffer, req->contentLength);
+	wchar_t *domain = wcsrchr(path, '\\');
+	*domain = '\0';
+	while (domain[-1] != '\\')
+		--domain;
+	
+	ALLOC_AND_INFLATE_GZIP(buff, buffer, sizeof(buffer));
+	
+	
+	void doit(void)
+	{
+		;
+	}
+	
 	for (char *s=buff;;) {
 		char *end = memchr(s, '\n', buff - s + sizeof(buff) - 1);
+		char *lineName = ses->status & DL_USE_SHORT_NAME ? s : end ? end - len : buff + sizeof(buff) - 1 - len;
 		// "ct:revision:830,facbc765308dae8cad3fe939422a9dd6,,Conflict Terra test-830\n"
-		if (!memcmp(name, (end ?: buff + sizeof(buff) - 1) - len, len)) {
-			if (__sync_fetch_and_or(&req->ses->status, DL_HAVE_PACKAGE_MASK) & DL_HAVE_PACKAGE_MASK)
+		
+		if (!memcmp(name, lineName, len)) {
+			if (__sync_fetch_and_or(&ses->status, DL_HAVE_PACKAGE_MASK) & DL_HAVE_PACKAGE_MASK)
 				break;
 			#ifdef NDEBUG
-				RequestContext *req2 = calloc(1, sizeof(*req2));
+				RequestContext *req = calloc(1, sizeof(*req));
 			#else
-				RequestContext *req2 = calloc(1, sizeof(*req2) + 16);
-				FromBase16(strchr(s, ',') + 1, req2->md5Param[0]);
+				RequestContext *req = calloc(1, sizeof(*req) + 16);
+				FromBase16(strchr(s, ',') + 1, req->md5Param[0]);
 			#endif
 			
-			swprintf(req->ses->packagePath, L"packages/%.32hs.sdp", strchr(s, ',') + 1);
+			swprintf(ses->packagePath, L"packages/%.32hs.sdp", strchr(s, ',') + 1);
 
-			req2->ses = req->ses;
-			if (req->con)
-				req2->con = req->con;
-			else {
-				wchar_t *domain = wcsrchr(req->wcharParam, '\\');
-				*domain = '\0';
-				while (domain[-1] != '\\')
-					--domain;
-				req2->con = makeConnect(req->ses, domain);
-			}
-			req2->onFinish = handlePackage;
-			sendRequest(req2, req->ses->packagePath);
+			req->ses = ses;
+
+			req->con = makeConnect(ses, domain);
+
+			req->onFinish = handlePackage;
+			sendRequest(req, ses->packagePath);
 			break;
 		}
 		if (!end)
 			break;
 		s = end + 1;
-	}
-	if (req->con) {
-		wchar_t path[MAX_PATH];
-		memcpy(path, gWritableDataDirectory, gWritableDataDirectoryLen * sizeof(wchar_t));
-		wchar_t *lastSlash = path + gWritableDataDirectoryLen + swprintf(path + gWritableDataDirectoryLen, L"repos\\%s\\versions.gz", req->wcharParam) - lengthof("versions.gz");
-		*lastSlash = 0;
-		SHCreateDirectoryEx(NULL, path, NULL);
-		*lastSlash = L'\\';
-		writeFile(path, req->buffer, req->contentLength);
 	}
 }
 
@@ -736,11 +850,23 @@ static void handleRepoList(RequestContext *req)
 		char *hostName = strstr(s, ",http://") + sizeof(",http://") - 1;
 		char *hostNameEnd = strchr(hostName, ',');
 		*hostNameEnd = 0;
-		RequestContext *req2 = calloc(1, sizeof(*req2) + 2 * (hostNameEnd - hostName + 1));
-		MultiByteToWideChar(CP_UTF8, 0, hostName, -1, req2->wcharParam, hostNameEnd - hostName + 1);
+		RequestContext *req2 = calloc(1, sizeof(*req2) + 2 * (MAX_PATH));
+		
+		wchar_t path[hostNameEnd - hostName + 1];
+		
+		MultiByteToWideChar(CP_UTF8, 0, hostName, -1, path, hostNameEnd - hostName + 1);
+		
+		memcpy(req2->wcharParam, gWritableDataDirectory, gWritableDataDirectoryLen * sizeof(wchar_t));
+		
+		swprintf(req2->wcharParam + gWritableDataDirectoryLen, L"repos\\%s\\", path);
+		_putws(req2->wcharParam);
+		CreateDirectory(req2->wcharParam, NULL);
+		wcscat(req2->wcharParam, L"versions.gz");
+		
 		req2->ses = req->ses;
-		req2->con = makeConnect(req->ses, req2->wcharParam);
-		req2->onFinish = handleRepo;
+		req2->con = makeConnect(req->ses, path);
+		
+		req2->onFinish = saveFile;
 		sendRequest(req2, L"versions.gz");
 	}
 }

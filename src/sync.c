@@ -650,7 +650,6 @@ static void _setScriptTags(char *script)
 	}
 	ExecuteInMainThread(setModInfo);
 	ExecuteInMainThread(BattleRoom_StartPositionsChanged);
-	// taskSetInfo = 1;
 }
 
 void SetScriptTags(char *script)

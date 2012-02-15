@@ -1,13 +1,20 @@
 #pragma once
 
-struct SessionContext;
+void Downloader_Init(void);
 
-extern int nbDownloads;
+enum DLTYPE {
+	DLTYPE_MOD,
+	DLTYPE_MAP,
+	DLTYPE_SHORTMOD,
+};
 
-void DownloadFile(const char *name, int isMap);
+void GetSelectedPackages(void);
+void DownloadFile(const char *name, enum DLTYPE type);
 #define DownloadMap(mapName)\
-	DownloadFile(mapName, 1)
+	DownloadFile(mapName, DLTYPE_MAP)
 #define DownloadMod(modName)\
-	DownloadFile(modName, 0)
+	DownloadFile(modName, DLTYPE_MOD)
+#define DownloadShortMod(modName)\
+	DownloadFile(modName, DLTYPE_SHORTMOD)
 	
 
