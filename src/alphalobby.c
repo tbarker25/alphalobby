@@ -405,7 +405,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		NULL, (HMENU)0, NULL, NULL);
 	
 	GetServerChat();
-	CreateRapidDlg();
+	Downloader_Init();
+	// CreateRapidDlg();
 	
 	char username[MAX_NAME_LENGTH_NUL], *s;
 	if (gSettings.flags & SETTING_AUTOCONNECT

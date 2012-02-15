@@ -3,16 +3,18 @@ libraries = Split('winhttp wsock32 comctl32 gdi32 user32 kernel32 shell32 msvcrt
 libpath = '.'
 cflags = '-ffast-math -fshort-enums -std=gnu99 -march=i686'
 
-version = ARGUMENTS.get('VERSION', '(development build)')
-cppdefines = {'UNICODE' : 1, 'VERSION' : version}
+version = ARGUMENTS.get('VERSION')
+cppdefines = {'UNICODE' : 1}
+if version:
+	cppdefines['VERSION'] = version
 
-if version == '(development build)':
-	variant_dir = 'debug'
-	cflags += ' -g -O0  -Wall -Werror'
-else:
+if version:
 	cppdefines['NDEBUG'] = 1
 	variant_dir = 'release'
 	cflags += ' -s -Os -mwindows'
+else:
+	variant_dir = 'debug'
+	cflags += ' -g -O0  -Wall -Werror'
 
 cflags += ' -I' + variant_dir
 cflags += ' -Iinclude'
@@ -46,5 +48,5 @@ Depends(variant_dir + '/alphalobby', icons)
 alphalobby = env.Program(variant_dir + '/alphalobby', [files, resources], LIBS=libraries, LIBPATH=libpath, LINKFLAGS=cflags, CCFLAGS=cflags, CPPDEFINES=cppdefines)
 
 
-if version != '(development build)':
+if version:
 	Command(variant_dir + '/alphalobby-' + version + '.exe', alphalobby, 'upx $SOURCE -qq --brute -f -o $TARGET')

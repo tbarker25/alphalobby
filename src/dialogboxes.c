@@ -10,11 +10,14 @@
 
 #include <windowsx.h>
 #include <ctype.h>
+#include <zlib.h>
+#include <assert.h>
 
 #include "alphalobby.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "battleroom.h"
+#include "downloader.h"
 #include "settings.h"
 #include "data.h"
 #include "client_message.h"
@@ -435,16 +438,56 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
     }
 	return 0;
 }
-#include <zlib.h>
-#include <assert.h>
+
+static void rapid_addAvailable(HWND window, bool downloadOnly)
+{
+	#define TVGN_NEXTSELECTED       0x000B
+	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
+	#undef TVGN_NEXTSELECTED
+	
+	char itemText1[256];
+	char itemText2[256];
+	char *textA = itemText1;
+	char *textB = NULL;
+	while (item) {
+		TVITEMA itemInfo = {TVIF_HANDLE | TVIF_TEXT | TVIF_CHILDREN, item,
+				.pszText = textA,
+				.cchTextMax = 256};
+		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (LPARAM)&itemInfo);
+		
+		if (textB)
+			sprintf(textA + strlen(textA), ":%s", textB);
+		else if (itemInfo.cChildren)
+			return;
+		else
+			textB = itemText2;
+
+		char *swap;
+		swap = textA;
+		textA = textB;
+		textB = swap;
+		item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)item);
+	}
+	if (downloadOnly)
+		DownloadShortMod(textB);
+	else
+		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)textB);
+}
+
 
 static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) {
 	case WM_INITDIALOG: {
+		#ifdef NDEBUG
+		ShowWindow(GetDlgItem(window, IDC_RAPID_ERRORCHECK), 0);
+		ShowWindow(GetDlgItem(window, IDC_RAPID_CLEANUP), 0);
+		#endif
+		
 		if (gSettings.selected_packages) {
 			size_t len = strlen(gSettings.selected_packages);
-			char buffer[len];
+			char buffer[len + 1];
+			buffer[len] = '\0';
 			char *start = buffer;
 			for (int i=0; i<len; ++i) {
 				buffer[i] = gSettings.selected_packages[i];
@@ -513,29 +556,7 @@ static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		NMHDR *info = (NMHDR *)lParam;
 		if (info->idFrom == IDC_RAPID_AVAILABLE
 				&& (info->code == NM_DBLCLK || info->code == NM_RETURN)) {
-			
-			#define TVGN_NEXTSELECTED       0x000B
-			HTREEITEM item = (HTREEITEM)SendMessage(info->hwndFrom, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
-			char itemText1[256];
-			char itemText2[256];
-			char *textA = itemText1;
-			char *textB = NULL;
-			while (item) {
-				TVITEMA itemInfo = {TVIF_HANDLE | TVIF_TEXT, item,
-						.pszText = textA,
-						.cchTextMax = 256};
-				SendMessageA(info->hwndFrom, TVM_GETITEMA, 0, (LPARAM)&itemInfo);
-				if (textB)
-					sprintf(textA + strlen(textA), ":%s", textB);
-				else
-					textB = itemText2;
-				char *swap;
-				swap = textA;
-				textA = textB;
-				textB = swap;
-				item = (HTREEITEM)SendMessage(info->hwndFrom, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)item);
-			}
-			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)textB);
+			rapid_addAvailable(window, false);
 		}
 	}	return 0;
 	case WM_COMMAND:
@@ -550,9 +571,26 @@ static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 				s += SendMessageA(listBox, LB_GETTEXT, i, (LPARAM)s);
 			}
 			gSettings.selected_packages = strdup(text + 1);
+			GetSelectedPackages();
 		}	//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
+			return 0;
+		case MAKEWPARAM(IDC_RAPID_REMOVE, BN_CLICKED): {
+			DWORD selected = SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_GETCURSEL, 0, 0);
+			SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_DELETESTRING, selected, 0);
+		}	return 0;
+		case MAKEWPARAM(IDC_RAPID_SELECT, BN_CLICKED):
+			rapid_addAvailable(window, false);
+			return 0;
+		case MAKEWPARAM(IDC_RAPID_DOWNLOAD, BN_CLICKED):
+			rapid_addAvailable(window, true);
+			return 0;
+		case MAKEWPARAM(IDC_RAPID_ERRORCHECK, BN_CLICKED):
+			// MyMessageBox(NULL, "Not implemented yet");
+			return 0;
+		case MAKEWPARAM(IDC_RAPID_CLEANUP, BN_CLICKED):
+			// MyMessageBox(NULL, "Not implemented yet");
 			return 0;
 		} break;
     }
@@ -610,7 +648,6 @@ void CreateReplayDlg(void)
 {
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), gMainWindow, replayListProc);
 }
-
 
 void CreateRapidDlg(void)
 {

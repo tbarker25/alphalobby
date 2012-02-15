@@ -215,6 +215,7 @@ extern BattleOption gBattleOptions;
 extern uint8_t gNbSides;
 extern char gSideNames[16][32];
 
+
 extern uint32_t gUdpHelpPort;
 
 Battle * FindBattle(uint32_t id);

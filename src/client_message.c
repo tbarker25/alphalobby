@@ -198,7 +198,11 @@ void ChangePassword(const char *oldPassword, const char *newPassword)
 
 void login(void)
 {
-	SendToServer("LOGIN %s %s 0 * AlphaLobby 0\t0\ta", myUserName, myPassword);//, GetLocalIP() ?: "*");
+	SendToServer("LOGIN %s %s 0 * AlphaLobby"
+	#ifdef VERSION
+	" " STRINGIFY(VERSION)
+	#endif
+	"\t0\ta", myUserName, myPassword);//, GetLocalIP() ?: "*");
 }
 
 static void registerAccount(void)

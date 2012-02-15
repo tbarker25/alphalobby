@@ -37,7 +37,8 @@
 
 enum DLG_ID {
 	DLG_LIST,
-	DLG_LAST = DLG_LIST,
+	DLG_RAPID, 
+	DLG_LAST = DLG_RAPID,
 };
 
 HWND gDownloadTabWindow;
@@ -48,6 +49,10 @@ static const DialogItem dialogItems[] = {
 	[DLG_LIST] = {
 		.class = WC_LISTVIEW,
 		.style = WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS | LVS_SINGLESEL,
+	}, [DLG_RAPID] = {
+		.class = WC_BUTTON,
+		.name = L"Rapid",
+		.style = WS_VISIBLE,
 	},
 };
 
@@ -110,10 +115,18 @@ static LRESULT CALLBACK downloadTabProc(HWND window, UINT msg, WPARAM wParam, LP
 		}
 		ListView_SetExtendedListViewStyle(listDlg, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP | LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
 	case WM_SIZE: {
-		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam) - MAP_Y(14 + 7 + 4), TRUE);
+		MoveWindow(GetDlgItem(window, DLG_RAPID), LOWORD(lParam) - MAP_X(50 + 7), HIWORD(lParam) - MAP_Y(14 + 7), MAP_X(50), MAP_Y(14), TRUE);
 		resizeColumns();
 		return 0;
 	}
+	case WM_COMMAND:
+		switch (wParam) {
+		case MAKEWPARAM(DLG_RAPID, BN_CLICKED):
+			CreateRapidDlg();
+			return 0;
+		}
+		return 0;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
 }
