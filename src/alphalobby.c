@@ -386,7 +386,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	InitializeSystemMetrics();
 	LoadLibrary(L"Riched20.dll");
 	
-	RegisterClassEx(&(WNDCLASSEX){
+	RegisterClassEx(&(WNDCLASSEX) {
 		.cbSize = sizeof(WNDCLASSEX),
 		.lpszClassName = WC_ALPHALOBBY,
 		.lpfnWndProc	= winMainProc,
@@ -394,6 +394,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	});
+
 	LONG left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
 	const char *windowPlacement = LoadSetting("window_placement");
 	if (windowPlacement)
@@ -405,7 +406,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		NULL, (HMENU)0, NULL, NULL);
 	
 	GetServerChat();
-	Downloader_Init();
+	/* Downloader_Init(); */
 	// CreateRapidDlg();
 	
 	char username[MAX_NAME_LENGTH_NUL], *s;
