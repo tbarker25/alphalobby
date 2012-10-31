@@ -170,23 +170,6 @@ typedef struct tagLVSETINFOTIP
 
 // ====================== Button Control =============================
 
-#ifndef NOBUTTON
-
-#ifdef _WIN32
-
-// Button Class Name
-#define WC_BUTTONA              "Button"
-#define WC_BUTTONW              L"Button"
-
-#ifdef UNICODE
-#define WC_BUTTON               WC_BUTTONW
-#else
-#define WC_BUTTON               WC_BUTTONA
-#endif
-
-#else
-#define WC_BUTTON               "Button"
-#endif
 
 #if (_WIN32_WINNT >= 0x0501)
 #define BUTTON_IMAGELIST_ALIGN_LEFT     0
@@ -317,6 +300,4 @@ typedef struct tagNMBCDROPDOWN
 #define BCN_DROPDOWN            (BCN_FIRST + 0x0002)
 
 #endif // _WIN32_WINNT >= 0x600
-
-#endif // NOBUTTON
 

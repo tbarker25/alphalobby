@@ -1,35 +1,36 @@
-BUILD_DIR:=debug
 LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lshell32 -lmsvcrt -lShlwapi -lzlib1 -ldevil -lshell32 -Llib
-CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686
-CFLAGS+= -Iinclude -I$(BUILD_DIR) -DUNICODE=1
-#cppdefines = {'UNICODE' : 1}
-#if version:
-#	cppdefines['VERSION'] = version
+CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions
 
-#if version:
-#	cppdefines['NDEBUG'] = 1
-#	variant_dir = 'release'
-#	cflags += ' -s -Os -mwindows'
-#else:
-#	variant_dir = 'debug'
-#	cflags += ' -g -O0  -Wall -Werror'
+ifdef VERSION 
+	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG=1
+	BUILD_DIR:=release
+	CFLAGS+= -s -Os -mwindows
+else
+	BUILD_DIR:=debug
+	CFLAGS+= -g -O0  -Wall -Werror -Wno-unknown-pragmas
+endif
+
+CFLAGS+= -Iinclude -I$(BUILD_DIR) -DUNICODE=1
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:
-ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_away user_ignore user_unsync_ignore user_away_ignore user_unsync_away_ignore closed open host spectator host_spectator ingame split_vert split_horz split_corner1 split_corner2 split_rand))
+ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_away user_ignore user_unsync_ignore user_away_ignore user_unsync_away_ignore closed open host spectator host_spectator ingame rank0 rank1 rank2 rank3 rank4 rank5 rank6 rank7 connecting battlelist replays options split_vert split_horz split_corner1 split_corner2 split_rand))
+
+
 ICONS+=$(wildcard icons/flags/*)
 ICONS+= null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null:
 
-#if version:
-	#Command(variant_dir + '/alphalobby-' + version + '.exe', alphalobby, 'upx $SOURCE -qq --brute -f -o $TARGET')
-
-FILES1:=gzip.o client.o downloadtab.o chat_window.o client_message.o data.o alphalobby.o common.o sync.o settings.o wincommon.o userlist.o battlelist.o battleroom.o downloader.o imagelist.o layoutmetrics.o dialogboxes.o chat.o md5.o res.o countrycodes.o battletools.o spring.o usermenu.o
+FILES1:=gzip.o client.o downloadtab.o chat_window.o client_message.o data.o alphalobby.o common.o sync.o settings.o wincommon.o userlist.o battlelist.o battleroom.o downloader.o imagelist.o layoutmetrics.o dialogboxes.o chat.o md5.o res.o countrycodes.o battletools.o spring.o usermenu.o messages.o
 
 FILES=$(addprefix $(BUILD_DIR)/, $(FILES1))
 
-all: $(BUILD_DIR)/alphalobby
+all: $(BUILD_DIR)/alphalobby.exe
 
-$(BUILD_DIR)/alphalobby: $(BUILD_DIR) $(FILES)
+release/alphalobby.exe: $(BUILD_DIR) $(FILES)
+	$(CC) $(FILES) -o $@-big $(CFLAGS) $(LDFLAGS)
+	upx $@-big -o$@ -qq --ultra-brute
+
+debug/alphalobby.exe: $(BUILD_DIR) $(FILES)
 	$(CC) $(FILES) -o $@ $(CFLAGS) $(LDFLAGS)
 
 $(BUILD_DIR)/icons.h: $(BUILD_DIR)/rgba2c.exe
