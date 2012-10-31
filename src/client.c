@@ -1,94 +1,15 @@
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-
 #include "wincommon.h"
 #include <winsock2.h>
-#include <Shlwapi.h>
 
 #include "alphalobby.h"
-#include "battlelist.h"
-#include "battleroom.h"
-#include "battletools.h"
 #include "chat.h"
-#include "chat_window.h"
-#include "client_message.h"
-#include "countrycodes.h"
-#include "data.h"
-#include "dialogboxes.h"
-#include "settings.h"
-#include "spring.h"
-#include "sync.h"
-#include "userlist.h"
-
 #include "client.h"
-
-#undef NDEBUG
-
-static FILE *agreement;
-extern uint32_t gLastBattleStatus;
-extern uint8_t gLastClientStatus;
-const char **gRelayManagers;
-int gRelayManagersCount;
-
-static DWORD timeJoinedBattle;
-static char *command;
+#include "client_message.h"
+#include "messages.h"
 
 #define RECV_SIZE 8192
 #define MAX_MESSAGE_LENGTH 1024 //Hardcoded into server
-
-void copyNextWord(char *s) {
-	size_t len = strcspn(command, " ");
-	char *word = command;
-	command += len + !!command[len];
-	word[len] = '\0';
-	memcpy(s, word, len + 1);
-}
-
-char * getNextWord(void) {
-	size_t len = strcspn(command, " ");
-	char *word = command;
-	command += len + !!command[len];
-	word[len] = '\0';
-	return word;
-}
-
-int getNextInt(void) {
-	return atoi(getNextWord());
-}
-
-void copyNextSentence(char *s) {
-	size_t len = strcspn(command, "\t");
-	char *word = command;
-	command += len + !!command[len];
-	word[len] = '\0';
-	memcpy(s, word, len + 1);
-}
-
-//Declare server message functions:
-#define X(name, func)\
-	static void name(void);
-#include "messages.def"
-#undef X
-
-//Define server message functions:
-#define X(name, func)\
-	static void name(void) {func;}
-#include "messages.def"
-#undef X
-
-//Initialize array of server message functions:
-static const struct {
-	void (*func)(void);
-	char *name;
-}serverCommands[] = {
-#define X(name, func)\
-	{name, #name},
-#include "messages.def"
-#undef X
-};
 
 static SOCKET sock = INVALID_SOCKET;
 
@@ -98,9 +19,10 @@ void PollServer(void)
 	static size_t bufferLength = 0;
 	static char buffer[RECV_SIZE+MAX_MESSAGE_LENGTH];
 	
-	int bytesReceived = 0;
-	if ((bytesReceived = recv(sock, buffer + bufferLength, RECV_SIZE, 0)) <= 0) {
-		printf("bytes recv = %d, err = %d\n", bytesReceived, WSAGetLastError());
+	int bytesReceived = recv(sock, buffer + bufferLength, RECV_SIZE, 0);
+	if (bytesReceived <= 0) {
+		printf("bytes recv = %d, err = %d\n", bytesReceived,
+				WSAGetLastError());
 		Disconnect();
 		assert(bytesReceived == 0);
 		return;
@@ -119,17 +41,8 @@ void PollServer(void)
 		HWND serverWindow = GetServerChat();
 		if (GetTabIndex(serverWindow) >= 0)
 			Chat_Said(serverWindow, NULL, CHAT_SERVERIN, s);
+		handleCommand(s);
 		
-		command = s;
-		char *commandName = getNextWord();
-		size_t commandLength = command - commandName;
-
-		for (int i=0; i<lengthof(serverCommands); ++i) {
-			if (!memcmp(commandName, serverCommands[i].name, commandLength)) {
-				serverCommands[i].func();
-				break;
-			}
-		}
 		s = buffer + i + 1;
 	}
 	bufferLength -= s - buffer;
@@ -149,7 +62,8 @@ void SendToServer(const char *format, ...)
 	int commandStart=0;
 	if (format[0] == '!') {
 		if (*relayHoster)
-			commandStart = sprintf(buff, "SAYPRIVATE %s ", relayHoster);
+			commandStart = sprintf(buff, "SAYPRIVATE %s ",
+					relayHoster);
 		else
 			++format;
 	}
@@ -171,7 +85,8 @@ void SendToServer(const char *format, ...)
 	if (send(sock, buff, len+1, 0) == SOCKET_ERROR) {
 		assert(0);
 		Disconnect();
-		MyMessageBox("Connection to server interupted", "Please check your internet connection.");
+		MyMessageBox("Connection to server interupted",
+				"Please check your internet connection.");
 	}
 }
 
@@ -191,7 +106,6 @@ void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
 	SendToServer("PING");
 }
 
-
 DWORD WINAPI _Connect(void (*onFinish)(void)) 
 {
 	if (sock != INVALID_SOCKET)
@@ -199,13 +113,15 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	MainWindow_ChangeConnect(CONNECTION_CONNECTING);
 	
 	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
-		MyMessageBox("Could not connect to server.", "WSAStartup failed.\nPlease check your internet connection.");
+		MyMessageBox("Could not connect to server.",
+				"WSAStartup failed.\nPlease check your internet connection.");
 		return 1;
 	}
 	
 	struct hostent *host = gethostbyname("lobby.springrts.com");
 	if (!host) {
-		MyMessageBox("Could not connect to server.", "Could not retrieve host information.\nPlease check your internet connection.");
+		MyMessageBox("Could not connect to server.",
+				"Could not retrieve host information.\nPlease check your internet connection.");
 		return 1;
 	}
 	#define HTONS(x) (uint16_t)((x) << 8 | (x) >> 8)
@@ -217,7 +133,8 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 	
 	if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
-		MyMessageBox("Could not connect to server.", "Could not finalize connection.\nPlease check your internet connection.");
+		MyMessageBox("Could not connect to server.",
+				"Could not finalize connection.\nPlease check your internet connection.");
 		closesocket(sock);
 		sock = INVALID_SOCKET;
 	}

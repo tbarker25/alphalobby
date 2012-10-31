@@ -85,19 +85,20 @@ enum USER_SYNC_STATUS {
 	USER_SYNC_UNSYNCED = 2,
 };
 
-#define USER_OR_BOT_HEADER\
-	char name[MAX_NAME_LENGTH_NUL];\
-	uint32_t battleStatus;\
-	struct battle *battle;\
-	union {\
-		uint32_t color;\
-		struct {\
-			uint8_t red, green, blue;\
-		};\
-	}
+typedef struct UserBot {
+	char name[MAX_NAME_LENGTH_NUL];
+	uint32_t battleStatus;
+	struct battle *battle;
+	union {
+		uint32_t color;
+		struct {
+			uint8_t red, green, blue;
+		};
+	};
+} UserBot;
 
 typedef struct User {
-	USER_OR_BOT_HEADER;
+	UserBot;
 
 	HWND chatWindow;
 	uint32_t cpu, id;
@@ -108,7 +109,7 @@ typedef struct User {
 }User;
 
 typedef struct Bot {
-	USER_OR_BOT_HEADER;
+	UserBot;
 	
 	char *dll;
 	int nbOptions;
@@ -120,15 +121,10 @@ typedef struct Bot {
 
 //Identify them with AI_MASK of battleStatus
 typedef union UserOrBot {
-	struct {
-		USER_OR_BOT_HEADER;
-	};
+	UserBot;
 	User user;
 	Bot bot;
 }UserOrBot;
-
-#undef USER_OR_BOT_HEADER
-
 
 typedef struct battle {
 	//MUST BE FIRST SINCE IT IS USED BY HASH:
