@@ -62,7 +62,6 @@ enum DLG_ID {
 	DLG_SIDE_LAST = DLG_SIDE_FIRST+4,
 	DLG_SPECTATE,
 	DLG_AUTO_UNSPEC,
-	DLG_READY,
 	DLG_MINIMAP,
 	DLG_START,
 	DLG_LEAVE,
@@ -119,10 +118,6 @@ static const DialogItem dialogItems[] = {
 	}, [DLG_MAP] = {
 		.class = WC_COMBOBOX,
 		.style = WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-	}, [DLG_READY] = {
-		.class = WC_BUTTON,
-		.name = L"Ready",
-		.style = WS_VISIBLE | BS_CHECKBOX | BS_ICON,
 	}, [DLG_SPECTATE] = {
 		.class = WC_BUTTON,
 		.name = L"Spectate",
@@ -286,7 +281,6 @@ void BattleRoom_Show(void)
 	int isSP = gBattleOptions.hostType == HOST_SP;
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_CHAT), !isSP);
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST), !isSP);
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_READY), !isSP);
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_ALLY), !isSP);
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MAP), isSP);
 	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MOD), isSP);
@@ -426,7 +420,6 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 	setIcon(item, COLUMN_RANK, ICONS_FIRST_RANK + FROM_RANK_MASK(u->clientStatus));
 
 	if (u == &gMyUser) {
-		SendDlgItemMessage(gBattleRoomWindow, DLG_READY, BM_SETCHECK, !!(battleStatus & READY_MASK), 0);
 		SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, !(battleStatus & MODE_MASK), 0);
 		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_AUTO_UNSPEC), !(battleStatus & MODE_MASK));
 		if (battleStatus & MODE_MASK)
@@ -524,9 +517,8 @@ static void resizeAll(LPARAM lParam)
 	for (int i=0; i <= DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i)
 		MOVE_ID(DLG_SIDE_FIRST + i, CHAT_WIDTH + i * (COMMANDBUTTON_Y + MAP_X(4)), VOTEBOX_BOTTOM + MAP_Y(41), COMMANDBUTTON_Y, COMMANDBUTTON_Y);
 
-	MOVE_ID(DLG_READY,       CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(62), MAP_X(70), TEXTBOX_Y);
-	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(77), MAP_X(70), TEXTBOX_Y);
-	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH + MAP_X(10), VOTEBOX_BOTTOM + MAP_Y(92), MAP_X(80), TEXTBOX_Y);
+	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(62), MAP_X(70), TEXTBOX_Y);
+	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH + MAP_X(10), VOTEBOX_BOTTOM + MAP_Y(77), MAP_X(80), TEXTBOX_Y);
 
 	for (int i=0; i<=SPLIT_LAST; ++i)
 		MOVE_ID(DLG_SPLIT_FIRST + i, minimapX + (1 + i) * XS + i * YH, YS, MAP_Y(14), MAP_Y(14));
@@ -888,9 +880,6 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			return 0;
 		case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
 			SetBattleStatus(&gMyUser, ~gMyUser.battleStatus, MODE_MASK);
-			return 0;
-		case MAKEWPARAM(DLG_READY, BN_CLICKED):
-			SetBattleStatus(&gMyUser, ~gMyUser.battleStatus, READY_MASK);
 			return 0;
 		case MAKEWPARAM(DLG_ALLY, CBN_SELCHANGE):
 			SetBattleStatus(&gMyUser, TO_ALLY_MASK(SendMessage((HWND)lParam, CB_GETCURSEL, 0, 0)), ALLY_MASK);

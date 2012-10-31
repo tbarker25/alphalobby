@@ -200,7 +200,7 @@ extern struct _LargeMapInfo _gLargeMapInfo;
 #define gMapInfo (_gLargeMapInfo.mapInfo)
 
 extern char **gMaps, **gMods;
-extern size_t gNbMaps, gNbMods;
+extern ssize_t gNbMaps, gNbMods;
 
 
 extern User gMyUser;
