@@ -38,7 +38,7 @@ uint8_t gNbSides;
 char gSideNames[16][32];
 
 char **gMaps, **gMods;
-size_t gNbMaps, gNbMods;
+ssize_t gNbMaps = -1, gNbMods = -1;
 
 struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 

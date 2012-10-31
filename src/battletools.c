@@ -189,6 +189,6 @@ uint32_t GetNewBattleStatus(void)
 			break;
 		}
 	}
-	return MODE_MASK | teamMask | TO_ALLY_MASK(ally > 0);
+	return MODE_MASK | READY_MASK | teamMask | TO_ALLY_MASK(ally > 0);
 }
 
