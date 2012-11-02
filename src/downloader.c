@@ -326,12 +326,11 @@ void handleMapSources(RequestContext *req)
 				.lpszUrlPath = path, .dwUrlPathLength = lengthof(path)}))
 			continue;
 		wchar_t *name = wcsrchr(path, '/');
-		size_t size = sizeof(wchar_t) * (wcslen(name) + gWritableDataDirectoryLen + lengthof(L"maps"));
+		size_t size = sizeof(wchar_t) * (wcslen(name) + wcslen(gDataDir) + lengthof(L"maps"));
 
 		RequestContext *req2 = calloc(1, sizeof(*req2) + size);
-		swprintf(req2->wcharParam, L"%.*s%s%s",
-				gWritableDataDirectoryLen, gWritableDataDirectory,
-				req->ses->status & DL_MAP ? L"maps" : L"mods", name);
+		swprintf(req2->wcharParam, L"%s%s%s",
+				gDataDir, req->ses->status & DL_MAP ? L"maps" : L"mods", name);
 		req2->ses = req->ses;
 		req2->con = makeConnect(req->ses, host);
 
@@ -380,16 +379,15 @@ void handleMapSources(RequestContext *req)
 
 void Downloader_Init(void)
 {
-
-	CreateDirectory(GetWritablePath_unsafe(L"maps"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"mods"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"packages"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"pool"), NULL);
-	CreateDirectory(GetWritablePath_unsafe(L"repos"), NULL);
+	CreateDirectory(GetDataDir(L"maps"), NULL);
+	CreateDirectory(GetDataDir(L"mods"), NULL);
+	CreateDirectory(GetDataDir(L"packages"), NULL);
+	CreateDirectory(GetDataDir(L"pool"), NULL);
+	CreateDirectory(GetDataDir(L"repos"), NULL);
 
 	for (int i=0; i<256; ++i) {
 		wchar_t path[MAX_PATH];
-		swprintf(path, GetWritablePath_unsafe(L"pool/%02x"), i);
+		swprintf(path, L"%spool/%02x", gDataDir, i);
 		CreateDirectory(path, NULL);
 	}
 
@@ -427,8 +425,8 @@ static void downloadPackage(SessionContext *ses)
 
 	WIN32_FIND_DATA findFileData;
 	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + swprintf(path, L"%.*srepos\\*",
-			gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
+	wchar_t *pathEnd = path + swprintf(path, L"%srepos\\*",
+			gDataDir) - 1;
 
 	HANDLE find = FindFirstFile(path, &findFileData);
 	do {
@@ -453,8 +451,8 @@ void GetSelectedPackages(void)
 	}
 	WIN32_FIND_DATA findFileData;
 	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + swprintf(path, L"%.*srepos\\*",
-			gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
+	wchar_t *pathEnd = path + swprintf(path, L"%srepos\\*",
+			gDataDir) - 1;
 
 	HANDLE find = FindFirstFile(path, &findFileData);
 	do {
@@ -630,18 +628,17 @@ void DownloadFile(const char *name, enum DLTYPE type)
 static void _handleStream(RequestContext *req)
 {
 	wchar_t path[MAX_PATH];
-	memcpy(path, gWritableDataDirectory, gWritableDataDirectoryLen * sizeof(wchar_t));
+	wcscpy(path, gDataDir);
 
 	for (int i=0, j=0; i<req->contentLength;++j) {
 		size_t fileSize = ntohl(*(uint32_t *)&req->buffer[i]);
-		getPathFromMD5(req->md5Param[j], path + gWritableDataDirectoryLen);
+		getPathFromMD5(req->md5Param[j], path + wcslen(gDataDir));
 		writeFile(path, req->buffer + i + 4, fileSize);
 		i += fileSize + 4;
 	}
 
 	if (req->ses->totalFiles == ++req->ses->fetchedFiles) {
-		wchar_t path[MAX_PATH];
-		GetWritablePath(req->ses->packagePath, path);
+		wchar_t *path = GetDataDir(req->ses->packagePath);
 		writeFile(path, req->ses->packageBytes, req->ses->packageLen);
 		req->ses->error = NULL;
 	}
@@ -684,8 +681,8 @@ static void _handlePackage(RequestContext *req)
 	RequestContext *requestContexts[MAX_REQUESTS] = {};
 
 	wchar_t path[MAX_PATH];
-	size_t pathLen = gWritableDataDirectoryLen;
-	memcpy(path, gWritableDataDirectory, pathLen * sizeof(wchar_t));
+	size_t pathLen = wcslen(gDataDir);
+	wcscpy(path, gDataDir);
 
 	wchar_t objectName[lengthof(L"streamer.cgi?") + 32] = L"streamer.cgi?";
 	memcpy(objectName + lengthof(L"streamer.cgi?") - 1,
@@ -907,10 +904,7 @@ static void handleRepoList(RequestContext *req)
 
 		MultiByteToWideChar(CP_UTF8, 0, hostName, -1, path, hostNameEnd - hostName + 1);
 
-		memcpy(req2->wcharParam, gWritableDataDirectory, gWritableDataDirectoryLen * sizeof(wchar_t));
-
-		swprintf(req2->wcharParam + gWritableDataDirectoryLen, L"repos\\%s\\", path);
-		_putws(req2->wcharParam);
+		swprintf(req2->wcharParam + wcslen(gDataDir), L"%srepos\\%s\\", gDataDir, path);
 		CreateDirectory(req2->wcharParam, NULL);
 		wcscat(req2->wcharParam, L"versions.gz");
 

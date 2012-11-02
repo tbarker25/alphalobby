@@ -28,6 +28,9 @@ extern struct Settings {
 void OpenDefaultChannels(void);
 
 
+wchar_t * GetDataDir(const wchar_t *file);
+extern wchar_t gDataDir[MAX_PATH];
+
 void SaveSetting(const char *key, const char *val);
 char *LoadSetting(const char *key);
 int LoadSettingInt(const char *key);

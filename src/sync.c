@@ -380,8 +380,8 @@ static void createMapFile(const char *mapName)
 	gzclose(fd);
 
 	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
-	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	sprintf(filePath, "%lscache\\alphalobby\\%s.MapData", gDataDir, mapName);
+	SHCreateDirectoryExW(NULL, GetDataDir(L"cache\\alphalobby"), NULL);
 	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 
 	ExecuteInMainThreadParam(ChangedMap, mapName);
@@ -460,8 +460,8 @@ static void createModFile(const char *modName)
 	gzclose(fd);
 	
 	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
-	SHCreateDirectoryExW(NULL, GetWritablePath_unsafe(L"cache\\alphalobby"), NULL);
+	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
+	SHCreateDirectoryExW(NULL, GetDataDir(L"cache\\alphalobby"), NULL);
 	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	
 	ExecuteInMainThreadParam(ChangedMod, modName);
@@ -475,7 +475,7 @@ void ChangedMod(const char *modName)
 		return;
 
 	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.ModData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, modName);
+	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
 	
 	gzFile fd = gzopen(filePath, "rb");
 	
@@ -530,7 +530,7 @@ void ChangedMap(const char *mapName)
 		return;
 
 	char filePath[MAX_PATH];
-	sprintf(filePath, "%.*ls\\cache\\alphalobby\\%s.MapData", gWritableDataDirectoryLen - 1, gWritableDataDirectory, mapName);
+	sprintf(filePath, "%lscache\\alphalobby\\%s.MapData", gDataDir, mapName);
 	
 	gzFile fd = gzopen(filePath, "rb");
 	if (fd && gzgetc(fd) != SYNCFILE_VERSION) {

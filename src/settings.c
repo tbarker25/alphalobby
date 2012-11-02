@@ -1,21 +1,18 @@
+#include "wincommon.h"
+
+#include <assert.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 #include <string.h>
-#include <assert.h>
-
-#include "alphalobby.h"
-#include "common.h"
-#include "wincommon.h"
 #include <Shlobj.h>
-#include "client_message.h"
-#include "data.h"
-#include "chat_window.h"
 
 #include "chat.h"
+#include "chat_window.h"
+#include "client_message.h"
 #include "settings.h"
 
-#define CONFIG_PATH (GetWritablePath_unsafe(L"alphalobby.conf"))
+#define CONFIG_PATH (GetDataDir(L"alphalobby.conf"))
 
 typedef struct KeyPair{
 	char *key, *val;
@@ -23,6 +20,7 @@ typedef struct KeyPair{
 }KeyPair;
 
 typeof(gSettings) gSettings;
+wchar_t gDataDir[MAX_PATH];
 
 static const KeyPair defaultSettings[] = {
 	{"spring_path", "spring.exe"},
@@ -94,15 +92,13 @@ void ResetSettings(void)
 	_wremove(CONFIG_PATH);
 }
 
-#include <assert.h>
 void InitSettings(void)
 {
-	SHGetFolderPath(NULL, CSIDL_FLAG_CREATE | CSIDL_PERSONAL, NULL, 0, gWritableDataDirectory);
-	wcscat(gWritableDataDirectory, L"\\My Games\\Spring\\");
-	SHCreateDirectoryEx(NULL, gWritableDataDirectory, NULL);
-	gWritableDataDirectoryLen = wcslen(gWritableDataDirectory);
+	SHGetFolderPath(NULL, CSIDL_FLAG_CREATE | CSIDL_PERSONAL, NULL, 0, gDataDir);
+	wcscat(gDataDir, L"\\My Games\\Spring\\");
+	SHCreateDirectoryEx(NULL, gDataDir, NULL);
 
-	FILE *fd = _wfopen(GetWritablePath_unsafe(L"aliases.conf"), L"r");
+	FILE *fd = _wfopen(GetDataDir(L"aliases.conf"), L"r");
 	if (fd) {
 		for (KeyPair s; (s = getLine(fd)).key;)
 			NewUser(atoi(s.key), s.val);
@@ -132,7 +128,7 @@ void InitSettings(void)
 
 void SaveAliases(void)
 {
-	FILE *aliasFile = _wfopen(GetWritablePath_unsafe(L"aliases.conf"), L"w");
+	FILE *aliasFile = _wfopen(GetDataDir(L"aliases.conf"), L"w");
 	if (!aliasFile)
 		return;
 	for (const User *u; (u = GetNextUser());)
@@ -153,7 +149,7 @@ void SaveSetting(const char *key, const char *val)
 	if (!tmpConfig)
 		return;
 	
-	const wchar_t *configPath = GetWritablePath_unsafe(L"alphalobby.conf");
+	const wchar_t *configPath = GetDataDir(L"alphalobby.conf");
 	
 	FILE *oldConfig = _wfopen(configPath, L"r");
 	if (oldConfig) {
@@ -191,3 +187,9 @@ void SaveSetting(const char *key, const char *val)
 	#endif
 }
 
+wchar_t * GetDataDir(const wchar_t *file)
+{
+	static __thread wchar_t buff[MAX_PATH];
+	wsprintf(buff, L"%s%s", gDataDir, file);
+	return buff;
+}

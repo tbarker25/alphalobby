@@ -1,30 +1,24 @@
+#include "wincommon.h"
 
+#include <Commctrl.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include "wincommon.h"
-#include "resource.h"
-
-#include <Commctrl.h>
-#include <assert.h>
-
 #include "alphalobby.h"
-#include "client.h"
-#include "client_message.h"
 #include "battlelist.h"
 #include "battleroom.h"
-#include "userlist.h"
-#include "dialogboxes.h"
 #include "chat.h"
+#include "chat_window.h"
+#include "client_message.h"
+#include "dialogboxes.h"
 #include "downloader.h"
+#include "downloadtab.h"
+#include "imagelist.h"
 #include "layoutmetrics.h"
 #include "settings.h"
 #include "sync.h"
-#include "md5.h"
-#include "imagelist.h"
-#include "downloadtab.h"
-#include "chat_window.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
 
@@ -37,8 +31,6 @@
 HWND gMainWindow;
 
 //Init in syncThread, then only use in mainthread:
-wchar_t gWritableDataDirectory[MAX_PATH];
-size_t gWritableDataDirectoryLen;
 
 static HWND currentTab;
 
@@ -380,7 +372,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 {
 	InitSettings();
 	
-	
 	srand(time(NULL));
 
 	InitializeSystemMetrics();
@@ -437,14 +428,3 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     return 0;
 }
 
-const wchar_t * GetWritablePath_unsafe(wchar_t *file)
-{
-	wcscpy(gWritableDataDirectory + gWritableDataDirectoryLen, file ?: L"");
-	return gWritableDataDirectory;
-}
-
-void GetWritablePath(wchar_t *file, wchar_t *buff)
-{
-	memcpy(buff, gWritableDataDirectory, gWritableDataDirectoryLen * sizeof(wchar_t));
-	wcscpy(buff + gWritableDataDirectoryLen, file ?: L"");
-}
