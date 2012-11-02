@@ -21,6 +21,7 @@
 #include "battleroom.h"
 
 #define ALLOC_STEP 10
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 static Battle **battles;
 Battle *gMyBattle;
@@ -163,7 +164,7 @@ void LeftBattle(void)
 void ResetBattleOptions(void)
 {
 	memset(&gBattleOptions, 0, sizeof(gBattleOptions));
-	for (int i=0; i<lengthof(gBattleOptions.positions); ++i)
+	for (int i=0; i<LENGTH(gBattleOptions.positions); ++i)
 		gBattleOptions.positions[i] = INVALID_STARTPOS;
 
 }

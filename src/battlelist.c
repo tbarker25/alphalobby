@@ -33,8 +33,11 @@
 #include "data.h"
 #include "common.h"
 #include "sync.h"
+#include "listview.h"
 
 HWND gBattleListWindow;
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 
 enum DLG_ID {
@@ -108,10 +111,10 @@ static void resizeColumns(void)
 	HWND list = GetDlgItem(gBattleListWindow, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int columnRem = rect.right % lengthof(columns);
-	int columnWidth = rect.right / lengthof(columns);
+	int columnRem = rect.right % LENGTH(columns);
+	int columnWidth = rect.right / LENGTH(columns);
 
-	for (int i=0, n = lengthof(columns); i < n; ++i)
+	for (int i=0, n = LENGTH(columns); i < n; ++i)
 		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
 }
 

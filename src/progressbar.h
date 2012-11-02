@@ -1,0 +1,19 @@
+
+#define PBS_MARQUEE             0x08
+#define PBM_SETRANGE            (WM_USER+1)
+#define PBM_SETPOS              (WM_USER+2)
+#define PBM_DELTAPOS            (WM_USER+3)
+#define PBM_SETSTEP             (WM_USER+4)
+#define PBM_STEPIT              (WM_USER+5)
+#define PBM_SETBKCOLOR          CCM_SETBKCOLOR
+#define PBS_MARQUEE             0x08
+#define PBM_SETMARQUEE          (WM_USER+10)
+#define PBS_SMOOTHREVERSE       0x10
+#define PBM_GETSTEP             (WM_USER+13)
+#define PBM_GETBKCOLOR          (WM_USER+14)
+#define PBM_GETBARCOLOR         (WM_USER+15)
+#define PBM_SETSTATE            (WM_USER+16)
+#define PBM_GETSTATE            (WM_USER+17)
+#define PBST_NORMAL             0x0001
+#define PBST_ERROR              0x0002
+#define PBST_PAUSED             0x0003
