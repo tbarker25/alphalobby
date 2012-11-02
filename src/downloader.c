@@ -27,24 +27,6 @@
 #define MAX_REQUESTS 10
 #define MIN_REQUEST_SIZE (512 * 1024) 
 
-// enum DLG_ID {
-// DLG_PROGRESS,
-// DLG_PROGRESS_BUTTON_,
-// DLG_TAB_BUTTON,
-// DLG_LAST = DLG_TAB_BUTTON,
-// };
-
-// static const DialogItem dialogItems[] = {
-// [DLG_PROGRESS] = {
-// .class = PROGRESS_CLASS,
-// .style = WS_VISIBLE | PBS_MARQUEE,
-// }, [DLG_PROGRESS_BUTTON_] = {
-// .class = WC_BUTTON,
-// .name = L"Cancel",
-// .style = WS_VISIBLE | BS_PUSHBUTTON,
-// }
-// };
-
 typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
 	DL_ACTIVE                 = 0x01,
@@ -87,7 +69,6 @@ typedef struct SessionContext {
 	uint8_t totalFiles, currentFiles, fetchedFiles;
 	size_t fetchedBytes, totalBytes;
 	DWORD startTime;
-	// HWND progressBar, button;
 	void *packageBytes; size_t packageLen;
 	char *error;
 	void (*onFinish)(void);
@@ -108,14 +89,6 @@ static void _handlePackage(RequestContext *req);
 #define handlePackage DEFINE_THREADED(_handlePackage)
 static void handleRepoList(RequestContext *req);
 static void handleRepo(const wchar_t *path, SessionContext *ses);
-
-// void EndDownload(SessionContext *ses)
-// {
-// if (!ses->status)
-// return;
-// ses->error = NULL;
-// WinHttpCloseHandle(ses->handle);
-// }
 
 	__attribute__((always_inline, optimize(("O3"))))
 static void getPathFromMD5(uint8_t *md5, wchar_t *path)
@@ -143,14 +116,7 @@ static void writeFile(wchar_t *path, const void *buffer, size_t len)
 	MoveFileEx(tmpPath, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 }
 
-// static void initializeProgressBar(SessionContext *ses)
-// {
-// HWND progressBar = ses->progressBar;
-// SetWindowLongPtr(progressBar, GWL_STYLE, GetWindowLong(progressBar, GWL_STYLE) & ~PBS_MARQUEE);
-// SendMessage(progressBar, PBM_SETRANGE32, 0, ses->totalBytes);
-// }
-
-DWORD WINAPI exeucuteOnFinishHelper(HINTERNET requestHandle)
+static DWORD WINAPI exeucuteOnFinishHelper(HINTERNET requestHandle)
 {
 	puts("exeucuteOnFinishHelper 1");
 	RequestContext *req; DWORD reqSize = sizeof(req);
@@ -161,114 +127,131 @@ DWORD WINAPI exeucuteOnFinishHelper(HINTERNET requestHandle)
 	return 0;
 }
 
-
-void CALLBACK callback(HINTERNET hRequest, RequestContext *req,
-		DWORD dwInternetStatus,
-		LPVOID lpvStatusInformation,
-		DWORD dwStatusInformationLength)
+static void onSessionEnd(SessionContext *ses)
 {
-	if (*(int *)req & 1) {	//Magic number means its actually a session, handles are aligned on DWORD borders
-		SessionContext *ses = (void *)req;
-		if (dwInternetStatus == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING) {
-			if (ses->handle != hRequest)
-				return;
-			if (ses->onFinish)
-				ses->onFinish();
+	if (ses->onFinish)
+		ses->onFinish();
 
-			free(ses->packageBytes);
-			ses->status = 0;
-			if (ses->name) {
-				BattleRoom_RedrawMinimap();
-				RemoveDownload(ses->name);
-				ReloadMapsAndMod();
-			}
-			if (ses->error)
-				MyMessageBox("Download Failed", ses->error);
+	free(ses->packageBytes);
+	ses->status = 0;
+	if (ses->name) {
+		BattleRoom_RedrawMinimap();
+		RemoveDownload(ses->name);
+		ReloadMapsAndMod();
+	}
+	if (ses->error)
+		MyMessageBox("Download Failed", ses->error);
+}
+
+static void onReadComplete(HINTERNET handle, RequestContext *req, DWORD numRead)
+{
+	if (numRead <= 0) {
+		if ((intptr_t)req->onFinish & THREAD_ONFINISH_FLAG)
+			CreateThread(NULL, 1, exeucuteOnFinishHelper, handle, 0, 0);
+		else {
+			if (req->onFinish)
+				req->onFinish(req);
+			WinHttpCloseHandle(handle);
 		}
 		return;
 	}
 
+	if (req->ses->totalBytes) {
+		req->ses->fetchedBytes += numRead;
+		assert(req->ses->totalBytes);
+		BattleRoom_RedrawMinimap();
+		wchar_t text[128];
+		swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
+				(float)req->ses->fetchedBytes / 1000000,
+				(float)req->ses->totalBytes / 1000000,
+				(float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
+		UpdateDownload(req->ses->name, text);
+	}
 
-	switch (dwInternetStatus) {
+	req->fetchedBytes += numRead;
+	WinHttpReadData(handle, req->buffer + req->fetchedBytes,
+			min(req->contentLength - req->fetchedBytes, CHUNK_SIZE),
+			NULL);
+}
+
+static void onHeadersAvailable(HINTERNET handle, RequestContext *req)
+{
+	wchar_t buff[128]; DWORD buffSize = sizeof(buff);
+	WinHttpQueryHeaders(handle, WINHTTP_QUERY_CONTENT_TYPE,
+			WINHTTP_HEADER_NAME_BY_INDEX, buff, &buffSize,
+			WINHTTP_NO_HEADER_INDEX);
+	if (!memcmp(buff, L"text/html", sizeof(L"text/html") - sizeof(wchar_t))
+			|| (__sync_fetch_and_or(&req->ses->status, DL_HAVE_ONE_REQUEST) & DL_DONT_ALLOW_MASK) == DL_DONT_ALLOW_MASK) {
+		WinHttpCloseHandle(handle);
+		return;
+	}
+
+	buffSize = sizeof(req->contentLength);
+
+	WinHttpQueryHeaders(handle,
+			WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+			WINHTTP_HEADER_NAME_BY_INDEX,
+			&req->contentLength, &buffSize,
+			WINHTTP_NO_HEADER_INDEX);
+
+	if (!req->contentLength) {
+		assert(0);
+		WinHttpCloseHandle(handle);
+		return;
+	}
+	req->buffer = malloc(req->contentLength);
+
+	if (req->ses->totalFiles) {
+		req->ses->totalBytes += req->contentLength;
+		++req->ses->currentFiles;
+	}
+	WinHttpReadData(handle, req->buffer + req->fetchedBytes,
+			min(req->contentLength - req->fetchedBytes, CHUNK_SIZE),
+			NULL);
+}
+
+static void onClosingHandle(RequestContext *req)
+{
+	if (!--req->con->requests) {
+		WinHttpCloseHandle(req->con->handle);
+		free(req->con);
+	}
+
+	if (!--req->ses->requests)
+		WinHttpCloseHandle(req->ses->handle);
+
+	free(req->buffer);
+	free(req);
+}
+
+static void CALLBACK callback(HINTERNET handle, RequestContext *req,
+		DWORD status, LPVOID info, DWORD infoLen)
+{
+	if (*(int *)req & 1) {	//Magic number means its actually a session, handles are aligned on DWORD borders
+		if (status == WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING
+				// no idea why this next bit is needed:
+				&& (((SessionContext *)req)->handle == handle))
+			onSessionEnd((SessionContext *)req);
+		return;
+	}
+
+
+	switch (status) {
 	case WINHTTP_CALLBACK_STATUS_READ_COMPLETE:
-		if (dwStatusInformationLength <= 0) {
-			if ((intptr_t)req->onFinish & THREAD_ONFINISH_FLAG)
-				CreateThread(NULL, 1, exeucuteOnFinishHelper, hRequest, 0, 0);
-			else {
-				if (req->onFinish)
-					req->onFinish(req);
-				WinHttpCloseHandle(hRequest);
-			}
-			return;
-		}
-
-		if (req->ses->totalBytes) {
-			req->ses->fetchedBytes += dwStatusInformationLength;
-			assert(req->ses->totalBytes);
-			BattleRoom_RedrawMinimap();
-			wchar_t text[128];
-			swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
-					(float)req->ses->fetchedBytes / 1000000,
-					(float)req->ses->totalBytes / 1000000,
-					(float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
-			UpdateDownload(req->ses->name, text);
-		}
-
-		req->fetchedBytes += dwStatusInformationLength;
-read_data:
-		WinHttpReadData(hRequest, req->buffer + req->fetchedBytes,
-				min(req->contentLength - req->fetchedBytes, CHUNK_SIZE),
-				NULL);
-
-		break;
-	case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE: {
-		wchar_t buff[128]; DWORD buffSize = sizeof(buff);
-		WinHttpQueryHeaders(hRequest, WINHTTP_QUERY_CONTENT_TYPE,
-				WINHTTP_HEADER_NAME_BY_INDEX, buff, &buffSize,
-				WINHTTP_NO_HEADER_INDEX);
-		if (memcmp(buff, L"text/html", sizeof(L"text/html") - sizeof(wchar_t))
-				&& (__sync_fetch_and_or(&req->ses->status, DL_HAVE_ONE_REQUEST) & DL_DONT_ALLOW_MASK) != DL_DONT_ALLOW_MASK) {
-			buffSize = sizeof(req->contentLength);
-
-			WinHttpQueryHeaders(hRequest,
-					WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
-					WINHTTP_HEADER_NAME_BY_INDEX,
-					&req->contentLength, &buffSize,
-					WINHTTP_NO_HEADER_INDEX);
-
-			if (!req->contentLength) {
-				assert(0);
-				goto closeHandle;
-			}
-			req->buffer = malloc(req->contentLength);
-
-			if (req->ses->totalFiles) {
-				req->ses->totalBytes += req->contentLength;
-				++req->ses->currentFiles;
-				// if (req->ses->totalFiles == req->ses->currentFiles)
-				// initializeProgressBar(req->ses);
-			}
-			goto read_data;
-		}
-	}	// FALLTHROUGH:
-	case WINHTTP_CALLBACK_STATUS_REQUEST_ERROR: closeHandle:
-	    WinHttpCloseHandle(hRequest);
-	    return;
+		onReadComplete(handle, req, infoLen);
+		return;
+	case WINHTTP_CALLBACK_STATUS_HEADERS_AVAILABLE:
+		onHeadersAvailable(handle, req);
+		return;
+	case WINHTTP_CALLBACK_STATUS_REQUEST_ERROR:
+		WinHttpCloseHandle(handle);
+		return;
 	case WINHTTP_CALLBACK_STATUS_SENDREQUEST_COMPLETE:
-	    WinHttpReceiveResponse(hRequest, NULL);
-	    return;
+		WinHttpReceiveResponse(handle, NULL);
+		return;
 	case WINHTTP_CALLBACK_STATUS_HANDLE_CLOSING:
-	    if (!--req->con->requests) {
-		    WinHttpCloseHandle(req->con->handle);
-		    free(req->con);
-	    }
-
-	    if (!--req->ses->requests)
-		    WinHttpCloseHandle(req->ses->handle);
-
-	    free(req->buffer);
-	    free(req);
-	    return;
+		onClosingHandle(req);
+		return;
 	}
 }
 
@@ -302,7 +285,7 @@ static const char messageTemplateStart[] =
 R"(<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>    <DownloadFile xmlns="http://tempuri.org/"><internalName>)";
 static const char messageTemplateEnd[] = R"(</internalName></DownloadFile></soap12:Body></soap12:Envelope>)";
 
-void handleMapSources(RequestContext *req)
+static void handleMapSources(RequestContext *req)
 	//NB: this function is stupidly dangerous
 {
 	req->ses->error = "Couldn't find a download source.";
@@ -342,40 +325,6 @@ void handleMapSources(RequestContext *req)
 		s = end+1;
 	}
 }
-
-// void ForEachDownload(void (*func)(HWND, HWND, const wchar_t *))
-// {
-// FOR_EACH(s, sessions) {
-// if (!s->status)
-// continue;
-// wchar_t *text;
-// if (s->fetchedBytes && s->totalFiles == s->currentFiles) {
-// SendMessage(s->progressBar, PBM_SETPOS, s->fetchedBytes, 0);
-// DWORD eta = (uint64_t)(GetTickCount() - s->startTime) * (s->totalBytes - s->fetchedBytes) / s->fetchedBytes / 1000;
-// swprintf((text = alloca(128)), L"%s - %ld:%02ld remaining - %.2fMB of %.2fMB - %.2fKB/s", s->name, eta / 60, eta % 60, s->fetchedBytes * 1E-6f, s->totalBytes * 1E-6f, (float)s->fetchedBytes / (GetTickCount() - s->startTime + 1));
-// } else 
-// text = s->name;
-// func(s->progressBar, s->button, text);
-// }
-// }
-
-// void downloadSelectedPackages(void)
-// {
-// if (gSettings.selected_packages) {
-// size_t len = strlen(gSettings.selected_packages);
-// char buffer[len];
-// char *start = buffer;
-// for (int i=0; i<len; ++i) {
-// buffer[i] = gSettings.selected_packages[i];
-// if (buffer[i] != ';')
-// continue;
-// buffer[i] = '\0';
-// SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
-// start = buffer + i + 1;
-// }
-// SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
-// }
-// }
 
 void Downloader_Init(void)
 {
