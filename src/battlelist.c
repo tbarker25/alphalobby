@@ -1,9 +1,21 @@
-
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
+#include "wincommon.h"
+
 
 #include "alphalobby.h"
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "downloader.h"
 
 #include "battlelist.h"
@@ -13,7 +25,6 @@
 #include "userlist.h"
 #include "settings.h"
 #include "imagelist.h"
-#include "listview.h"
 #include "layoutmetrics.h"
 
 #include "chat_window.h"

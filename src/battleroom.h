@@ -1,7 +1,5 @@
 #pragma once
 
-#include "common.h"
-
 #define WC_BATTLEROOM L"BattleRoom"
 
 #define WM_SETMODDETAILS (WM_APP+202)
@@ -10,7 +8,7 @@
 
 struct User;
 union UserOrBot;
-typedef struct HWND__ * HWND;
+typedef void * HWND;
 
 extern HWND gBattleRoomWindow;
 

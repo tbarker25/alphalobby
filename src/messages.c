@@ -1,7 +1,15 @@
 #include <assert.h>
 #include <ctype.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include <Shlwapi.h>
 
 #include "alphalobby.h"
@@ -10,14 +18,18 @@
 #include "battletools.h"
 #include "chat.h"
 #include "chat_window.h"
+#include "client.h"
 #include "client_message.h"
 #include "countrycodes.h"
 #include "dialogboxes.h"
+#include "data.h"
 #include "messages.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
 #include "userlist.h"
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 static void accepted(void);
 static void addBot(void);
@@ -159,7 +171,7 @@ void handleCommand(char *s)
 	command = s;
 	char *commandName = getNextWord();
 	typeof(*serverCommands) *com =
-		bsearch(commandName, serverCommands, lengthof(serverCommands),
+		bsearch(commandName, serverCommands, LENGTH(serverCommands),
 				sizeof(*serverCommands), (void *)strcmp);
 	if (com)
 		com->func();
@@ -189,7 +201,7 @@ static void addUser(void)
 {
 	char *name = getNextWord();
 	uint8_t country = 0;
-	for (int i=0; i < lengthof(countryCodes); ++i)
+	for (int i=0; i < LENGTH(countryCodes); ++i)
 		if (*((uint16_t *)command) == *((uint16_t *)countryCodes[i]))
 			country = i;
 	command += 3;
@@ -332,7 +344,9 @@ static void clientStatus(void)
 	uint8_t oldStatus = u->clientStatus;
 	u->clientStatus = getNextInt();
 	// UserList_AddUser(u);
-	UpdateUser(u);
+	if (gMyBattle && u->battle == gMyBattle)
+		BattleRoom_UpdateUser((void *)u);
+	/* UpdateUser(u); */
 	if (!u->battle)
 		return;
 	if (u == &gMyUser)
@@ -406,7 +420,7 @@ static void joinedBattle(void)
 	++b->nbParticipants;
 	u->battleStatus = 0;
 	BattleList_UpdateBattle(b);
-	UpdateUser(u);
+	/* UpdateUser(u); */
 
 	if (b == gMyBattle){
 		if (gSettings.flags & (1<<DEST_BATTLE))
@@ -455,7 +469,7 @@ static void leftBattle(void)
 	if (u == &gMyUser)
 		LeftBattle();
 
-	UpdateUser(u);
+	/* UpdateUser(u); */
 	BattleList_UpdateBattle(b);
 
 	if (b == gMyBattle){
@@ -471,9 +485,7 @@ static void leftBattle(void)
 static void loginInfoEnd(void)
 {
 	OpenDefaultChannels();
-	for (int i=0; i<16; ++i)
-		gMyUser.scriptPassword[i] = '0' + rand()%10;
-	gMyUser.scriptPassword[16] = '\0';
+	sprintf(gMyUser.scriptPassword, "%x%x%x%x", rand(), rand(), rand(), rand());
 	BattleList_OnEndLoginInfo();
 	MainWindow_ChangeConnect(CONNECTION_ONLINE);
 	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
@@ -793,14 +805,15 @@ static void updateBattleInfo(void)
 		return;
 #endif
 
+	uint32_t lastMapHash = b->mapHash;
+
 	b->nbSpectators = getNextInt();
 	b->locked = getNextInt();
-	uint32_t lastMapHash = b->mapHash;
 	b->mapHash = getNextInt();
 	copyNextSentence(b->mapName);
 
-	if (b == gMyBattle && b->mapHash != lastMapHash)
-		ChangedMap(gMyBattle->mapName);
+	if (b == gMyBattle && (b->mapHash != lastMapHash || !gMapHash))
+		ChangedMap(command);
 
 	BattleList_UpdateBattle(b);
 }

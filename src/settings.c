@@ -1,16 +1,25 @@
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 
 #include <assert.h>
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
+#include <stdbool.h>
 #include <Shlobj.h>
 
+#include "common.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
 #include "settings.h"
+#include "data.h"
 
 #define CONFIG_PATH (GetDataDir(L"alphalobby.conf"))
 

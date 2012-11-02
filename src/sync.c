@@ -1,13 +1,21 @@
-#include "gzip.h"
 #include <assert.h>
 #include <IL/il.h>
-
-#include "wincommon.h"
-#include "data.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <zlib.h>
+
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
+#include "wincommon.h"
+
+#include "data.h"
+#include "gzip.h"
 // #include "map.h"
 #include "alphalobby.h"
 #include "client_message.h"

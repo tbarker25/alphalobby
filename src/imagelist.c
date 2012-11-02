@@ -1,5 +1,11 @@
 #include <stdio.h>
+#include <inttypes.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include <Commctrl.h>
 #include "data.h"
 #include "imagelist.h"

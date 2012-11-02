@@ -1,23 +1,5 @@
 #pragma once
 
-#ifndef _WIN32_IE
-	#define _WIN32_IE 0x0600
-#endif
-#ifndef _WIN32_WINNT
-	#define _WIN32_WINNT 0x0600
-#endif
-#ifndef WINVER
-	#define WINVER 0x0600
-#endif
-
-#include <windows.h>
-#include <Windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include <stdio.h>
-
-#include "common.h"
-
 typedef struct DialogItem {
 	wchar_t *class, *name;
 	DWORD style, exStyle;

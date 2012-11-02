@@ -3,9 +3,17 @@
 #include <ctype.h>
 #include <assert.h>
 #include <malloc.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <limits.h>
 
 #include "common.h"
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "layoutmetrics.h"
 
 #include <windowsx.h>
@@ -105,8 +113,8 @@ static void updateUser(HWND window, User *u, int item)
 	});
 }
 
-void UpdateUser(User *u)
-{
+/* void UpdateUser(User *u) */
+/* { */
 	// int i=0x2000;
 	// HWND window = GetServerChat();
 	// do {
@@ -116,9 +124,7 @@ void UpdateUser(User *u)
 		// if (item >= 0)
 			// updateUser(window, u, item);
 	// } while ((window = GetDlgItem(gMainWindow, i++)));
-	// if (gMyBattle && u->battle == gMyBattle)
-		// BattleRoom_UpdateUser((void *)u);
-}
+/* } */
 
 void ChatWindow_AddUser(HWND window, User *u)
 {
@@ -227,9 +233,11 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			char *s = textA + 1;
 			char *code = strsplit(&s, " ");
 			
-			if (!strcmp(code, "me")) {
+			if (!strcmp(code, "me"))
 				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + lengthof("/me ") - 1);
-			} else if (!strcmp(code, "start"))
+			else if (!strcmp(code, "resync"))
+				ReloadMapsAndMod();
+			else if (!strcmp(code, "start"))
 				LaunchSpring();
 			else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
 				char *username = strsplit(&s, " ");
@@ -368,7 +376,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 				ChatWindow_SetActiveTab(GetPrivateChat(u));
 			else if (clicked == 2) {
 				u->ignore ^= 1;
-				UpdateUser(u);
+				/* UpdateUser(u); */
 			} else if (clicked == 3) {
 				char title[128], buff[MAX_NAME_LENGTH_NUL];
 				sprintf(title, "Set alias for %s", u->name);

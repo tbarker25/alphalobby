@@ -1,18 +1,25 @@
+#include <inttypes.h>
 #include <stdio.h>
 #include <sys\stat.h>
 #include <ctype.h>
 #include <assert.h>
 #include <malloc.h>
+#include <stdbool.h>
 
+#include "data.h"
 #include "common.h"
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "layoutmetrics.h"
 
 #include <windowsx.h>
 #include <Commctrl.h>
 
 #include "client_message.h"
-#include "data.h"
 
 #include "alphalobby.h"
 #include "settings.h"

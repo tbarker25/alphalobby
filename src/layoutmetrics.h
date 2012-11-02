@@ -1,6 +1,4 @@
 #pragma once
-#include <inttypes.h>
-
 #define MAP_X(x)\
 	((x) * baseUnitX / 4)
 #define MAP_Y(y)\
@@ -34,7 +32,8 @@
 #define UNRELATED_SPACING_Y MAP_Y(7)
 
 
-extern struct HFONT__ *gFont;
+typedef void * HFONT;
+extern HFONT gFont;
 extern uint16_t baseUnitX;
 extern uint16_t baseUnitY;
 extern uint32_t scrollWidth;

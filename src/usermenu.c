@@ -1,7 +1,16 @@
 #include <assert.h>
 #include <malloc.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+
 #include "alphalobby.h"
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "data.h"
 #include "sync.h"
 #include "usermenu.h"
@@ -128,14 +137,14 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		break;
 	case IGNORED:
 		s->user.ignore ^= 1;
-		UpdateUser(&s->user);
+		/* UpdateUser(&s->user); */
 		break;
 	case ALIAS: {
 		char title[128], buff[MAX_NAME_LENGTH_NUL];
 		sprintf(title, "Set alias for %s", s->name);
 		if (!GetTextDlg(title, strcpy(buff, GetAliasOf(s->name)), sizeof(buff))) {
 			strcpy(s->user.alias, buff);
-			UpdateUser(&s->user);
+			/* UpdateUser(&s->user); */
 		}
 		} break;
 	case COLOR:
