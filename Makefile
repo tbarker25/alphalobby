@@ -7,7 +7,7 @@ ifdef VERSION
 	CFLAGS+= -s -Os -mwindows
 else
 	BUILD_DIR:=debug
-	CFLAGS+= -g -O0  -Wall -Werror -Wno-unknown-pragmas
+	CFLAGS+= -g3 -O0  -Wall -Werror -Wno-unknown-pragmas
 endif
 
 CFLAGS+= -Iinclude -I$(BUILD_DIR) -DUNICODE=1
