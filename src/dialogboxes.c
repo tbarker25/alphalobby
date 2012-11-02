@@ -502,7 +502,7 @@ static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 	
 		char path[MAX_PATH];
 		WIN32_FIND_DATAA findFileData;
-		char *pathEnd = path + sprintf(path, "%.*lsrepos\\*", gWritableDataDirectoryLen, gWritableDataDirectory) - 1;
+		char *pathEnd = path + sprintf(path, "%lsrepos\\*", gDataDir) - 1;
 	
 		HANDLE find = FindFirstFileA(path, &findFileData);
 		do {

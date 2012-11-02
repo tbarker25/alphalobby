@@ -54,11 +54,6 @@ char * MyGetWindowTextA2(HWND window);
 
 wchar_t *utf8to16(const char *str);
 char *utf16to8(const wchar_t *wStr);
-//Const before 'file' starts, ie appending is ok. Valid until next call:
-const wchar_t * GetWritablePath_unsafe(wchar_t *file);
-void GetWritablePath(wchar_t *file, wchar_t *buff);
-extern wchar_t gWritableDataDirectory[MAX_PATH];
-extern size_t gWritableDataDirectoryLen;
 
 #define SS_REALSIZECONTROL      0x40
 #define PBS_MARQUEE             0x08
