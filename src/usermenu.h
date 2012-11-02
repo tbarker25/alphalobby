@@ -1,4 +1,5 @@
 #pragma once
 
-void CreateUserMenu(union UserOrBot *s, struct HWND__ *window);
+typedef void * HWND;
+void CreateUserMenu(union UserOrBot *s, HWND window);
 

@@ -1,8 +1,4 @@
 #pragma once
-#include <stdbool.h>
-#include <stddef.h>
-#include <limits.h>
-#include <inttypes.h>
 
 #define MAX_SERVER_MESSAGE 1024
 #define MAX_TEXT_MESSAGE_LENGTH 900
@@ -21,19 +17,6 @@
 	(sizeof(x) / sizeof(*x))
 #define FOR_EACH(i, L)\
 	for (typeof(*L) *i = L; i - L < lengthof(L); ++i)
-
-typedef enum ChatType {
-	CHAT_NORMAL,
-	CHAT_SELF,
-	CHAT_SYSTEM,
-	CHAT_SELFEX,
-	CHAT_EX,
-	CHAT_INGAME,
-	CHAT_TOPIC,
-	CHAT_SERVERIN,
-	CHAT_SERVEROUT,
-	CHAT_LAST = CHAT_SERVEROUT,
-}ChatType;
 
 char *strsplit(char **restrict s, const char * delim);
 char *strpcpy(char *dst, const char *src);

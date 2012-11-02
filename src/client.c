@@ -1,6 +1,15 @@
 #include <assert.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include <winsock2.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include "data.h"
 
 #include "alphalobby.h"
 #include "chat.h"

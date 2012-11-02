@@ -1,6 +1,14 @@
 #include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "data.h"
 #include "client.h"
 #include "settings.h"
@@ -13,6 +21,7 @@
 
 #define LAUNCH_SPRING(path)\
 	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(wcsdup(path)), 0, NULL);
+
 static DWORD WINAPI _launchSpring2(LPVOID path)
 {
 	PROCESS_INFORMATION processInfo = {};
@@ -176,7 +185,8 @@ void LaunchSpring(void)
 	}
 	done:;
 	
-	FILE *fp = fopen("script_.txt", "w");
+	wchar_t *scriptPath = GetDataDir(L"script.txt");
+	FILE *fp = _wfopen(scriptPath, L"w");
 	if (!fp) {
 		MessageBox(NULL, L"Could not open script.txt for writing", L"Launch failed", MB_OK);
 		fclose(fp);
@@ -185,7 +195,7 @@ void LaunchSpring(void)
 	fwrite(buff, 1, buffEnd - buff, fp);
 	fclose(fp);
 	wchar_t path[128];
-	swprintf(path, L"%hs script_.txt", gSettings.spring_path);
+	swprintf(path, L"\"%hs\" \"%s\"", gSettings.spring_path, scriptPath);
 	LAUNCH_SPRING(path);
 	return;
 }

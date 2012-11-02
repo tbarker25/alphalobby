@@ -1,7 +1,18 @@
 #include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <malloc.h>
+#include <ctype.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "downloader.h"
 #include "sync.h"
+#include <winhttp.h>
 #include <Shlobj.h>
 
 #include "alphalobby.h"
@@ -9,10 +20,6 @@
 #include "client_message.h"
 #include "settings.h"
 #include "data.h"
-#include <winhttp.h>
-#include <stdio.h>
-#include <malloc.h>
-#include <ctype.h>
 #include "gzip.h"
 #include "md5.h"
 #include "downloadtab.h"

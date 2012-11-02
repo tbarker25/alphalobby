@@ -1,11 +1,17 @@
-
 #include <inttypes.h>
+#include <stdbool.h>
 #include <malloc.h>
 #include <stddef.h>
 #include <math.h>
+#include <stdio.h>
 
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include <Richedit.h>
 
 #include <windowsx.h>

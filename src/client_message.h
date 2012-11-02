@@ -1,7 +1,4 @@
 #pragma once
-#include <inttypes.h>
-#include "common.h"
-#include "data.h"
 
 void SendToServer(const char *format, ...);
 #define SpadsMessageF(format, ...)\
@@ -9,6 +6,7 @@ void SendToServer(const char *format, ...);
 
 void JoinBattle(uint32_t id, const char *password);
 
+union UserOrBot;
 void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, uint32_t color);
 #define SetBattleStatus(_s, _orMask, _nandMask)\
 	SetBattleStatusAndColor((union UserOrBot *)(_s), (_orMask), (_nandMask), -1)

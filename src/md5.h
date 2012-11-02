@@ -2,8 +2,6 @@
 #define BASE64_MD5_LENGTH 24
 #define BASE16_MD5_LENGTH 32
 #define MD5_LENGTH 16
-#include <stdio.h>
-
 extern __thread uint8_t _md5Checksum[16];
 
 

@@ -1,8 +1,15 @@
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
+#include <stdbool.h>
+#include <inttypes.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 
 #include <Commctrl.h>
 #include <Wingdi.h>
@@ -19,7 +26,6 @@
 #include "chat.h"
 #include "data.h"
 #include "countrycodes.h"
-#include "listview.h"
 #include "imagelist.h"
 #include "dialogboxes.h"
 #include "sync.h"
@@ -899,7 +905,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			voteYes = 0;
 			vote:
 			if (gBattleOptions.hostType == HOST_SPADS)
-				SendToServer("SAYPRIVATE !vote %c %s", voteYes ? 'y' : 'n', gMyBattle->founder);
+				SendToServer("SAYPRIVATE %s !vote %c", gMyBattle->founder, voteYes ? 'y' : 'n');
 			else if (gBattleOptions.hostType == HOST_SPRINGIE)
 				SendToServer("SAYBATTLE !vote %c", '2' - (char)voteYes);
 			EnableWindow(GetDlgItem(window, DLG_VOTEYES), 0);
@@ -1014,7 +1020,7 @@ void CreateSinglePlayerDlg(void)
 	GetDlgItemTextA(gBattleRoomWindow, DLG_MAP, gMyBattle->mapName, sizeof(gMyBattle->mapName));
 	
 	ChangedMod(gMyBattle->modName);
-	if (!gMapHash || gMapHash != GetMapHash(gMyBattle->mapName))
+	if (!gMapHash || gMapHash != GetMapHash(gMyBattle->mapName) || !gMapHash)
 		ChangedMap(gMyBattle->mapName);
 	gMyBattle->mapHash = gMapHash;
 	gBattleOptions.modHash = gModHash;

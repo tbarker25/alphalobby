@@ -5,8 +5,15 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <malloc.h>
+#include <inttypes.h>
+#include <stdbool.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "alphalobby.h"
 #include "dialogboxes.h"
 #include "battleroom.h"
@@ -34,7 +41,7 @@ void JoinBattle(uint32_t id, const char *password)
 	Battle *b = FindBattle(id);
 	if (b) {
 		ChangedMod(b->modName);
-		if (gMapHash != b->mapHash)
+		if (gMapHash != b->mapHash || !gMapHash)
 			ChangedMap(b->mapName);
 	}
 	

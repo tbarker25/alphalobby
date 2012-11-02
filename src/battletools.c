@@ -1,4 +1,12 @@
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 #include "data.h"
 #include "client_message.h"
 #include "dialogboxes.h"
@@ -12,14 +20,14 @@ static void addStartBox(int i, int left, int top, int right, int bottom)
 {
 	SendToServer("!ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 	if (gBattleOptions.hostType == HOST_LOCAL)
-		gBattleOptions.startRects[i] = (RECT){left, top, right, bottom};
+		gBattleOptions.startRects[i] = (StartRect){left, top, right, bottom};
 }
 
 static void delStartBox(int i)
 {
 	SendToServer("!REMOVESTARTRECT %d", i);
 	if (gBattleOptions.hostType == HOST_LOCAL)
-		gBattleOptions.startRects[i] = (RECT){0};
+		gBattleOptions.startRects[i] = (StartRect){0};
 }
 
 

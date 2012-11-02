@@ -1,8 +1,15 @@
+#include <stdbool.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 
 #include <Commctrl.h>
 #include <Wingdi.h>
@@ -17,7 +24,6 @@
 #include "chat.h"
 #include "data.h"
 #include "countrycodes.h"
-#include "listview.h"
 #include "imagelist.h"
 #include "dialogboxes.h"
 #include "sync.h"

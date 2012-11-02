@@ -1,9 +1,15 @@
-
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <inttypes.h>
+#include <stdbool.h>
 
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 
 #include <Commctrl.h>
 
@@ -12,7 +18,6 @@
 #include "layoutmetrics.h"
 #include "client_message.h"
 #include "data.h"
-#include "listview.h"
 #include "imagelist.h"
 #include "sync.h"
 #include "common.h"

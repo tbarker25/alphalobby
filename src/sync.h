@@ -1,14 +1,8 @@
 #pragma once
-#include <inttypes.h>
-#include <stdbool.h>
 #define MAP_DETAIL 0
 #define MAP_RESOLUTION (1024 >> MAP_DETAIL)
 #define MAP_SIZE (MAP_RESOLUTION * MAP_RESOLUTION)
 #define MOD_OPTION_FLAG  0x8000
-
-#include "unitsync.h"
-#include "data.h"
-
 
 uint32_t GetMapHash(const char *mapName);
 uint32_t GetModHash(const char *modName);

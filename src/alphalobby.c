@@ -1,16 +1,26 @@
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
 #include "wincommon.h"
+
 
 #include <Commctrl.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <inttypes.h>
+#include <stdbool.h>
 
+#include "common.h"
+#include "data.h"
 #include "alphalobby.h"
 #include "battlelist.h"
 #include "battleroom.h"
 #include "chat.h"
 #include "chat_window.h"
+#include "client.h"
 #include "client_message.h"
 #include "dialogboxes.h"
 #include "downloader.h"
@@ -412,8 +422,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	if ((s = LoadSetting("last_mod")))
 		ChangedMod(strdup(s));
 	gBattleOptions.startPosType = STARTPOS_CHOOSE_INGAME;
-	gBattleOptions.startRects[0] = (RECT){0, 0, 50, 200};
-	gBattleOptions.startRects[1] = (RECT){150, 0, 200, 200};
+	gBattleOptions.startRects[0] = (StartRect){0, 0, 50, 200};
+	gBattleOptions.startRects[1] = (StartRect){150, 0, 200, 200};
 	#endif
 	
 	

@@ -1,7 +1,4 @@
 #pragma once
-
-#include "resource.h"
-
 #define INGAME_MASK 1
 #define PW_MASK 2
 #define FULL_MASK 4

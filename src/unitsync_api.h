@@ -1,8 +1,6 @@
 #ifndef UNITSYNC_API_H
 #define UNITSYNC_API_H
 
-#include "unitsync.h"
-
 
 // from unitsync.cpp:
 
