@@ -22,6 +22,7 @@
 #include "data.h"
 
 #define CONFIG_PATH (GetDataDir(L"alphalobby.conf"))
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 typedef struct KeyPair{
 	char *key, *val;
@@ -114,7 +115,7 @@ void InitSettings(void)
 		fclose(fd);
 	}
 	
-	for(int i=0; i<lengthof(defaultSettings); ++i)
+	for(int i=0; i<LENGTH(defaultSettings); ++i)
 		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
 		                         : defaultSettings[i].val ? strdup(defaultSettings[i].val)
 								 : NULL;
@@ -123,7 +124,7 @@ void InitSettings(void)
 	if (!fd)
 		return;
 	for (KeyPair s; (s = getLine(fd)).key;)
-		for(int i=0; i<lengthof(defaultSettings); ++i)
+		for(int i=0; i<LENGTH(defaultSettings); ++i)
 			if (!strcmp(defaultSettings[i].key, s.key)) {
 				if (defaultSettings[i].isInt)
 					((intptr_t *)&gSettings)[i] = atoi(s.val);
@@ -165,7 +166,7 @@ void SaveSetting(const char *key, const char *val)
 		for (KeyPair s; (s = getLine(oldConfig)).key;) {
 			if (key && !strcmp(key, s.key))
 				goto skipKey;
-			for(int i=0; i<lengthof(defaultSettings); ++i)
+			for(int i=0; i<LENGTH(defaultSettings); ++i)
 				if (!strcmp(defaultSettings[i].key, s.key))
 					goto skipKey;
 			fprintf(tmpConfig, "%s=%s\n", s.key, s.val);
@@ -177,7 +178,7 @@ void SaveSetting(const char *key, const char *val)
 	if (key && *val)
 		fprintf(tmpConfig, "%s=%s\n", key, val);
 
-	for (int i=0; i<lengthof(defaultSettings); ++i) {
+	for (int i=0; i<LENGTH(defaultSettings); ++i) {
 		if (defaultSettings[i].isInt)
 			fprintf(tmpConfig, "%s=%d\n", defaultSettings[i].key, ((int *)&gSettings)[i]);
 		else if (((void **)&gSettings)[i])

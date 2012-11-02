@@ -1,17 +1,15 @@
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
-
-#include <Commctrl.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <inttypes.h>
 #include <stdbool.h>
+
+#include <windows.h>
+#include <windowsx.h>
+#include <oleacc.h>
+#include <Commctrl.h>
+#include "wincommon.h"
 
 #include "common.h"
 #include "data.h"

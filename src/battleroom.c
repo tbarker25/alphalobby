@@ -34,12 +34,20 @@
 #include "layoutmetrics.h"
 #include "downloader.h"
 #include "battletools.h"
+#include "listview.h"
 
 #include "spring.h"
 
 #include "resource.h"
 
 HWND gBattleRoomWindow;
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
+#define CFE_LINK		0x0020
+// #define CFM_LINK		0x00000020
+#define CFM_STYLE			0x00080000
+#define CFM_KERNING			0x00100000
 
 static const uint16_t *minimapPixels;
 static uint16_t metalMapHeight, metalMapWidth;
@@ -616,7 +624,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SetWindowSubclass(startPos, startPositionProc, i, i);
 		}
 		for (int i=0; i<16; ++i) {
-			wchar_t buff[lengthof("Team 16")];
+			wchar_t buff[LENGTH("Team 16")];
 			swprintf(buff, L"Team %d", i+1);
 			SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buff);
 		}
@@ -629,7 +637,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);
 		ListView_EnableGroupView(playerList, TRUE);
 		for (int i=0; i<=16; ++i) {
-			wchar_t buff[lengthof("Spectators")];
+			wchar_t buff[LENGTH("Spectators")];
 			swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
 			ListView_InsertGroup(playerList, -1, (&(LVGROUP){
 				.cbSize = sizeof(LVGROUP),
@@ -813,7 +821,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			wchar_t buff[link->chrg.cpMax - link->chrg.cpMin];
 			SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)buff);
 
-			int i = _wtoi(buff + lengthof(L":<") - 1);
+			int i = _wtoi(buff + LENGTH(L":<") - 1);
 			if (i & MOD_OPTION_FLAG)
 				ChangeModOption(i & ~MOD_OPTION_FLAG);
 			else

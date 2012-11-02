@@ -33,11 +33,13 @@
 #include "layoutmetrics.h"
 #include "downloader.h"
 #include "battletools.h"
+#include "listview.h"
 
 #include "spring.h"
 
 #include "resource.h"
 
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 enum DLG_ID {
 	DLG_LIST,
@@ -66,10 +68,10 @@ static void resizeColumns(void)
 	HWND list = GetDlgItem(gDownloadTabWindow, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int columnRem = rect.right % lengthof(columns);
-	int columnWidth = rect.right / lengthof(columns);
+	int columnRem = rect.right % LENGTH(columns);
+	int columnWidth = rect.right / LENGTH(columns);
 
-	for (int i=0, n = lengthof(columns); i < n; ++i)
+	for (int i=0, n = LENGTH(columns); i < n; ++i)
 		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
 }
 

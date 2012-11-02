@@ -18,6 +18,14 @@ typedef enum ChatType {
 	CHAT_LAST = CHAT_SERVEROUT,
 }ChatType;
 
+typedef enum ChatDest {
+	DEST_BATTLE,
+	DEST_PRIVATE,
+	DEST_CHANNEL,
+	DEST_SERVER,
+	DEST_LAST = DEST_SERVER,
+}ChatDest;
+
 void Chat_Said(HWND window, const char *username, ChatType type, const char *text);
 HWND GetChannelChat(const char *name);
 HWND GetPrivateChat(struct User *);

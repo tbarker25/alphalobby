@@ -10,7 +10,6 @@
 #include <Commctrl.h>
 #include "wincommon.h"
 
-
 #include <Commctrl.h>
 
 #include "alphalobby.h"
@@ -22,9 +21,12 @@
 #include "sync.h"
 #include "common.h"
 #include "chat.h"
+#include "listview.h"
 
 #include "resource.h"
 HWND /* userList,  */chanList;
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 static BOOL CALLBACK listDialogProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -35,7 +37,7 @@ static BOOL CALLBACK listDialogProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		RECT rect;
 		GetClientRect(list, &rect);
 		const wchar_t *columnNames[] = {L"name", L"users", L"description"};
-		for (int i=0; i < lengthof(columnNames); ++i) {
+		for (int i=0; i < LENGTH(columnNames); ++i) {
 			SendMessage(list, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){
 				.mask = LVCF_TEXT | LVCF_SUBITEM,
 				// .cx = columnWidth + (i == 0) * (rect.right - scrollWidth) % 3,
@@ -74,7 +76,7 @@ static BOOL CALLBACK listDialogProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	activate:;
 	wchar_t name[MAX_NAME_LENGTH_NUL];
 	SendDlgItemMessage(window, IDC_USERLIST_LIST, LVM_GETITEMTEXT, item,
-		(LPARAM)&(LVITEM){.pszText = name, .cchTextMax = lengthof(name)});
+		(LPARAM)&(LVITEM){.pszText = name, .cchTextMax = LENGTH(name)});
 	JoinChannel(utf16to8(name), 1);
 	DestroyWindow(window);
 	return 0;

@@ -33,6 +33,8 @@
 #include "sync.h"
 #include "resource.h"
 
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
 void ToMD5(char *password)
 {
 	if (strlen(password) != 24)
@@ -80,7 +82,7 @@ static BOOL CALLBACK loginDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		case MAKEWPARAM(IDC_LOGIN_REGISTER, BN_CLICKED): {
 			char username[MAX_NAME_LENGTH+1];
-			if (!GetDlgItemTextA(window, IDC_LOGIN_USERNAME, username, lengthof(username))) {
+			if (!GetDlgItemTextA(window, IDC_LOGIN_USERNAME, username, LENGTH(username))) {
 				MessageBox(window, L"Enter a username less than " STRINGIFY(MAX_NAME_LENGTH) L" characters.", L"Username too long", MB_OK);
 				return 1;
 			}
@@ -101,7 +103,7 @@ static BOOL CALLBACK loginDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 				char confirmPassword[sizeof(password)];
 				retry:
 				confirmPassword[0] = 0;
-				if (GetTextDlg2(window, "Confirm password", confirmPassword, lengthof(confirmPassword)))
+				if (GetTextDlg2(window, "Confirm password", confirmPassword, LENGTH(confirmPassword)))
 					break;
 				ToMD5(confirmPassword);
 				if (strcmp(password, confirmPassword)) {
@@ -165,10 +167,10 @@ static BOOL CALLBACK hostDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
                 case MAKEWPARAM(IDOK, BN_CLICKED): {
 					char description[128], mod[128], password[128], map[128];
 
-					GetDlgItemTextA(window, IDC_HOST_DESCRIPTION, description, lengthof(description));
-					GetDlgItemTextA(window, IDC_HOST_PASSWORD, password, lengthof(password));
-					GetDlgItemTextA(window, IDC_HOST_MOD, mod, lengthof(mod));
-					GetDlgItemTextA(window, IDC_HOST_MAP, map, lengthof(map));
+					GetDlgItemTextA(window, IDC_HOST_DESCRIPTION, description, LENGTH(description));
+					GetDlgItemTextA(window, IDC_HOST_PASSWORD, password, LENGTH(password));
+					GetDlgItemTextA(window, IDC_HOST_MOD, mod, LENGTH(mod));
+					GetDlgItemTextA(window, IDC_HOST_MAP, map, LENGTH(map));
 
 
 					if (strchr(password, ' ')) {
@@ -181,7 +183,7 @@ static BOOL CALLBACK hostDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 					SaveSetting("last_host_map", map);
 					if (SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_GETCHECK, 0, 0)) {
 						char manager[128];
-						GetDlgItemTextA(window, IDC_HOST_RELAY, manager, lengthof(manager));
+						GetDlgItemTextA(window, IDC_HOST_RELAY, manager, LENGTH(manager));
 						SaveSetting("last_host_manager", manager);
 						OpenRelayBattle(description, password, mod, map, manager);
 					} else {
@@ -407,7 +409,7 @@ static void activateReplayListItem(HWND listViewWindow, int index)
 {
 	printf("index = %d\n", index);
 	wchar_t buff[1024];
-	LVITEM item = {.pszText = buff, lengthof(buff)};
+	LVITEM item = {.pszText = buff, LENGTH(buff)};
 	SendMessage(listViewWindow, LVM_GETITEMTEXT, index, (LPARAM)&item);
 	wprintf(L"buff = %s\n", buff);
 	LaunchReplay(buff);

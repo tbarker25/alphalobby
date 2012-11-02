@@ -36,6 +36,8 @@
 #undef EXPORT2
 #undef UNITSYNC_API_H
 
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
 static const struct {
 	void **proc;
 	const char *name;
@@ -71,7 +73,7 @@ static void printLastError(wchar_t *title)
 {
 	wchar_t errorMessage[1024];
 	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-	NULL, GetLastError(), 0, errorMessage, lengthof(errorMessage), NULL);
+	NULL, GetLastError(), 0, errorMessage, LENGTH(errorMessage), NULL);
 	MessageBox(NULL, errorMessage, title, 0);
 }
 
@@ -85,7 +87,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 	if (!libUnitSync)
 		printLastError(L"Could not load unitsync.dll");
 
-	for (int i=0; i<lengthof(x); ++i) {
+	for (int i=0; i<LENGTH(x); ++i) {
 		*x[i].proc = GetProcAddress(libUnitSync, x[i].name);
 		assert(*x[i].proc);
 	}

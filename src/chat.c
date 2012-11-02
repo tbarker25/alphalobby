@@ -35,8 +35,9 @@
 #include "richedit.h"
 #include "dialogboxes.h"
 #include "spring.h"
+#include "listview.h"
 
-
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 // #define SERVER_ID 0x2000
 // #define CHANNEL_ID 0x2001
@@ -156,7 +157,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 	switch (wParam) {
 	case VK_TAB: {
 		char text[MAX_TEXT_MESSAGE_LENGTH];
-		GetWindowTextA(window, text, lengthof(text));
+		GetWindowTextA(window, text, LENGTH(text));
 		
 		if (data->lastPos != Edit_GetSel(window) || data->end < 0) {
 			data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
@@ -200,7 +201,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		while (++data->inputHint != data->textBuff
 				&& data->inputHint != data->buffTail
 				&& ((data->inputHint)[-1] || !*data->inputHint))
-			if (data->inputHint >= data->textBuff+lengthof(data->textBuff)-1)
+			if (data->inputHint >= data->textBuff+LENGTH(data->textBuff)-1)
 				data->inputHint = data->textBuff - 1;
 
 		SetWindowText(window, data->inputHint);
@@ -212,13 +213,13 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 				&& data->inputHint != data->buffTail
 				&& ((data->inputHint)[-1] || !*data->inputHint))
 			if (data->inputHint < data->textBuff)
-				data->inputHint = data->textBuff + lengthof(data->textBuff) - 1;
+				data->inputHint = data->textBuff + LENGTH(data->textBuff) - 1;
 		SetWindowText(window, data->inputHint);
 	}	return 0;
 	case '\r': {
-		if (lengthof(data->textBuff) - (data->buffTail - data->textBuff) < MAX_TEXT_MESSAGE_LENGTH) {
+		if (LENGTH(data->textBuff) - (data->buffTail - data->textBuff) < MAX_TEXT_MESSAGE_LENGTH) {
 			data->buffTail = data->textBuff;
-			memset(data->buffTail, (lengthof(data->textBuff) - (data->buffTail - data->textBuff)) * sizeof(*data->textBuff), '\0');
+			memset(data->buffTail, (LENGTH(data->textBuff) - (data->buffTail - data->textBuff)) * sizeof(*data->textBuff), '\0');
 		}
 		size_t len = GetWindowTextW(window, data->buffTail, MAX_TEXT_MESSAGE_LENGTH);
 		if (len <= 0)
@@ -234,7 +235,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			char *code = strsplit(&s, " ");
 			
 			if (!strcmp(code, "me"))
-				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + lengthof("/me ") - 1);
+				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + LENGTH("/me ") - 1);
 			else if (!strcmp(code, "resync"))
 				ReloadMapsAndMod();
 			else if (!strcmp(code, "start"))
@@ -529,7 +530,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 
 HWND GetChannelChat(const char *name)
 {
-	for (int i=0; i<lengthof(channelWindows); ++i) {
+	for (int i=0; i<LENGTH(channelWindows); ++i) {
 		if (!channelWindows[i]) {
 			chatWindowData *data = malloc(sizeof(chatWindowData));
 			*data = (chatWindowData){strdup(name), DEST_CHANNEL};
@@ -573,7 +574,7 @@ void SaveLastChatWindows(void)
 	char autojoinChannels[10000];
 	autojoinChannels[0] = 0;
 	size_t len = 0;
-	for (int i=0; i<lengthof(channelWindows); ++i) {
+	for (int i=0; i<LENGTH(channelWindows); ++i) {
 		SendDlgItemMessage(channelWindows[i], DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 		if (GetTabIndex(channelWindows[i]) >= 0) {
 			chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);

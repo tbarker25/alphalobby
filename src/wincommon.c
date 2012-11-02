@@ -13,6 +13,8 @@
 #include "settings.h"
 #include "wincommon.h"
 
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
 HWND CreateDlgItem(HWND parent, const DialogItem *item, int dlgID)
 {
 	HWND window = CreateWindowEx(item->exStyle, item->class, item->name, item->style | (parent ? WS_CHILD : 0),
@@ -38,31 +40,17 @@ HWND MyCreateWindowExW(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowNam
 	return window;
 }
 
-wchar_t *utf8to16(const char *str)
-{
-	static wchar_t wStr[MAX_SERVER_MESSAGE];
-	MultiByteToWideChar(CP_UTF8, 0, str, -1, wStr, lengthof(wStr));
-	return wStr;
-}
-
-char *utf16to8(const wchar_t *wStr)
-{
-	static char str[MAX_SERVER_MESSAGE];
-	WideCharToMultiByte(CP_UTF8, 0, wStr, -1, str, lengthof(str), NULL, NULL);
-	return str;
-}
-
 int MyGetWindowTextA(HWND window, char *str, int strLen)
 {
 	wchar_t buff[MAX_SERVER_MESSAGE];
-	GetWindowText(window, buff, lengthof(buff));
+	GetWindowText(window, buff, LENGTH(buff));
 	return WideCharToMultiByte(CP_UTF8, 0, buff, -1, str, strLen, NULL, NULL);
 }
 
 char * MyGetWindowTextA2(HWND window)
 {
 	static char buff[MAX_SERVER_MESSAGE];
-	MyGetWindowTextA(window, buff, lengthof(buff));
+	MyGetWindowTextA(window, buff, LENGTH(buff));
 	return buff;
 }
 

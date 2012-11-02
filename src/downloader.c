@@ -24,6 +24,7 @@
 #include "md5.h"
 #include "downloadtab.h"
 
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 //determines minimum resolution of progressbar
 // values below ~16KB will degrade throughput.
@@ -114,7 +115,7 @@ static void getPathFromMD5(uint8_t *md5, wchar_t *path)
 static void writeFile(wchar_t *path, const void *buffer, size_t len)
 {
 	wchar_t tmpPath[MAX_PATH];
-	GetTempPath(lengthof(tmpPath), tmpPath);
+	GetTempPath(LENGTH(tmpPath), tmpPath);
 	GetTempFileName(tmpPath, NULL, 0, tmpPath);
 	HANDLE file = CreateFile(tmpPath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
 	DWORD unused;
@@ -312,11 +313,11 @@ static void handleMapSources(RequestContext *req)
 		wchar_t path[256], host[256];
 		if (FALSE == WinHttpCrackUrl(utf8to16(s), 0, ICU_DECODE, &(URL_COMPONENTS){
 				.dwStructSize = sizeof(URL_COMPONENTS),
-				.lpszHostName = host, .dwHostNameLength = lengthof(host),
-				.lpszUrlPath = path, .dwUrlPathLength = lengthof(path)}))
+				.lpszHostName = host, .dwHostNameLength = LENGTH(host),
+				.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)}))
 			continue;
 		wchar_t *name = wcsrchr(path, '/');
-		size_t size = sizeof(wchar_t) * (wcslen(name) + wcslen(gDataDir) + lengthof(L"maps"));
+		size_t size = sizeof(wchar_t) * (wcslen(name) + wcslen(gDataDir) + LENGTH(L"maps"));
 
 		RequestContext *req2 = calloc(1, sizeof(*req2) + size);
 		swprintf(req2->wcharParam, L"%s%s%s",
@@ -640,9 +641,9 @@ static void _handlePackage(RequestContext *req)
 	size_t pathLen = wcslen(gDataDir);
 	wcscpy(path, gDataDir);
 
-	wchar_t objectName[lengthof(L"streamer.cgi?") + 32] = L"streamer.cgi?";
-	memcpy(objectName + lengthof(L"streamer.cgi?") - 1,
-			req->ses->packagePath + lengthof(L"packages/") - 1,
+	wchar_t objectName[LENGTH(L"streamer.cgi?") + 32] = L"streamer.cgi?";
+	memcpy(objectName + LENGTH(L"streamer.cgi?") - 1,
+			req->ses->packagePath + LENGTH(L"packages/") - 1,
 			32 * sizeof(wchar_t));
 
 
