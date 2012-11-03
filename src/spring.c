@@ -3,20 +3,12 @@
 #include <stdio.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
 
-#include "data.h"
-#include "client.h"
-#include "settings.h"
-#include "sync.h"
-#include "countrycodes.h"
-#include "client_message.h"
 #include "alphalobby.h"
-#include "spring.h"
-
+#include "client_message.h"
+#include "countrycodes.h"
+#include "data.h"
+#include "settings.h"
 
 #define LAUNCH_SPRING(path)\
 	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(wcsdup(path)), 0, NULL);

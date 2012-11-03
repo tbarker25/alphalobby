@@ -1,23 +1,9 @@
-#include <assert.h>
 #include <stdio.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
+#include <inttypes.h>
 
+#include <windows.h>
 
 #include "data.h"
-#include "sync.h"
-#include "md5.h"
-#include "settings.h"
-#include "battlelist.h"
-#include "common.h"
-#include "client_message.h"
-#include "battletools.h"
-#include "battleroom.h"
 
 #define ALLOC_STEP 10
 

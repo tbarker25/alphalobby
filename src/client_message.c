@@ -1,29 +1,23 @@
-#include <ctype.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
 #include <assert.h>
-#include <malloc.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <malloc.h>
+#include <stdio.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
 
 #include "alphalobby.h"
-#include "dialogboxes.h"
 #include "battleroom.h"
-#include "client.h"
-#include "client_message.h"
-#include "sync.h"
-#include "settings.h"
-#include "data.h"
 #include "chat.h"
 #include "chat_window.h"
+#include "client.h"
+#include "client_message.h"
+#include "data.h"
+#include "dialogboxes.h"
 #include "md5.h"
+#include "settings.h"
+#include "sync.h"
 
 int lastStatusUpdate, gLastAutoMessage;
 static char myPassword[BASE16_MD5_LENGTH];

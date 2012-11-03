@@ -1,17 +1,13 @@
 #include <inttypes.h>
-#include <stdio.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
+#include <unistd.h>
 
-#include "data.h"
-#include "client_message.h"
-#include "dialogboxes.h"
+#include <windows.h>
+
 #include "battletools.h"
-#include "sync.h"
+#include "client_message.h"
+#include "data.h"
 #include "settings.h"
+#include "sync.h"
 
 static uint32_t balance;
 

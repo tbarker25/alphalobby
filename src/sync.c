@@ -1,31 +1,20 @@
 #include <assert.h>
 #include <IL/il.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
 #include <inttypes.h>
 #include <zlib.h>
 
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
-#include "data.h"
-#include "gzip.h"
-// #include "map.h"
-#include "alphalobby.h"
-#include "client_message.h"
-#include "downloader.h"
-#include "battleroom.h"
-#include "dialogboxes.h"
-#include "Richedit.h"
-#include "sync.h"
-#include "settings.h"
-#include "imagelist.h"
 #include <Shlobj.h>
+
+#include "alphalobby.h"
+#include "battleroom.h"
+#include "client_message.h"
+#include "data.h"
+#include "dialogboxes.h"
+#include "downloader.h"
+#include "imagelist.h"
+#include "settings.h"
+#include "sync.h"
 
 #define PLAIN_API_STRUCTURE
 #define EXPORT2(type, name, args)\

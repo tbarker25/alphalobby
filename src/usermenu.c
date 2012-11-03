@@ -1,24 +1,15 @@
 #include <assert.h>
-#include <malloc.h>
 #include <inttypes.h>
 #include <stdio.h>
 
-#include "alphalobby.h"
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
 
-#include "data.h"
-#include "sync.h"
-#include "usermenu.h"
 #include "chat.h"
-#include "dialogboxes.h"
-#include "settings.h"
-#include "client_message.h"
 #include "chat_window.h"
-
+#include "client_message.h"
+#include "data.h"
+#include "dialogboxes.h"
+#include "sync.h"
 
 void CreateUserMenu(union UserOrBot *s, HWND window)
 {

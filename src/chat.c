@@ -1,41 +1,28 @@
-#include <stdio.h>
-#include <sys\stat.h>
 #include <ctype.h>
-#include <assert.h>
-#include <malloc.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <malloc.h>
+#include <stdio.h>
 
-#include "common.h"
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
-
-#include "layoutmetrics.h"
-
-#include <windowsx.h>
-#include <Commctrl.h>
-
-#include "client_message.h"
-#include "data.h"
+#include <richedit.h>
 
 #include "alphalobby.h"
-#include "settings.h"
+#include "battletools.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "resource.h"
-#include "sync.h"
-#include "userlist.h"
-#include "imagelist.h"
-#include "battletools.h"
-#include "battleroom.h"
-#include "richedit.h"
+#include "client_message.h"
+#include "data.h"
 #include "dialogboxes.h"
-#include "spring.h"
-#include "listview.h"
 #include "downloader.h"
+#include "imagelist.h"
+#include "layoutmetrics.h"
+#include "listview.h"
+#include "settings.h"
+#include "spring.h"
+#include "sync.h"
+#include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -159,7 +146,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		char text[MAX_TEXT_MESSAGE_LENGTH];
 		GetWindowTextA(window, text, LENGTH(text));
 		
-		if (data->lastPos != Edit_GetSel(window) || data->end < 0) {
+		if (data->lastPos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
 			data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
 			data->offset = 0;
 			data->lastIndex = 0;
@@ -186,14 +173,14 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			const char *s = NULL;
 			if (!_strnicmp(name, text+start, strlen(text+start)) || ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
 				data->lastIndex = itemInfo.iItem + 1;
-				SendMessage(window, EM_SETSEL, start - offset, LOWORD(Edit_GetSel(window)));
+				SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
 				data->offset = s ? s - name + 1 : 0;
 				SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
 				break;
 			}
 			itemInfo.iItem = (itemInfo.iItem + 1) % count;
 		} while (itemInfo.iItem != data->lastIndex);
-		data->lastPos = Edit_GetSel(window);
+		data->lastPos = SendMessage(window, EM_GETSEL, 0, 0);
 	}	return 0;
 	case VK_DOWN:
 		if (!data->inputHint)

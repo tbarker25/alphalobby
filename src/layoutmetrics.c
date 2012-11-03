@@ -1,12 +1,6 @@
 #include <inttypes.h>
 
-#include "layoutmetrics.h"
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
 
 HFONT gFont;
 uint16_t baseUnitX;

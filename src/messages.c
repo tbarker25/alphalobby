@@ -4,11 +4,6 @@
 #include <stdio.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
 #include <Shlwapi.h>
 
 #include "alphalobby.h"
@@ -20,9 +15,8 @@
 #include "client.h"
 #include "client_message.h"
 #include "countrycodes.h"
-#include "dialogboxes.h"
 #include "data.h"
-#include "messages.h"
+#include "dialogboxes.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
