@@ -1,11 +1,14 @@
 #include <ctype.h>
 #include <inttypes.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <zlib.h>
 
 #include <windows.h>
 #include <Commctrl.h>
 #include <Richedit.h>
+#include <basetyps.h>
+#include <shellapi.h>
 
 #include "alphalobby.h"
 #include "client_message.h"

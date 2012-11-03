@@ -1,11 +1,13 @@
 #include <assert.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <malloc.h>
 
 #include <windows.h>
 #include <windowsx.h>
 #include <Commctrl.h>
 #include <richedit.h>
+#include <commdlg.h>
 
 #include "alphalobby.h"
 #include "battleroom.h"

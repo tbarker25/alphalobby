@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include <windows.h>
+#include <winsock2.h>
 
 #include "alphalobby.h"
 #include "chat.h"

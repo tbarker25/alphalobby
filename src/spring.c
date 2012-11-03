@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <malloc.h>
 
 #include <windows.h>
 
