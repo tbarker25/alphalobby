@@ -36,6 +36,7 @@
 #include "dialogboxes.h"
 #include "spring.h"
 #include "listview.h"
+#include "downloader.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -238,6 +239,8 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + LENGTH("/me ") - 1);
 			else if (!strcmp(code, "resync"))
 				ReloadMapsAndMod();
+			else if (!strcmp(code, "dlmap"))
+				DownloadMap(s);
 			else if (!strcmp(code, "start"))
 				LaunchSpring();
 			else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {

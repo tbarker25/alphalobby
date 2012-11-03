@@ -16,5 +16,4 @@ void DownloadFile(const char *name, enum DLTYPE type);
 	DownloadFile(modName, DLTYPE_MOD)
 #define DownloadShortMod(modName)\
 	DownloadFile(modName, DLTYPE_SHORTMOD)
-	
 

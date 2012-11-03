@@ -1,18 +1,13 @@
 #include <assert.h>
+#include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <inttypes.h>
-#include <stdbool.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
 
-#include "common.h"
-#include "data.h"
 #include "alphalobby.h"
 #include "battlelist.h"
 #include "battleroom.h"
@@ -20,6 +15,7 @@
 #include "chat_window.h"
 #include "client.h"
 #include "client_message.h"
+#include "data.h"
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "downloadtab.h"
@@ -27,6 +23,7 @@
 #include "layoutmetrics.h"
 #include "settings.h"
 #include "sync.h"
+#include "wincommon.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
 
@@ -37,7 +34,6 @@
 #endif
 
 HWND gMainWindow;
-
 //Init in syncThread, then only use in mainthread:
 
 static HWND currentTab;

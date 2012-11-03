@@ -5,8 +5,8 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <malloc.h>
-#include <inttypes.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include <windows.h>
 #include <windowsx.h>
