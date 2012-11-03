@@ -7,6 +7,8 @@
 #include <windows.h>
 #include <Commctrl.h>
 #include <richedit.h>
+#include <basetyps.h>
+#include <shellapi.h>
 
 #include "alphalobby.h"
 #include "battletools.h"

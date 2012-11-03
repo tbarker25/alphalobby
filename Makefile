@@ -11,7 +11,7 @@ else
 endif
 
 CFLAGS+= -Iinclude -I$(BUILD_DIR) -DUNICODE -DNO_STRICT
-CFLAGS+= -D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600
+CFLAGS+= -D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:

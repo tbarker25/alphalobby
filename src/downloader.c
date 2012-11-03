@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <malloc.h>
 
 #include <windows.h>
 #include <winhttp.h>
+#include <winsock2.h>
 
 #include "alphalobby.h"
 #include "battleroom.h"
