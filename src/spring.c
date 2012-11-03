@@ -52,9 +52,10 @@ void LaunchSpring(void)
 	if (gBattleOptions.hostType == HOST_SP)
 		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyUser.name);
 	else
-		APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;IsHost=%hu;MyPlayerName=%s;MyPasswd=%s;",
+		APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;%sMyPlayerName=%s;MyPasswd=%s;",
 			b->ip, b->port, gBattleOptions.hostType & HOST_FLAG && 
 			!(gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))
+			? "IsHost=1;" : ""
 			, gMyUser.name, gMyUser.scriptPassword);
 
 	if (!(gBattleOptions.hostType & HOST_FLAG) || (gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))) {
