@@ -1,43 +1,28 @@
+#include <assert.h>
 #include <stdio.h>
-#include <math.h>
-#include <limits.h>
 #include <inttypes.h>
 
 #include <windows.h>
 #include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
-
-
-#include <Commctrl.h>
-#include <Wingdi.h>
-#include <assert.h>
 #include <richedit.h>
 
 #include "alphalobby.h"
 #include "battleroom.h"
+#include "battletools.h"
 #include "chat.h"
 #include "chat_window.h"
-
-#include "usermenu.h"
 #include "client_message.h"
-#include "chat.h"
-#include "data.h"
 #include "countrycodes.h"
+#include "data.h"
 #include "imagelist.h"
-#include "dialogboxes.h"
-#include "sync.h"
-#include "common.h"
-#include "settings.h"
 #include "layoutmetrics.h"
-#include "downloader.h"
-#include "battletools.h"
 #include "listview.h"
-
+#include "settings.h"
 #include "spring.h"
-
-#include "resource.h"
+#include "sync.h"
+#include "usermenu.h"
+#include "wincommon.h"
 
 HWND gBattleRoomWindow;
 

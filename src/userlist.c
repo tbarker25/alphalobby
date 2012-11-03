@@ -1,28 +1,14 @@
-#include <stdio.h>
-#include <string.h>
-#include <limits.h>
 #include <inttypes.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
 #include <Commctrl.h>
 
-#include "alphalobby.h"
-#include "userlist.h"
-#include "layoutmetrics.h"
 #include "client_message.h"
-#include "data.h"
-#include "imagelist.h"
-#include "sync.h"
 #include "common.h"
-#include "chat.h"
+#include "layoutmetrics.h"
 #include "listview.h"
-
 #include "resource.h"
+
 HWND /* userList,  */chanList;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))

@@ -1,38 +1,18 @@
+#include <assert.h>
+#include <ctype.h>
 #include <inttypes.h>
+#include <malloc.h>
 #include <stdio.h>
 #include <sys\stat.h>
-#include <ctype.h>
-#include <assert.h>
-#include <malloc.h>
 
-#include "data.h"
-#include "common.h"
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
-
-#include "layoutmetrics.h"
-
-#include <windowsx.h>
-#include <Commctrl.h>
-
-#include "client_message.h"
 
 #include "alphalobby.h"
-#include "settings.h"
-#include "chat.h"
-#include "resource.h"
-#include "sync.h"
-#include "userlist.h"
-#include "imagelist.h"
-#include "battletools.h"
-#include "battleroom.h"
-#include "richedit.h"
-#include "dialogboxes.h"
-#include "spring.h"
 #include "chat_window.h"
+#include "data.h"
+#include "resource.h"
+#include "wincommon.h"
 
 HWND gChatWindow;
 

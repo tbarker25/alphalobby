@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <inttypes.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <stdio.h>
 
 int main(int argc, char **argv)
 {

@@ -1,16 +1,12 @@
-#include <stdio.h>
 #include <inttypes.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
+#include <unistd.h>
 
+#include <windows.h>
 #include <Commctrl.h>
+
 #include "data.h"
-#include "imagelist.h"
 #include "icons.h"
-#include "resource.h"
+#include "imagelist.h"
 
 HIMAGELIST gIconList;
 

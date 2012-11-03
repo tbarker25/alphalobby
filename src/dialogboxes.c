@@ -1,36 +1,23 @@
+#include <ctype.h>
 #include <inttypes.h>
-#include <malloc.h>
-#include <stddef.h>
-#include <math.h>
 #include <stdio.h>
-
+#include <zlib.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
-#include "wincommon.h"
-
 #include <Richedit.h>
 
-#include <windowsx.h>
-#include <ctype.h>
-#include <zlib.h>
-#include <assert.h>
-
 #include "alphalobby.h"
-#include "common.h"
-#include "dialogboxes.h"
-#include "battleroom.h"
-#include "downloader.h"
-#include "settings.h"
-#include "data.h"
 #include "client_message.h"
-#include "spring.h"
+#include "data.h"
+#include "dialogboxes.h"
+#include "downloader.h"
 #include "md5.h"
-
-#include "sync.h"
 #include "resource.h"
+#include "settings.h"
+#include "spring.h"
+#include "sync.h"
+#include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 

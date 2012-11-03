@@ -3,28 +3,18 @@
 #include <stdio.h>
 
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
 #include <Commctrl.h>
 #include "wincommon.h"
 
-#include "alphalobby.h"
 #include "battlelist.h"
-#include "battleroom.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
-#include "common.h"
 #include "data.h"
-#include "dialogboxes.h"
 #include "downloader.h"
 #include "imagelist.h"
-#include "layoutmetrics.h"
 #include "listview.h"
-#include "resource.h"
-#include "settings.h"
 #include "sync.h"
-#include "userlist.h"
 
 HWND gBattleListWindow;
 

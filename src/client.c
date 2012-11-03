@@ -1,19 +1,14 @@
 #include <assert.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
-
-#include <winsock2.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include "data.h"
+
+#include <windows.h>
 
 #include "alphalobby.h"
 #include "chat.h"
 #include "client.h"
 #include "client_message.h"
+#include "data.h"
 #include "messages.h"
 
 #define RECV_SIZE 8192

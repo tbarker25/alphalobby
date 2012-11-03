@@ -1,17 +1,6 @@
 #include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include <stdio.h>
-#include <richedit.h>
-#include <Commctrl.h>
-#include <inttypes.h>
 
 #include "common.h"
-#include "countryCodes.h"
-#include "layoutmetrics.h"
-#include "settings.h"
-#include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 

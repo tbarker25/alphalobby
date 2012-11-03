@@ -1,27 +1,19 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
-#include <malloc.h>
-#include <ctype.h>
-#include <windows.h>
-#include <windowsx.h>
-#include <oleacc.h>
-#include <Commctrl.h>
-#include "wincommon.h"
 
-#include "downloader.h"
-#include "sync.h"
+#include <windows.h>
 #include <winhttp.h>
-#include <Shlobj.h>
 
 #include "alphalobby.h"
 #include "battleroom.h"
-#include "client_message.h"
-#include "settings.h"
 #include "data.h"
+#include "downloader.h"
+#include "downloadtab.h"
 #include "gzip.h"
 #include "md5.h"
-#include "downloadtab.h"
+#include "settings.h"
+#include "sync.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 

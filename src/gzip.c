@@ -1,8 +1,8 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <zlib.h>
-#include <assert.h>
 
-void InflateGzip(void *src, size_t srcLen, void *dst, size_t dstLen)
+void InflateGzip(void *restrict src, size_t srcLen, void *restrict dst, size_t dstLen)
 {
 	z_stream stream = {
 		.avail_in = srcLen,

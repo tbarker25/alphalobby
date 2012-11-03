@@ -2,5 +2,5 @@
 	char (_out)[*(uint32_t *)((_in) + (_len) - 4)];\
 	InflateGzip(_in, _len, _out, sizeof(_out));
 
-void InflateGzip(void *src, size_t srcLen, void *dst, size_t dstLen);
+void InflateGzip(void *restrict src, size_t srcLen, void *restrict dst, size_t dstLen);
 void *DeflateGzip(void *src, size_t *len);
