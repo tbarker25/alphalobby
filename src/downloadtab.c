@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <math.h>

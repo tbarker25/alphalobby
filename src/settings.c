@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <Shlobj.h>
 
 #include "common.h"
@@ -26,7 +25,7 @@
 
 typedef struct KeyPair{
 	char *key, *val;
-	bool isInt;
+	char isInt;
 }KeyPair;
 
 typeof(gSettings) gSettings;

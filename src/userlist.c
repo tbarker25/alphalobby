@@ -2,7 +2,6 @@
 #include <string.h>
 #include <limits.h>
 #include <inttypes.h>
-#include <stdbool.h>
 
 #include <windows.h>
 #include <windowsx.h>

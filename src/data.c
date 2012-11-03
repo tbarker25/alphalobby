@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <windows.h>
 #include <windowsx.h>
 #include <oleacc.h>

@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
-#include <stdbool.h>
 #include <inttypes.h>
 
 #include <windows.h>
@@ -369,7 +368,7 @@ static void updatePlayerListGroup(int groupId)
 		});
 }
 
-bool BattleRoom_IsAutoUnspec(void)
+char BattleRoom_IsAutoUnspec(void)
 {
 	return SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
 }
@@ -907,7 +906,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			return 0;
 		
 		case MAKEWPARAM(DLG_VOTEYES, BN_CLICKED): {
-			bool voteYes = 1;
+			char voteYes = 1;
 			goto vote;
 		case MAKEWPARAM(DLG_VOTENO, BN_CLICKED):
 			voteYes = 0;

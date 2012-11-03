@@ -50,7 +50,7 @@ EXPORT2(const char* , GetSpringVersion, ())
  *
  * The config handler won't be reset, it will however be initialised if it wasn't before , (with SetSpringConfigFile, ())
  */
-EXPORT2(int         , Init, (bool isServer, int id))
+EXPORT2(int         , Init, (char isServer, int id))
 /**
  * @brief Uninitialize the unitsync library
  *

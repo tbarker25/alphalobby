@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <malloc.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include "alphalobby.h"
