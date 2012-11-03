@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -95,7 +94,7 @@ void MainWindow_SetActiveTab(HWND newTab)
 	if (newTab == currentTab)
 		return;
 	
-	void changeCheck(bool enable) {
+	void changeCheck(char enable) {
 		int tabIndex = currentTab == gBattleListWindow  ? ID_BATTLELIST
 	                 : currentTab == gBattleRoomWindow  ? ID_BATTLEROOM
 		             : currentTab == gChatWindow        ? ID_CHAT

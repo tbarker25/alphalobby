@@ -20,7 +20,7 @@ void BattleRoom_RemoveUser(const union UserOrBot *u);
 
 void BattleRoom_Show(void);
 void BattleRoom_Hide(void);
-bool BattleRoom_IsAutoUnspec(void);
+char BattleRoom_IsAutoUnspec(void);
 void BattleRoom_ChangeMinimapBitmap(const uint16_t *mapPixels,
 		uint16_t metalMapWidth, uint16_t metalMapHeight, const uint8_t *metalMapPixels,
 		uint16_t heightMapWidth, uint16_t heightMapHeight, const uint8_t *heightMapPixels);

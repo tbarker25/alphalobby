@@ -1,5 +1,4 @@
 #include <inttypes.h>
-#include <stdbool.h>
 #include <malloc.h>
 #include <stddef.h>
 #include <math.h>
@@ -447,7 +446,7 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	return 0;
 }
 
-static void rapid_addAvailable(HWND window, bool downloadOnly)
+static void rapid_addAvailable(HWND window, char downloadOnly)
 {
 	#define TVGN_NEXTSELECTED       0x000B
 	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
@@ -564,7 +563,7 @@ static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 		NMHDR *info = (NMHDR *)lParam;
 		if (info->idFrom == IDC_RAPID_AVAILABLE
 				&& (info->code == NM_DBLCLK || info->code == NM_RETURN)) {
-			rapid_addAvailable(window, false);
+			rapid_addAvailable(window, 0);
 		}
 	}	return 0;
 	case WM_COMMAND:
@@ -589,10 +588,10 @@ static BOOL CALLBACK rapidDlgProc(HWND window, UINT msg, WPARAM wParam, LPARAM l
 			SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_DELETESTRING, selected, 0);
 		}	return 0;
 		case MAKEWPARAM(IDC_RAPID_SELECT, BN_CLICKED):
-			rapid_addAvailable(window, false);
+			rapid_addAvailable(window, 0);
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_DOWNLOAD, BN_CLICKED):
-			rapid_addAvailable(window, true);
+			rapid_addAvailable(window, 1);
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_ERRORCHECK, BN_CLICKED):
 			// MyMessageBox(NULL, "Not implemented yet");

@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <malloc.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <limits.h>
 
 #include "common.h"

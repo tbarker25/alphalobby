@@ -7,7 +7,6 @@
 
 #include <winsock2.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include "data.h"
 

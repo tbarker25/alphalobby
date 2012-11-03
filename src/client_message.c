@@ -5,7 +5,6 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <inttypes.h>
 
 #include <windows.h>
@@ -224,19 +223,19 @@ void RegisterAccount(const char *username, const char *password)
 	Connect(registerAccount);
 }
 
-bool Autologin(void)
+char Autologin(void)
 {
 	const char *s;
 	s = LoadSetting("username");
 	if (!s)
-		return false;
+		return 0;
 	strcpy(myUserName, s);
 	s = LoadSetting("password");
 	if (!s)
-		return false;
+		return 0;
 	strcpy(myPassword, s);
 	Connect(login);
-	return true;
+	return 1;
 }
 
 void Login(const char *username, const char *password)

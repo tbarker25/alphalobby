@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -613,8 +612,8 @@ static void saidBattleEx(void)
 		chanceOfAutohost += strstr(text, username) != NULL;
 		chanceOfAutohost += strstr(text, "!help") != NULL;
 
-		bool saidSpads = strstr(text, "SPADS") != NULL;
-		bool saidSpringie = strstr(text, "Springie") != NULL;
+		char saidSpads = strstr(text, "SPADS") != NULL;
+		char saidSpringie = strstr(text, "Springie") != NULL;
 		chanceOfAutohost += saidSpads;
 		chanceOfAutohost += saidSpringie;
 

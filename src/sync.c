@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <malloc.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <zlib.h>
 
 #include <windows.h>
@@ -26,7 +25,6 @@
 #include "sync.h"
 #include "settings.h"
 #include "imagelist.h"
-#include <stdbool.h>
 #include <Shlobj.h>
 
 #define PLAIN_API_STRUCTURE
@@ -63,7 +61,7 @@ static HANDLE event;
 //malloc new value, swap atomically, and free old value:
 static const char *mapToSave, *modToSave;
 static char *scriptToSet;
-static bool haveTriedToDownload;
+static char haveTriedToDownload;
 
 //Sync thread only:
 static char currentMod[MAX_TITLE];
@@ -100,7 +98,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 		if (taskReload) {
 			STARTCLOCK();
 			taskReload = 0;
-			Init(false, 0);
+			Init(0, 0);
 			ENDCLOCK();
 			
 			taskSetBattleStatus = 1;
@@ -438,14 +436,14 @@ static void createModFile(const char *modName)
 	gzwrite(fd, sideNames, sizeof(sideNames));
 	
 	uint32_t sidePics[sideCount][16*16];
-	bool isBMP = false;
+	char isBMP = 0;
 	for (uint8_t i=0; i<sideCount; ++i) {
 		char vfsPath[128];
 		int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
 		int fd = OpenFileVFS(vfsPath);
 		if (!fd) {
 			memcpy(&vfsPath[n - 3], (char[]){'b', 'm', 'p'}, 3);
-			isBMP = true;
+			isBMP = 1;
 			fd = OpenFileVFS(vfsPath);
 		}
 		if (!fd) {

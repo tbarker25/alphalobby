@@ -22,7 +22,7 @@ void LeaveChannel(const char *chanName);
 void RenameAccount(const char *newUsername);
 void ChangePassword(const char *oldPassword, const char *newPassword);
 void RegisterAccount(const char *username, const char *password);
-bool Autologin(void);
+char Autologin(void);
 void Login(const char *username, const char *password);
 void OpenBattle(const char *title, const char *password, const char *modName, const char *mapName, uint16_t port);
 void OpenRelayBattle(const char *title, const char *password, const char *modName, const char *mapName, const char *manager);
