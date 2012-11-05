@@ -43,7 +43,7 @@ $(BUILD_DIR)/rgba2c.exe : src/rgba2c.c
 $(BUILD_DIR)/res.o: src/res.rc
 	windres $< $@
 
-$(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h
+$(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h src/user.h src/battle.h src/data.h
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean :
