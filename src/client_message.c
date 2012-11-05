@@ -59,7 +59,9 @@ void JoinBattle(uint32_t id, const char *password)
 		}
 		gBattleOptions.hostType = 0;
 		BattleRoom_Show();
-		SendToServer("JOINBATTLE %u %s %s", id, password ?: "", gMyUser.scriptPassword);
+		SendToServer("JOINBATTLE %u %s %x",
+				id, password ?: "",
+				(uint32_t)(rand() ^ (rand() << 16)));
 		free((void *)passwordToJoin);
 	}
 }
@@ -198,11 +200,12 @@ void ChangePassword(const char *oldPassword, const char *newPassword)
 
 void login(void)
 {
+/* LOGIN userName password cpu localIP {lobby name and version} [userID] [{compFlags}] */
 	SendToServer("LOGIN %s %s 0 * AlphaLobby"
 	#ifdef VERSION
 	" " STRINGIFY(VERSION)
 	#endif
-	"\t0\ta", myUserName, myPassword);//, GetLocalIP() ?: "*");
+	"\t0\ta m sp", myUserName, myPassword);//, GetLocalIP() ?: "*");
 }
 
 static void registerAccount(void)

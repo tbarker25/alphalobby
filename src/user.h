@@ -92,7 +92,7 @@ typedef struct User {
 	uint32_t cpu, id;
 	
 	char alias[MAX_NAME_LENGTH_NUL];
-	char scriptPassword[128];
+	char *scriptPassword;
 	uint8_t clientStatus, country, ignore;
 }User;
 

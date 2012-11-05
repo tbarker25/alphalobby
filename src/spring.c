@@ -56,7 +56,7 @@ void LaunchSpring(void)
 			b->ip, b->port, gBattleOptions.hostType & HOST_FLAG && 
 			!(gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))
 			? "IsHost=1;" : ""
-			, gMyUser.name, gMyUser.scriptPassword);
+			, gMyUser.name, gMyUser.scriptPassword ?: "");
 
 	if (!(gBattleOptions.hostType & HOST_FLAG) || (gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))) {
 		*buffEnd++ = '}';
@@ -130,7 +130,7 @@ void LaunchSpring(void)
 		} else {
 			const User *u = &s->user;
 			APPEND_LINE("[PLAYER%d]{Name=%s;CountryCode=%.2s;Rank=%d;Password=%s;Team=%d;",
-					i, u->name, countryCodes[u->country], FROM_RANK_MASK(u->clientStatus), u->scriptPassword, FROM_TEAM_MASK(battleStatus));
+					i, u->name, countryCodes[u->country], FROM_RANK_MASK(u->clientStatus), u->scriptPassword ?: "", FROM_TEAM_MASK(battleStatus));
 
 			if (!(u->battleStatus & MODE_MASK))
 				APPEND_LINE("Spectator=1;");

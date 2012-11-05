@@ -397,6 +397,7 @@ static void joined(void)
 }
 
 static void joinedBattle(void)
+/* JOINEDBATTLE battleID userName [scriptPassword] */
 {
 	Battle *b = FindBattle(getNextInt());
 	User *u = FindUser(getNextWord());
@@ -404,6 +405,9 @@ static void joinedBattle(void)
 	if (!u || !b)
 		return;
 	u->battle = b;
+	free(u->scriptPassword);
+	u->scriptPassword = strdup(getNextWord());
+
 	int i=1; //Start at 1 so founder is first
 	while (i<b->nbParticipants - b->nbBots && strcmpi(b->users[i]->name, u->name) < 0)
 		++i;
@@ -478,7 +482,6 @@ static void leftBattle(void)
 static void loginInfoEnd(void)
 {
 	OpenDefaultChannels();
-	sprintf(gMyUser.scriptPassword, "%x%x%x%x", rand(), rand(), rand(), rand());
 	BattleList_OnEndLoginInfo();
 	MainWindow_ChangeConnect(CONNECTION_ONLINE);
 	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
@@ -711,8 +714,10 @@ static void saidPrivate(void)
 		command += sizeof("JOINEDBATTLE ") - 1;
 		getNextWord();
 		User *u = FindUser(getNextWord());
-		if (u)
-			copyNextWord(u->scriptPassword);
+		if (u) {
+			free(u->scriptPassword);
+			u->scriptPassword = strdup(getNextWord());
+		}
 
 		// Zero-K juggler sends matchmaking command "!join <host>"
 	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)){
@@ -806,7 +811,7 @@ static void updateBattleInfo(void)
 	copyNextSentence(b->mapName);
 
 	if (b == gMyBattle && (b->mapHash != lastMapHash || !gMapHash))
-		ChangedMap(command);
+		ChangedMap(b->mapName);
 
 	BattleList_UpdateBattle(b);
 }
