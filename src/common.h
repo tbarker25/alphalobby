@@ -16,7 +16,7 @@
 #define FOR_EACH(i, L)\
 	for (typeof(*L) *i = L; i - L < LENGTH(L); ++i)
 
-char *strsplit(char **restrict s, const char * delim);
+char *strsep(char **restrict s, const char * delim);
 char *strpcpy(char *dst, const char *src);
 
 #ifdef _WCHAR_T

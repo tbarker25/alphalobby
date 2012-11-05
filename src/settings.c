@@ -79,7 +79,7 @@ void OpenDefaultChannels(void)
 	strcpy(buff, gSettings.autojoin);
 	char *s, *s2 = buff;
 	
-	while ((s=strsplit(&s2, ";"))) {
+	while ((s=strsep(&s2, ";"))) {
 		if (*s == '*')
 			ChatWindow_SetActiveTab(GetServerChat());
 		else
