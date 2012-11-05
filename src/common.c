@@ -4,7 +4,7 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-char *strsplit(char **restrict s, const char *restrict delimiters)
+char *strsep(char **restrict s, const char *restrict delimiters)
 {
 	*s += strspn(*s, delimiters);
 	if (!**s)

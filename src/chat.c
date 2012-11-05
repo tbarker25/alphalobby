@@ -221,7 +221,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		GetWindowText(GetParent(window), destName, sizeof(destName));
 		if (textA[0] == '/') {
 			char *s = textA + 1;
-			char *code = strsplit(&s, " ");
+			char *code = strsep(&s, " ");
 			
 			if (!strcmp(code, "me"))
 				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + LENGTH("/me ") - 1);
@@ -232,7 +232,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			else if (!strcmp(code, "start"))
 				LaunchSpring();
 			else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
-				char *username = strsplit(&s, " ");
+				char *username = strsep(&s, " ");
 				User *u = FindUser(username);
 				if (u) {
 					SendToServer("SAYPRIVATE %s %s", u->name, s);
@@ -249,7 +249,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			else if (!strcmp(code, "ingame"))
 				SendToServer("GETINGAMETIME");
 			else if (!strcmp(code, "split")) {
-				char *splitType = strsplit(&s, " ");
+				char *splitType = strsep(&s, " ");
 				SplitType type = !strcmp(splitType, "h") ? SPLIT_HORZ
 						 : !strcmp(splitType, "v") ? SPLIT_VERT
 						 : !strcmp(splitType, "c1") ? SPLIT_CORNERS1

@@ -614,7 +614,7 @@ uint32_t GetModHash(const char *modName)
 
 static void _setScriptTags(char *script)
 {
-	for (char *key, *val; (key = strsplit(&script, "=")) && (val = strsplit(&script, "\t"));) {
+	for (char *key, *val; (key = strsep(&script, "=")) && (val = strsep(&script, "\t"));) {
 		if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
 			StartPosType startPosType = atoi(val);
 			if (startPosType != gBattleOptions.startPosType)

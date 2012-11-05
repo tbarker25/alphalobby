@@ -695,8 +695,8 @@ static void saidPrivate(void)
 
 	// Get list of relayhost managers
 	if (!strcmp(username, "RelayHostManagerList") && !memcmp(command, "managerlist ", sizeof("managerlist ") - 1)){
-		strsplit(&command, " ");
-		for (const char *c; (c = strsplit(&command, " \t\n"));){
+		strsep(&command, " ");
+		for (const char *c; (c = strsep(&command, " \t\n"));){
 			User *u = FindUser(c);
 			if (u){
 				gRelayManagers = realloc(gRelayManagers, (gRelayManagersCount+1) * sizeof(*gRelayManagers));
