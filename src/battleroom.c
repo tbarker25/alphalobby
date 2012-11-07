@@ -142,8 +142,8 @@ static const DialogItem dialogItems[] = {
 		.exStyle = WS_EX_CLIENTEDGE,
 		.style = WS_VISIBLE | LVS_SHAREIMAGELISTS | LVS_SINGLESEL | LVS_REPORT | LVS_NOCOLUMNHEADER,
 	}, [DLG_BATTLE_INFO] = {
-		.class = RICHEDIT_CLASS,
-		.style = ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_VISIBLE,
+		.class = WC_LISTVIEW,
+		.style = WS_VISIBLE | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_REPORT,
 
 	}, [DLG_VOTEBOX] = {
 		.class = WC_BUTTON,
@@ -598,63 +598,178 @@ static LRESULT CALLBACK startPositionProc(HWND window, UINT msg, WPARAM wParam, 
 	return DefSubclassProc(window, msg, wParam, lParam);
 }
 
+static void onCreate(HWND window)
+{
+	gBattleRoomWindow = window;
+	CreateDlgItems(window, dialogItems, DLG_LAST + 1);
+	for (int i=0; i<16; ++i) {
+		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
+		HWND startPos = CreateDlgItem(minimap, &dialogItems[DLG_STARTPOS], DLG_FIRST_STARTPOS + i);
+		SetWindowSubclass(startPos, startPositionProc, i, i);
+	}
+	for (int i=0; i<16; ++i) {
+		wchar_t buff[LENGTH("Team 16")];
+		swprintf(buff, L"Team %d", i+1);
+		SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buff);
+	}
+
+	HWND infoList = GetDlgItem(window, DLG_BATTLE_INFO);
+	SendMessage(infoList, LVM_INSERTCOLUMN, 0, (LPARAM)&(LVCOLUMN){});
+	SendMessage(infoList, LVM_INSERTCOLUMN, 1, (LPARAM)&(LVCOLUMN){});
+	ListView_EnableGroupView(infoList, TRUE);
+
+	HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
+	for (int i=0; i <= COLUMN_LAST; ++i)
+		SendMessage(playerList, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){});
+
+	ListView_SetExtendedListViewStyle(playerList, LVS_EX_DOUBLEBUFFER |  LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+	SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);
+	ListView_EnableGroupView(playerList, TRUE);
+	for (int i=0; i<=16; ++i) {
+		wchar_t buff[LENGTH("Spectators")];
+		swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
+		ListView_InsertGroup(playerList, -1, (&(LVGROUP){
+					.cbSize = sizeof(LVGROUP),
+					.mask = LVGF_HEADER | LVGF_GROUPID,
+					.pszHeader = buff,
+					.iGroupId = i})
+				);
+	}
+
+	HWND hwndTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, 0,
+			0, 0, 0, 0,
+			window, NULL, NULL, NULL);
+	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 200);
+	TOOLINFO toolInfo = {
+		sizeof(toolInfo), TTF_SUBCLASS | TTF_IDISHWND | TTF_TRANSPARENT , window, (UINT_PTR)GetDlgItem(window, DLG_PLAYER_LIST),
+		.lpszText = LPSTR_TEXTCALLBACK,
+	};
+	SendMessage(hwndTip, TTM_ADDTOOL, 0, (LPARAM)&toolInfo);
+	SetWindowSubclass(playerList, playerListProc, 0, (DWORD_PTR)hwndTip);
+
+	SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_SETRANGE, 1,
+			MAKELONG(0, 200));
+	SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_VERT,
+			BM_SETIMAGE, IMAGE_ICON,
+			(WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
+	SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_HORZ,
+			BM_SETIMAGE, IMAGE_ICON,
+			(WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_HORZ, 0));
+	SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS1,
+			BM_SETIMAGE, IMAGE_ICON,
+			(WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER1, 0));
+	SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS2,
+			BM_SETIMAGE, IMAGE_ICON,
+			(WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER2, 0));
+	SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_RAND,
+			BM_SETIMAGE, IMAGE_ICON,
+			(WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RAND, 0));
+
+	SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
+}
+
+static void onDraw(DRAWITEMSTRUCT *info)
+{
+	FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
+
+	if (!minimapPixels) {
+		/* extern void GetDownloadMessage(const char *text); */
+		/* char text[256]; */
+		/* GetDownloadMessage(text); */
+		/* DrawTextA(info->hDC, text, -1, &info->rcItem, DT_CENTER); */
+		return;
+	}
+
+	int width = info->rcItem.right;
+	int height = info->rcItem.bottom;
+
+	if (!gMapInfo.width || !gMapInfo.height || !width || !height)
+		return;
+
+	if (height * gMapInfo.width > width * gMapInfo.height)
+		height = width * gMapInfo.height / gMapInfo.width;
+	else
+		width = height * gMapInfo.width / gMapInfo.height;
+
+	int xOffset = (info->rcItem.right - width) / 2;
+	int yOffset = (info->rcItem.bottom - height) / 2;
+
+
+	uint32_t *pixels = malloc(width * height * 4);
+	if (SendDlgItemMessage(gBattleRoomWindow, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
+		for (int i=0; i<width * height; ++i) {
+			uint8_t heightPixel = heightMapPixels[i % width * heightMapWidth / width + i / width * heightMapHeight / height * heightMapWidth];
+			pixels[i] = heightPixel | heightPixel << 8 | heightPixel << 16;
+		}
+	} else if (SendDlgItemMessage(gBattleRoomWindow, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
+		for (int i=0; i<width * height; ++i) {
+			uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
+			uint8_t metalPixel = metalMapPixels[i % width * metalMapWidth / width + i / width * metalMapHeight / height * metalMapWidth];
+			pixels[i] = (p & 0x001B) << 1 | (p & 0x700 ) << 3 | (p & 0xE000) << 6 | metalPixel >> 2 | metalPixel << 8;
+		}
+	} else {
+		for (int i=0; i<width * height; ++i) {
+			uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
+			pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
+		}
+	}
+
+	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
+		for (int j=0; j<NUM_ALLIANCES; ++j) {
+			int xMin = gBattleOptions.startRects[j].left * width / START_RECT_MAX;
+			int xMax = gBattleOptions.startRects[j].right * width / START_RECT_MAX;
+			int yMin = gBattleOptions.startRects[j].top * height / START_RECT_MAX;
+			int yMax = gBattleOptions.startRects[j].bottom * height / START_RECT_MAX;
+
+			if ((gMyUser.battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser.battleStatus)) {
+				for (int x=xMin; x<xMax; ++x) {
+					for (int y=yMin; y<yMax; ++y) {
+						if ((pixels[x+width*y] & 0x00FF00) >= (0x00FF00 - 0x003000))
+							pixels[x+width*y] |= 0x00FF00;
+						else
+							pixels[x+width*y] += 0x003000;
+					}
+				}
+			} else {
+				for (int x=xMin; x<xMax; ++x) {
+					for (int y=yMin; y<yMax; ++y) {
+						if ((pixels[x+width*y] & 0xFF0000) >= (0xFF0000 - 0x300000))
+							pixels[x+width*y] |= 0xFF0000;
+						else
+							pixels[x+width*y] += 0x300000;
+					}
+				}
+			}
+			for (int x=xMin; x<xMax; ++x) {
+				pixels[x+width*yMin] = 0;
+				// pixels[x+width*(yMin+1)] = 0;
+				pixels[x+width*(yMax-1)] = 0;
+				// pixels[x+width*(yMax-2)] = 0;
+			}
+			for (int y=yMin; y<yMax; ++y) {
+				pixels[xMin+width*y] = 0;
+				// pixels[(xMin+1)+width*y] = 0;
+				pixels[(xMax-1)+width*y] = 0;
+				// pixels[(xMax-2)+width*y] = 0;
+			}
+		}
+	}
+	HBITMAP bitmap = CreateBitmap(width, height, 1, 32, pixels);
+	free(pixels);
+
+	HDC dcSrc = CreateCompatibleDC(info->hDC);
+	SelectObject(dcSrc, bitmap);
+	BitBlt(info->hDC, xOffset, yOffset, width, height, dcSrc, 0, 0, SRCCOPY);
+
+	DeleteObject(bitmap);
+	// printf("is it? %d\n", ReleaseDC(info->hwndItem, dcSrc));
+}
+
 static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
 	case WM_CREATE:
-		gBattleRoomWindow = window;
-		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
-		for (int i=0; i<16; ++i) {
-			HWND minimap = GetDlgItem(window, DLG_MINIMAP);
-			HWND startPos = CreateDlgItem(minimap, &dialogItems[DLG_STARTPOS], DLG_FIRST_STARTPOS + i);
-			SetWindowSubclass(startPos, startPositionProc, i, i);
-		}
-		for (int i=0; i<16; ++i) {
-			wchar_t buff[LENGTH("Team 16")];
-			swprintf(buff, L"Team %d", i+1);
-			SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buff);
-		}
-
-		HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
-		for (int i=0; i <= COLUMN_LAST; ++i)
-			SendMessage(playerList, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){});
-
-		ListView_SetExtendedListViewStyle(playerList, LVS_EX_DOUBLEBUFFER |  LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-		SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);
-		ListView_EnableGroupView(playerList, TRUE);
-		for (int i=0; i<=16; ++i) {
-			wchar_t buff[LENGTH("Spectators")];
-			swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
-			ListView_InsertGroup(playerList, -1, (&(LVGROUP){
-				.cbSize = sizeof(LVGROUP),
-				.mask = LVGF_HEADER | LVGF_GROUPID,
-				.pszHeader = buff,
-				.iGroupId = i})
-			);
-		}
-
-		HWND hwndTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, 0,
-			0, 0, 0, 0,
-			window, NULL, NULL, NULL);
-		SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 200);
-		TOOLINFO toolInfo = {
-			sizeof(toolInfo), TTF_SUBCLASS | TTF_IDISHWND | TTF_TRANSPARENT , window, (UINT_PTR)GetDlgItem(window, DLG_PLAYER_LIST),
-			.lpszText = LPSTR_TEXTCALLBACK,
-		};
-		SendMessage(hwndTip, TTM_ADDTOOL, 0, (LPARAM)&toolInfo);
-		SetWindowSubclass(playerList, playerListProc, 0, (DWORD_PTR)hwndTip);
-
-		SendDlgItemMessage(window, DLG_BATTLE_INFO, EM_SETEVENTMASK, 0, ENM_LINK);
-		
-		SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_SETRANGE, 1, MAKELONG(0, 200));
-		
-		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_VERT, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_VERT, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_HORZ, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_HORZ, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS1, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER1, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_CORNERS2, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_CORNER2, 0));
-		SendDlgItemMessage(window, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETIMAGE, IMAGE_ICON, (WPARAM)ImageList_GetIcon(gIconList, ICONS_SPLIT_RAND, 0));
-		
-		SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
+		onCreate(window);
 		return 0;
 	case WM_SIZE:
 		resizeAll(lParam);
@@ -664,104 +779,10 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 	// case WM_EXITSIZEMOVE:
 		// InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
 		// break;
-	case WM_DRAWITEM: {
+	case WM_DRAWITEM:
 		assert(wParam == DLG_MINIMAP);
-		DRAWITEMSTRUCT *info = (void *)lParam;
-
-		FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
-		
-		if (!minimapPixels) {
-			extern void GetDownloadMessage(const char *text);
-			char text[256];
-			GetDownloadMessage(text);
-			DrawTextA(info->hDC, text, -1, &info->rcItem, DT_CENTER);
-			return 0;
-		}
-		
-		int width = info->rcItem.right;
-		int height = info->rcItem.bottom;
-		
-		if (!gMapInfo.width || !gMapInfo.height || !width || !height)
-			return 1;
-		
-		if (height * gMapInfo.width > width * gMapInfo.height)
-			height = width * gMapInfo.height / gMapInfo.width;
-		else
-			width = height * gMapInfo.width / gMapInfo.height;
-		
-		int xOffset = (info->rcItem.right - width) / 2;
-		int yOffset = (info->rcItem.bottom - height) / 2;
-		
-	
-		uint32_t *pixels = malloc(width * height * 4);
-		if (SendDlgItemMessage(window, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
-			for (int i=0; i<width * height; ++i) {
-				uint8_t heightPixel = heightMapPixels[i % width * heightMapWidth / width + i / width * heightMapHeight / height * heightMapWidth];
-				pixels[i] = heightPixel | heightPixel << 8 | heightPixel << 16;
-			}
-		} else if (SendDlgItemMessage(window, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
-			for (int i=0; i<width * height; ++i) {
-				uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
-				uint8_t metalPixel = metalMapPixels[i % width * metalMapWidth / width + i / width * metalMapHeight / height * metalMapWidth];
-				pixels[i] = (p & 0x001B) << 1 | (p & 0x700 ) << 3 | (p & 0xE000) << 6 | metalPixel >> 2 | metalPixel << 8;
-			}
-		} else {
-			for (int i=0; i<width * height; ++i) {
-				uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
-				pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
-			}
-		}
-		
-		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
-			for (int j=0; j<NUM_ALLIANCES; ++j) {
-				int xMin = gBattleOptions.startRects[j].left * width / START_RECT_MAX;
-				int xMax = gBattleOptions.startRects[j].right * width / START_RECT_MAX;
-				int yMin = gBattleOptions.startRects[j].top * height / START_RECT_MAX;
-				int yMax = gBattleOptions.startRects[j].bottom * height / START_RECT_MAX;
-
-				if ((gMyUser.battleStatus & MODE_MASK) && j == FROM_ALLY_MASK(gMyUser.battleStatus)) {
-					for (int x=xMin; x<xMax; ++x) {
-						for (int y=yMin; y<yMax; ++y) {
-							if ((pixels[x+width*y] & 0x00FF00) >= (0x00FF00 - 0x003000))
-								pixels[x+width*y] |= 0x00FF00;
-							else
-								pixels[x+width*y] += 0x003000;
-						}
-					}
-				} else {
-					for (int x=xMin; x<xMax; ++x) {
-						for (int y=yMin; y<yMax; ++y) {
-							if ((pixels[x+width*y] & 0xFF0000) >= (0xFF0000 - 0x300000))
-								pixels[x+width*y] |= 0xFF0000;
-							else
-								pixels[x+width*y] += 0x300000;
-						}
-					}
-				}
-				for (int x=xMin; x<xMax; ++x) {
-					pixels[x+width*yMin] = 0;
-					// pixels[x+width*(yMin+1)] = 0;
-					pixels[x+width*(yMax-1)] = 0;
-					// pixels[x+width*(yMax-2)] = 0;
-				}
-				for (int y=yMin; y<yMax; ++y) {
-					pixels[xMin+width*y] = 0;
-					// pixels[(xMin+1)+width*y] = 0;
-					pixels[(xMax-1)+width*y] = 0;
-					// pixels[(xMax-2)+width*y] = 0;
-				}
-			}
-		}
-		HBITMAP bitmap = CreateBitmap(width, height, 1, 32, pixels);
-		free(pixels);
-		
-		HDC dcSrc = CreateCompatibleDC(info->hDC);
-		SelectObject(dcSrc, bitmap);
-		BitBlt(info->hDC, xOffset, yOffset, width, height, dcSrc, 0, 0, SRCCOPY);
-
-		DeleteObject(bitmap);
-		// printf("is it? %d\n", ReleaseDC(info->hwndItem, dcSrc));
-	}	return 1;
+		onDraw((void *)lParam);
+		return 1;
 	case WM_NOTIFY: {
 		const LPNMHDR note = (void *)lParam;
 		if (note->code == TTN_GETDISPINFO) {
@@ -799,20 +820,20 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			return 0;
 		}
 		switch (note->idFrom) {
-		case DLG_BATTLE_INFO: {
-			ENLINK *link = (ENLINK *)lParam;
-			if (note->code != EN_LINK || link->msg != WM_LBUTTONUP)
-				break;
-			SendMessage(note->hwndFrom, EM_EXSETSEL, 0, (LPARAM)&link->chrg);
-			wchar_t buff[link->chrg.cpMax - link->chrg.cpMin];
-			SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)buff);
+		/* case DLG_BATTLE_INFO: { */
+			/* ENLINK *link = (ENLINK *)lParam; */
+			/* if (note->code != EN_LINK || link->msg != WM_LBUTTONUP) */
+				/* break; */
+			/* SendMessage(note->hwndFrom, EM_EXSETSEL, 0, (LPARAM)&link->chrg); */
+			/* wchar_t buff[link->chrg.cpMax - link->chrg.cpMin]; */
+			/* SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)buff); */
 
-			int i = _wtoi(buff + LENGTH(L":<") - 1);
-			if (i & MOD_OPTION_FLAG)
-				ChangeModOption(i & ~MOD_OPTION_FLAG);
-			else
-				ChangeMapOption(i);
-		}	return 0;
+			/* int i = _wtoi(buff + LENGTH(L":<") - 1); */
+			/* if (i & MOD_OPTION_FLAG) */
+				/* ChangeModOption(i & ~MOD_OPTION_FLAG); */
+			/* else */
+				/* ChangeMapOption(i); */
+		/* }	return 0; */
 		case DLG_PLAYER_LIST: {
 			switch (note->code) {
 			case LVN_ITEMACTIVATE:
@@ -932,18 +953,40 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		
 	 }	return 0;
 	case WM_SETMODDETAILS: {
-		HWND infoWindow = GetDlgItem(window, DLG_BATTLE_INFO);
-		POINT scrollPosition;
-		SendMessage(infoWindow, EM_GETSCROLLPOS, 0, (LPARAM)&scrollPosition);
-		SendMessage(infoWindow, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){.codepage = 65001}, lParam);
-		free((void *)lParam);
-		for (int startPos, endPos=0; (startPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{endPos,-1}, L":<"})) >= 0; ) {
-			endPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{startPos, -1}, L">:"});
-			SendMessage(infoWindow, EM_SETSEL, startPos, endPos);
-			SendMessage(infoWindow, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&(CHARFORMAT2){.cbSize = sizeof(CHARFORMAT2), .dwMask = CFM_LINK, .dwEffects = CFE_LINK});
+		HWND infoList = GetDlgItem(window, DLG_BATTLE_INFO);
+
+		int gid = SendMessage(infoList, LVM_INSERTGROUP, -1, (LPARAM)&(LVGROUP){
+				sizeof(LVGROUP), LVGF_HEADER, L"group1"});
+		printf("gid: %d\n", gid);
+
+
+		
+		ListView_DeleteAllItems(infoList);
+		for (ssize_t i=0; i<gNbModOptions; ++i) {
+			SendMessageA(infoList, LVM_INSERTITEMA, 0,
+					(LPARAM)&(LVITEMA){
+					LVIF_GROUPID | LVIF_TEXT, i,
+					.pszText = gModOptions[i].name,
+					.iGroupId = gid
+					});
+			SendMessageA(infoList, LVM_SETITEMA, 0,
+					(LPARAM)&(LVITEMA){LVIF_TEXT, i, 1,
+					.pszText = gModOptions[i].val});
 		}
-		SendMessage(infoWindow, EM_SETSEL, 0, 0);
-		SendMessage(infoWindow, EM_SETSCROLLPOS, 0, (LPARAM)&scrollPosition);
+		ListView_SetColumnWidth(infoList, 0, LVSCW_AUTOSIZE);
+		ListView_SetColumnWidth(infoList, 1, LVSCW_AUTOSIZE);
+
+		/* POINT scrollPosition; */
+		/* SendMessage(infoWindow, EM_GETSCROLLPOS, 0, (LPARAM)&scrollPosition); */
+		/* SendMessage(infoWindow, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){.codepage = 65001}, lParam); */
+		/* free((void *)lParam); */
+		/* for (int startPos, endPos=0; (startPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{endPos,-1}, L":<"})) >= 0; ) { */
+			/* endPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{startPos, -1}, L">:"}); */
+			/* SendMessage(infoWindow, EM_SETSEL, startPos, endPos); */
+			/* SendMessage(infoWindow, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&(CHARFORMAT2){.cbSize = sizeof(CHARFORMAT2), .dwMask = CFM_LINK, .dwEffects = CFE_LINK}); */
+		/* } */
+		/* SendMessage(infoWindow, EM_SETSEL, 0, 0); */
+		/* SendMessage(infoWindow, EM_SETSCROLLPOS, 0, (LPARAM)&scrollPosition); */
 		} return 0;
 	case WM_CHANGEMOD: {
 		// HWND sideBox = GetDlgItem(window, DLG_SIDE);

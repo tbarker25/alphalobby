@@ -13,9 +13,6 @@
 #define _STR(x) #x
 #define STRINGIFY(x) _STR(x)
 
-#define FOR_EACH(i, L)\
-	for (typeof(*L) *i = L; i - L < LENGTH(L); ++i)
-
 char *strsep(char **restrict s, const char * delim);
 char *strpcpy(char *dst, const char *src);
 
