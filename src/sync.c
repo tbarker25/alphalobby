@@ -108,7 +108,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			for (int i=0; i<gNbMaps; ++i)
 				gMaps[i] = strdup(GetMapName(i));
 			
-			SendMessage(gBattleRoomWindow, WM_RESYNC, 0, 0);
+			SendMessage(gBattleRoom, WM_RESYNC, 0, 0);
 			void resetMapAndMod(void) {
 				if (gMyBattle) {
 					ChangedMod(gMyBattle->modName);
@@ -154,7 +154,7 @@ uint32_t GetSyncStatus(void)
 
 static void setModInfo(void)
 {
-	PostMessage(gBattleRoomWindow, WM_SETMODDETAILS, 0, 0);
+	PostMessage(gBattleRoom, WM_SETMODDETAILS, 0, 0);
 }
 
 void Sync_Init(void)
@@ -453,7 +453,7 @@ void ChangedMod(const char *modName)
 	
 	gzclose(fd);
 	
-	PostMessage(gBattleRoomWindow, WM_CHANGEMOD, 0, 0);
+	PostMessage(gBattleRoom, WM_CHANGEMOD, 0, 0);
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
@@ -569,13 +569,13 @@ static void _setScriptTags(char *script)
 			if (startPosType != gBattleOptions.startPosType)
 				;// taskSetMinimap = 1;
 			gBattleOptions.startPosType = startPosType;
-			// PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+			// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 			continue;
 		} else if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
 			int team = atoi(key + sizeof("game/team") - 1);
 			char type = key[sizeof("game/team/startpos") + (team > 10)];
 			((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
-			// PostMessage(gBattleRoomWindow, WM_MOVESTARTPOSITIONS, 0, 0);
+			// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 		} else if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
 			for (int i=0; i<gNbModOptions; ++i) {
 				if (!strcmp(gModOptions[i].key, key + sizeof("game/modoptions/") - 1)) {

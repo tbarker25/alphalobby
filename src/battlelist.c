@@ -16,7 +16,7 @@
 #include "listview.h"
 #include "sync.h"
 
-HWND gBattleListWindow;
+HWND gBattleList;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -83,13 +83,13 @@ static void SortBattleList(int newOrder)
 		return stricmp(s1, s2);
 	}
 
-	ListView_SortItems(GetDlgItem(gBattleListWindow, DLG_LIST), CompareFunc, 0);
+	ListView_SortItems(GetDlgItem(gBattleList, DLG_LIST), CompareFunc, 0);
 }
 
 static void resizeColumns(void)
 {
 	RECT rect;
-	HWND list = GetDlgItem(gBattleListWindow, DLG_LIST);
+	HWND list = GetDlgItem(gBattleList, DLG_LIST);
 	GetClientRect(list, &rect);
 
 	int columnRem = rect.right % LENGTH(columns);
@@ -104,13 +104,13 @@ static Battle * getBattleFromIndex(int index) {
 		.mask = LVIF_PARAM,
 		.iItem = index
 	};
-	ListView_GetItem(GetDlgItem(gBattleListWindow, DLG_LIST), &item);
+	ListView_GetItem(GetDlgItem(gBattleList, DLG_LIST), &item);
 	return (Battle *)item.lParam;
 }
 
 static void onItemRightClick(POINT pt)
 {
-	int index = SendDlgItemMessage(gBattleListWindow, DLG_LIST,
+	int index = SendDlgItemMessage(gBattleList, DLG_LIST,
 			LVM_SUBITEMHITTEST, 0,
 			(LPARAM)&(LVHITTESTINFO){.pt = pt});
 
@@ -138,9 +138,9 @@ static void onItemRightClick(POINT pt)
 		AppendMenuA(userMenu, 0, (UINT_PTR)u, u->name);
 
 	InsertMenu(userMenu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-	ClientToScreen(gBattleListWindow, &pt);
+	ClientToScreen(gBattleList, &pt);
 
-	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, gBattleListWindow, NULL);
+	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, gBattleList, NULL);
 	switch (clicked) {
 	case 0:
 		break;
@@ -178,10 +178,10 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		gBattleListWindow = window;
+		gBattleList = window;
 		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 		
-		HWND listDlg = GetDlgItem(gBattleListWindow, DLG_LIST);
+		HWND listDlg = GetDlgItem(gBattleList, DLG_LIST);
 		
 		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
 			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
@@ -220,7 +220,7 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 void BattleList_CloseBattle(Battle *b)
 {
-	ListView_DeleteItem(GetDlgItem(gBattleListWindow, DLG_LIST), ListView_FindItem(GetDlgItem(gBattleListWindow, DLG_LIST), -1, (&(LVFINDINFO){
+	ListView_DeleteItem(GetDlgItem(gBattleList, DLG_LIST), ListView_FindItem(GetDlgItem(gBattleList, DLG_LIST), -1, (&(LVFINDINFO){
 		.flags = LVFI_PARAM,
 		.lParam = (LPARAM)b,
 	})));
@@ -228,7 +228,7 @@ void BattleList_CloseBattle(Battle *b)
 
 void BattleList_UpdateBattle(Battle *b)
 {
-	HWND list = GetDlgItem(gBattleListWindow, DLG_LIST);
+	HWND list = GetDlgItem(gBattleList, DLG_LIST);
 	int item = ListView_FindItem(list, -1,
 		(&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)b})
 	);
@@ -295,5 +295,5 @@ _init_ (void)
 
 void BattleList_Reset(void)
 {
-	SendDlgItemMessage(gBattleListWindow, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
+	SendDlgItemMessage(gBattleList, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 }
