@@ -332,7 +332,10 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	case WM_POLL_SERVER:
 		PollServer();
 		return 0;
-	case WM_EXEC_FUNC:
+	case WM_EXECFUNC:
+		((void (*)(void))wParam)();
+		return 0;
+	case WM_EXECFUNCPARAM:
 		((void (*)(LPARAM))wParam)(lParam);
 		return 0;
 	case WM_CREATE_DLG_ITEM:

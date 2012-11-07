@@ -238,7 +238,7 @@ static void agreement(void)
 static void agreementEnd(void)
 {
 	rewind(agreementFile);
-	SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)CreateAgreementDlg, (LPARAM)agreementFile);
+	SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)agreementFile);
 	agreementFile = NULL;
 }
 
