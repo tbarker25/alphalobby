@@ -95,7 +95,7 @@ void MainWindow_SetActiveTab(HWND newTab)
 		return;
 	
 	void changeCheck(char enable) {
-		int tabIndex = currentTab == gBattleListWindow  ? ID_BATTLELIST
+		int tabIndex = currentTab == gBattleList  ? ID_BATTLELIST
 	                 : currentTab == gBattleRoom  ? ID_BATTLEROOM
 		             : currentTab == gChatWindow        ? ID_CHAT
 					 : currentTab == gDownloadTabWindow ? ID_DOWNLOADS
@@ -131,7 +131,7 @@ void Ring(void)
 void MainWindow_DisableBattleroomButton(void)
 {
 	if (currentTab == gBattleRoom)
-		MainWindow_SetActiveTab(gBattleListWindow);
+		MainWindow_SetActiveTab(gBattleList);
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
 }
 
@@ -259,7 +259,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			MainWindow_SetActiveTab(gBattleRoom);
 			return 0;
 		case ID_BATTLELIST:
-			MainWindow_SetActiveTab(gBattleListWindow);
+			MainWindow_SetActiveTab(gBattleList);
 			return 0;
 		case ID_DOWNLOADS:
 			MainWindow_SetActiveTab(gDownloadTabWindow);
