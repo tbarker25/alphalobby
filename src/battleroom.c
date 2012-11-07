@@ -26,7 +26,7 @@
 #include "usermenu.h"
 #include "wincommon.h"
 
-HWND gBattleRoomWindow;
+HWND gBattleRoom;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -209,12 +209,12 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *_minimapPixels,
 	heightMapHeight = _heightMapHeight;
 	heightMapPixels = _heightMapPixels;
 	
-	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+	InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 }
 
 void BattleRoom_RedrawMinimap(void)
 {
-	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+	InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 }
 
 void BattleRoom_StartPositionsChanged(void)
@@ -240,19 +240,19 @@ void BattleRoom_StartPositionsChanged(void)
 	}
 
 	for (int i=0; i<=SPLIT_LAST; ++i)
-		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + i, BM_SETCHECK, i == splitType ? BST_CHECKED : BST_UNCHECKED, 0);
+		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + i, BM_SETCHECK, i == splitType ? BST_CHECKED : BST_UNCHECKED, 0);
 	
-	SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
+	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
 	if (splitType >= 0)
-		SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
-	InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
+	InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 }
 #if 0
 	case WM_MOVESTARTPOSITIONS:
 		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
 		for (int i=0; i<16; ++i) {
-			SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
+			SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoom, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
 		}
 		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME
 				|| !gMapInfo.width || !gMapInfo.height)
@@ -279,29 +279,29 @@ void BattleRoom_StartPositionsChanged(void)
 void BattleRoom_Show(void)
 {
 	int isSP = gBattleOptions.hostType == HOST_SP;
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_CHAT), !isSP);
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST), !isSP);
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_ALLY), !isSP);
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MAP), isSP);
-	ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MOD), isSP);
+	ShowWindow(GetDlgItem(gBattleRoom, DLG_CHAT), !isSP);
+	ShowWindow(GetDlgItem(gBattleRoom, DLG_PLAYER_LIST), !isSP);
+	ShowWindow(GetDlgItem(gBattleRoom, DLG_ALLY), !isSP);
+	ShowWindow(GetDlgItem(gBattleRoom, DLG_MAP), isSP);
+	ShowWindow(GetDlgItem(gBattleRoom, DLG_MOD), isSP);
 	if (isSP)
-		ShowWindow(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 1);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_START), isSP);
+		ShowWindow(GetDlgItem(gBattleRoom, DLG_MINIMAP), 1);
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_START), isSP);
 	RECT rect;
-	GetClientRect(gBattleRoomWindow, &rect);
-	SendMessage(gBattleRoomWindow, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
+	GetClientRect(gBattleRoom, &rect);
+	SendMessage(gBattleRoom, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
 	MainWindow_EnableBattleroomButton();
 }
 
 void BattleRoom_Hide(void)
 {
-	ListView_DeleteAllItems(GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST));
+	ListView_DeleteAllItems(GetDlgItem(gBattleRoom, DLG_PLAYER_LIST));
 	MainWindow_DisableBattleroomButton();
 }
 
 static int findUser(const void *u)
 {
-	return SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_FINDITEM, -1,
+	return SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_FINDITEM, -1,
 			(LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
 }
 
@@ -311,17 +311,17 @@ static void *getUserFromIndex(int index)
 		.mask = LVIF_PARAM,
 		.iItem = index,
 	};
-	SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_GETITEM, 0, (LPARAM)&item);
+	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_GETITEM, 0, (LPARAM)&item);
 	return (void *)item.lParam;
 }
 
 void BattleRoom_RemoveUser(const union UserOrBot *s)
 {
-	SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_DELETEITEM, findUser(s), 0);
+	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_DELETEITEM, findUser(s), 0);
 }
 
 static void setIcon(int item, int subItem, enum ICONS icon) {
-	SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_SETITEM, 0, (LPARAM)&(LVITEM){.iItem = item, .iSubItem = subItem, .mask = LVIF_IMAGE, .iImage = icon});
+	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_SETITEM, 0, (LPARAM)&(LVITEM){.iItem = item, .iSubItem = subItem, .mask = LVIF_IMAGE, .iImage = icon});
 }
 
 const char * getEffectiveUsername(const union UserOrBot *s)
@@ -347,7 +347,7 @@ static void updatePlayerListGroup(int groupId)
 		playersOnTeam += FROM_ALLY_MASK(p->battleStatus) == groupId;
 	swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
 	
-	SendDlgItemMessage(gBattleRoomWindow, DLG_PLAYER_LIST, LVM_SETGROUPINFO, groupId,
+	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_SETGROUPINFO, groupId,
 		(LPARAM)&(LVGROUP){
 			.cbSize = sizeof(LVGROUP),
 			.mask = LVGF_HEADER,
@@ -357,12 +357,12 @@ static void updatePlayerListGroup(int groupId)
 
 char BattleRoom_IsAutoUnspec(void)
 {
-	return SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
+	return SendDlgItemMessage(gBattleRoom, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
 }
 
 void BattleRoom_UpdateUser(union UserOrBot *s)
 {
-	HWND playerList = GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST);
+	HWND playerList = GetDlgItem(gBattleRoom, DLG_PLAYER_LIST);
 
 	uint32_t battleStatus = s->battleStatus;
 	int groupId = (battleStatus & MODE_MASK) ? FROM_ALLY_MASK(battleStatus) : 16;
@@ -420,18 +420,18 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 	setIcon(item, COLUMN_RANK, ICONS_FIRST_RANK + FROM_RANK_MASK(u->clientStatus));
 
 	if (u == &gMyUser) {
-		SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, !(battleStatus & MODE_MASK), 0);
-		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_AUTO_UNSPEC), !(battleStatus & MODE_MASK));
+		SendDlgItemMessage(gBattleRoom, DLG_SPECTATE, BM_SETCHECK, !(battleStatus & MODE_MASK), 0);
+		EnableWindow(GetDlgItem(gBattleRoom, DLG_AUTO_UNSPEC), !(battleStatus & MODE_MASK));
 		if (battleStatus & MODE_MASK)
-			SendDlgItemMessage(gBattleRoomWindow, DLG_AUTO_UNSPEC, BM_SETCHECK, BST_UNCHECKED, 0);
+			SendDlgItemMessage(gBattleRoom, DLG_AUTO_UNSPEC, BM_SETCHECK, BST_UNCHECKED, 0);
 		
 		for (int i=DLG_SIDE_FIRST; i<=DLG_SIDE_LAST; ++i)
-			SendDlgItemMessage(gBattleRoomWindow, i, BM_SETCHECK, FROM_SIDE_MASK(battleStatus) == i - DLG_SIDE_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
+			SendDlgItemMessage(gBattleRoom, i, BM_SETCHECK, FROM_SIDE_MASK(battleStatus) == i - DLG_SIDE_FIRST ? BST_CHECKED : BST_UNCHECKED, 0);
 			
-		SendDlgItemMessage(gBattleRoomWindow, DLG_ALLY, CB_SETCURSEL, FROM_ALLY_MASK(battleStatus), 0);
+		SendDlgItemMessage(gBattleRoom, DLG_ALLY, CB_SETCURSEL, FROM_ALLY_MASK(battleStatus), 0);
 	}
 	if (u->battle->founder == u)
-		EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_START), !!(u->clientStatus & CS_INGAME_MASK) ^ (u == &gMyUser) || gBattleOptions.hostType & HOST_FLAG);
+		EnableWindow(GetDlgItem(gBattleRoom, DLG_START), !!(u->clientStatus & CS_INGAME_MASK) ^ (u == &gMyUser) || gBattleOptions.hostType & HOST_FLAG);
 
 	int teamSizes[16] = {};
 	FOR_EACH_PLAYER(u, gMyBattle)
@@ -455,7 +455,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 
 void resizePlayerListTabs(void)
 {
-	HWND playerList = GetDlgItem(gBattleRoomWindow, DLG_PLAYER_LIST);
+	HWND playerList = GetDlgItem(gBattleRoom, DLG_PLAYER_LIST);
 	RECT rect;
 	GetClientRect(playerList, &rect);
 	for (int i=0; i <= COLUMN_LAST; ++i) {
@@ -487,7 +487,7 @@ static void resizeAll(LPARAM lParam)
 	HDWP dwp = BeginDeferWindowPos(DLG_LAST + 1);
 		
 	#define MOVE_ID(id, x, y, cx, cy)\
-		(DeferWindowPos(dwp, (GetDlgItem(gBattleRoomWindow, (id))), NULL, (x), (y), (cx), (cy), 0))
+		(DeferWindowPos(dwp, (GetDlgItem(gBattleRoom, (id))), NULL, (x), (y), (cx), (cy), 0))
 	
 	
 	MOVE_ID(DLG_BATTLE_INFO, XS, YS, INFO_WIDTH, INFO_HEIGHT);
@@ -600,7 +600,7 @@ static LRESULT CALLBACK startPositionProc(HWND window, UINT msg, WPARAM wParam, 
 
 static void onCreate(HWND window)
 {
-	gBattleRoomWindow = window;
+	gBattleRoom = window;
 	CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 	for (int i=0; i<16; ++i) {
 		HWND minimap = GetDlgItem(window, DLG_MINIMAP);
@@ -696,12 +696,12 @@ static void onDraw(DRAWITEMSTRUCT *info)
 
 
 	uint32_t *pixels = malloc(width * height * 4);
-	if (SendDlgItemMessage(gBattleRoomWindow, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
+	if (SendDlgItemMessage(gBattleRoom, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
 		for (int i=0; i<width * height; ++i) {
 			uint8_t heightPixel = heightMapPixels[i % width * heightMapWidth / width + i / width * heightMapHeight / height * heightMapWidth];
 			pixels[i] = heightPixel | heightPixel << 8 | heightPixel << 16;
 		}
-	} else if (SendDlgItemMessage(gBattleRoomWindow, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
+	} else if (SendDlgItemMessage(gBattleRoom, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
 		for (int i=0; i<width * height; ++i) {
 			uint16_t p = minimapPixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
 			uint8_t metalPixel = metalMapPixels[i % width * metalMapWidth / width + i / width * metalMapHeight / height * metalMapWidth];
@@ -777,7 +777,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		break;
 		//FALLTHROUGH:
 	// case WM_EXITSIZEMOVE:
-		// InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+		// InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 		// break;
 	case WM_DRAWITEM:
 		assert(wParam == DLG_MINIMAP);
@@ -852,13 +852,13 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		}
 		break;
 	} case WM_DESTROY:
-		gBattleRoomWindow = NULL;
+		gBattleRoom = NULL;
 		break;
 	case WM_HSCROLL:
 		if (GetDlgCtrlID((HWND)lParam) == DLG_SPLIT_SIZE) {
 			if (wParam == SB_ENDSCROLL)
 				for (int i=0; i<=SPLIT_LAST; ++i)
-					if (SendDlgItemMessage(gBattleRoomWindow, DLG_SPLIT_FIRST + i, BM_GETCHECK, 0, 0))
+					if (SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + i, BM_GETCHECK, 0, 0))
 						SetSplit(i, SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
 				// SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0)
 		}
@@ -910,7 +910,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 			SetBattleStatus(&gMyUser, TO_SIDE_MASK(LOWORD(wParam) - DLG_SIDE_FIRST), SIDE_MASK);
 			return 0;
 		case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
-			InvalidateRect(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), 0, 0);
+			InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 			return 0;
 		
 		case MAKEWPARAM(DLG_VOTEYES, BN_CLICKED): {
@@ -1020,7 +1020,7 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		// resizePlayerListTabs();
 		if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME)
 			for (int i=0; i<16; ++i)
-				SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoomWindow, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
+				SetWindowPos(GetDlgItem(GetDlgItem(gBattleRoom, DLG_MINIMAP), DLG_FIRST_STARTPOS + i), NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW);
 		} break;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
@@ -1028,10 +1028,10 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 void BattleRoom_VoteStarted(const char *topic)
 {
-	SetDlgItemTextA(gBattleRoomWindow, DLG_VOTETEXT, topic);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTETEXT), (BOOL)topic);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTEYES), (BOOL)topic);
-	EnableWindow(GetDlgItem(gBattleRoomWindow, DLG_VOTENO), (BOOL)topic);
+	SetDlgItemTextA(gBattleRoom, DLG_VOTETEXT, topic);
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTETEXT), (BOOL)topic);
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTEYES), (BOOL)topic);
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTENO), (BOOL)topic);
 }
 
 
@@ -1053,8 +1053,8 @@ void CreateSinglePlayerDlg(void)
 	gBattleOptions.startPosType = STARTPOS_CHOOSE_BEFORE;
 	
 	gMyBattle = calloc(1, sizeof(Battle));
-	GetDlgItemTextA(gBattleRoomWindow, DLG_MOD, gMyBattle->modName, sizeof(gMyBattle->modName));
-	GetDlgItemTextA(gBattleRoomWindow, DLG_MAP, gMyBattle->mapName, sizeof(gMyBattle->mapName));
+	GetDlgItemTextA(gBattleRoom, DLG_MOD, gMyBattle->modName, sizeof(gMyBattle->modName));
+	GetDlgItemTextA(gBattleRoom, DLG_MAP, gMyBattle->mapName, sizeof(gMyBattle->mapName));
 	
 	ChangedMod(gMyBattle->modName);
 	if (!gMapHash || gMapHash != GetMapHash(gMyBattle->mapName) || !gMapHash)
@@ -1064,7 +1064,7 @@ void CreateSinglePlayerDlg(void)
 	
 	gMyUser.battleStatus = READY_MASK | MODE_MASK | SYNC_MASK;
 	gMyUser.battle = gMyBattle;
-	SendDlgItemMessage(gBattleRoomWindow, DLG_SPECTATE, BM_SETCHECK, 0, 0);
+	SendDlgItemMessage(gBattleRoom, DLG_SPECTATE, BM_SETCHECK, 0, 0);
 	gMyBattle->founder = &gMyUser;
 	gMyBattle->nbParticipants = 1;
 

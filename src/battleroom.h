@@ -10,10 +10,10 @@ struct User;
 union UserOrBot;
 typedef void * HWND;
 
-extern HWND gBattleRoomWindow;
+extern HWND gBattleRoom;
 
 #define GetBattleChat()\
-	GetDlgItem(gBattleRoomWindow, DEST_BATTLE)
+	GetDlgItem(gBattleRoom, DEST_BATTLE)
 
 void BattleRoom_UpdateUser(union UserOrBot *);
 void BattleRoom_RemoveUser(const union UserOrBot *u);
