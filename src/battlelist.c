@@ -99,6 +99,79 @@ static void resizeColumns(void)
 		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
 }
 
+static Battle * getBattleFromIndex(int index) {
+	LV_ITEM item = {
+		.mask = LVIF_PARAM,
+		.iItem = index
+	};
+	ListView_GetItem(GetDlgItem(gBattleListWindow, DLG_LIST), &item);
+	return (Battle *)item.lParam;
+}
+
+static void onItemRightClick(POINT pt)
+{
+	int index = SendDlgItemMessage(gBattleListWindow, DLG_LIST,
+			LVM_SUBITEMHITTEST, 0,
+			(LPARAM)&(LVHITTESTINFO){.pt = pt});
+
+	if (index < 0)
+		return;
+
+	Battle *b = getBattleFromIndex(index);
+
+	enum {
+		JOIN = 1, DL_MAP, DL_MOD,
+	};
+
+	HMENU menu = CreatePopupMenu();
+	AppendMenu(menu, 0, JOIN, L"Join battle");
+	SetMenuDefaultItem(menu, JOIN, 0);
+	HMENU userMenu = CreatePopupMenu();
+	AppendMenu(menu, MF_POPUP, (UINT_PTR )userMenu, L"Chat with ...");
+	if (!GetMapHash(b->mapName))
+		AppendMenu(menu, 0, DL_MAP, L"Download map");
+	if (!GetModHash(b->modName))
+		AppendMenu(menu, 0, DL_MOD, L"Download mod");
+
+
+	FOR_EACH_USER(u, b)
+		AppendMenuA(userMenu, 0, (UINT_PTR)u, u->name);
+
+	InsertMenu(userMenu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+	ClientToScreen(gBattleListWindow, &pt);
+
+	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, gBattleListWindow, NULL);
+	switch (clicked) {
+	case 0:
+		break;
+	case 1:
+		JoinBattle(b->id, NULL);
+		break;
+	case DL_MAP:
+		DownloadMap(b->mapName); 
+		break;
+	case DL_MOD:
+		DownloadMod(b->modName);
+		break;
+	default:
+		ChatWindow_SetActiveTab(GetPrivateChat((User *)clicked));
+		break;
+	}
+
+	DestroyMenu(userMenu);
+	DestroyMenu(menu);
+}
+
+static void onGetInfoTip(NMLVGETINFOTIP *info)
+{
+	Battle *b = getBattleFromIndex(info->iItem);
+	swprintf(info->pszText,
+			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
+			b->founder->name, b->modName, b->mapName,
+			utf8to16(b->title), GetNumPlayers(b), b->maxPlayers,
+			b->nbParticipants);
+}
+
 static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
@@ -119,83 +192,25 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 		}
 		EnableIcons(listDlg);
 		ListView_SetExtendedListViewStyle(listDlg, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP | LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
-	case WM_SIZE: {
+	case WM_SIZE:
 		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 		resizeColumns();
 		return 0;
-	} case WM_NOTIFY:
+	case WM_NOTIFY:
 		switch (((LPNMHDR)lParam)->code) {
 		
-		Battle * getBattleFromIndex(int index) {
-			LV_ITEM item = {
-				.mask = LVIF_PARAM,
-				.iItem = index
-			};
-			ListView_GetItem(GetDlgItem(gBattleListWindow, DLG_LIST), &item);
-			return (Battle *)item.lParam;
-		}
-		case LVN_COLUMNCLICK: {
+		case LVN_COLUMNCLICK:
 			SortBattleList(((NMLISTVIEW *)lParam)->iSubItem + 1);
-		}	break;
-		case LVN_ITEMACTIVATE: {
-			Battle *b = getBattleFromIndex(((LPNMITEMACTIVATE)lParam)->iItem);
-			if (b != gMyBattle)
-				JoinBattle(b->id, NULL);
 			return 0;
-		} case NM_RCLICK: {
-			POINT pt =  ((LPNMITEMACTIVATE)lParam)->ptAction;
-			int index = SendDlgItemMessage(window, DLG_LIST, LVM_SUBITEMHITTEST, 0, (LPARAM)&(LVHITTESTINFO){.pt = pt});
-			if (index < 0)
-				return 0;
-
-			Battle *b = getBattleFromIndex(index);
-			
-			enum {
-				JOIN = 1, DL_MAP, DL_MOD,
-			};
-			HMENU menu = CreatePopupMenu();
-			AppendMenu(menu, 0, JOIN, L"Join battle");
-			SetMenuDefaultItem(menu, JOIN, 0);
-			HMENU userMenu = CreatePopupMenu();
-			AppendMenu(menu, MF_POPUP, (UINT_PTR )userMenu, L"Chat with ...");
-			if (!GetMapHash(b->mapName))
-				AppendMenu(menu, 0, DL_MAP, L"Download map");
-			if (!GetModHash(b->modName))
-				AppendMenu(menu, 0, DL_MOD, L"Download mod");
-			
-			
-			FOR_EACH_USER(u, b)
-				AppendMenuA(userMenu, 0, (UINT_PTR)u, u->name);
-			InsertMenu(userMenu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-			ClientToScreen(window, &pt);
-			
-			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
-			switch (clicked) {
-			case 0:
-				break;
-			case 1:
-				if (b != gMyBattle)
-					JoinBattle(b->id, NULL);
-				break;
-			case DL_MAP:
-				DownloadMap(b->mapName); 
-				break;
-			case DL_MOD:
-				DownloadMod(b->modName);
-				break;
-			default: {
-				ChatWindow_SetActiveTab(GetPrivateChat((User *)clicked));
-			}	break;
-			}
-			DestroyMenu(userMenu);
-			DestroyMenu(menu);
-		}	return 1;
-		case LVN_GETINFOTIP: {
-			NMLVGETINFOTIP *info = (void *)lParam;
-			Battle *b = getBattleFromIndex(info->iItem);
-			swprintf(info->pszText, L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
-					b->founder->name, b->modName, b->mapName, utf8to16(b->title), GetNumPlayers(b), b->maxPlayers, b->nbParticipants);
-		}	break;
+		case LVN_ITEMACTIVATE:
+			JoinBattle(getBattleFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)->id, NULL);
+			return 0;
+		case NM_RCLICK:
+			onItemRightClick(((LPNMITEMACTIVATE)lParam)->ptAction);
+			return 1;
+		case LVN_GETINFOTIP:
+			onGetInfoTip((void *)lParam);
+			return 0;
 		}
 		break;
 	}

@@ -510,38 +510,38 @@ static void downloadFile(SessionContext *ses)
 			(DWORD_PTR)req);
 }
 
-void GetDownloadMessage(char *text)
-{
-	if (gMyBattle == NULL)
-		return;
-	text[0] = '\0';
-	FOR_EACH(s, sessions) {
-		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) {
-			text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n",
-					(float)s->fetchedBytes / 1000000,
-					(float)s->totalBytes / 1000000,
-					(float)100 * s->fetchedBytes / (s->totalBytes?:1));
-		}
-	}
-	FOR_EACH(s, sessions) {
-		if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) {
-			sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n",
-					(float)s->fetchedBytes / 1000000,
-					(float)s->totalBytes / 1000000,
-					(float)100 * s->fetchedBytes / (s->totalBytes?:1));
-		}
-	}
-}
+/* void GetDownloadMessage(char *text) */
+/* { */
+	/* if (gMyBattle == NULL) */
+		/* return; */
+	/* text[0] = '\0'; */
+	/* FOR_EACH(s, sessions) { */
+		/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) { */
+			/* text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n", */
+					/* (float)s->fetchedBytes / 1000000, */
+					/* (float)s->totalBytes / 1000000, */
+					/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
+		/* } */
+	/* } */
+	/* FOR_EACH(s, sessions) { */
+		/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) { */
+			/* sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n", */
+					/* (float)s->fetchedBytes / 1000000, */
+					/* (float)s->totalBytes / 1000000, */
+					/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
+		/* } */
+	/* } */
+/* } */
 
 void DownloadFile(const char *name, enum DLTYPE type)
 {
 	SessionContext *ses = NULL;
 	wchar_t buff[128];
 	swprintf(buff, L"%hs", name);
-	FOR_EACH(s, sessions) {
-		if (s->status && !wcscmp(s->name, buff))
+	for (int i=0; i<LENGTH(sessions); ++i) {
+		if (sessions[i].status && !wcscmp(sessions[i].name, buff))
 			return;
-		ses = ses ?: !s->status ? s : NULL;
+		ses = ses ?: !sessions[i].status ? &sessions[i] : NULL;
 	}
 	if (!ses)
 		return;

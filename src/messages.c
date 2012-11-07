@@ -180,6 +180,7 @@ static void accepted(void)
 static void addBot(void)
 {
 	// ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL}
+	__attribute__((unused))
 	char *battleID = getNextWord();
 	assert(atoi(battleID) == gMyBattle->id);
 	char *name = getNextWord();
@@ -509,6 +510,7 @@ static void registrationAccepted(void)
 static void removeBot(void)
 {
 	// REMOVEBOT BATTLE_ID name
+	__attribute__((unused))
 	char *battleID = getNextWord();
 	assert(atoi(battleID) == gMyBattle->id);
 	DelBot(getNextWord());
@@ -819,6 +821,7 @@ static void updateBattleInfo(void)
 static void updateBot(void)
 {
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
+	__attribute__((unused))
 	char *battleID = getNextWord();
 	assert(atoi(battleID) == gMyBattle->id);
 	char *name = getNextWord();

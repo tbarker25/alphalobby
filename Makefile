@@ -2,7 +2,7 @@ LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lshell32 -l
 CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions
 
 ifdef VERSION 
-	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG=1
+	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG
 	BUILD_DIR:=release
 	CFLAGS+= -s -Os -mwindows
 else

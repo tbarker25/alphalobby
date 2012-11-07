@@ -30,21 +30,31 @@ char relayCmd[1024], relayHoster[1024], relayManager[1024], relayPassword[1024];
 void JoinBattle(uint32_t id, const char *password)
 {
 	static const char *passwordToJoin;
-	
 	Battle *b = FindBattle(id);
-	if (b) {
-		ChangedMod(b->modName);
-		if (gMapHash != b->mapHash || !gMapHash)
-			ChangedMap(b->mapName);
+
+	if (!b) {
+		assert(0);
+		return;
 	}
+
+	if (b == gMyBattle) {
+		BattleRoom_Show();
+		return;
+	}
+
+	ChangedMod(b->modName);
+	if (gMapHash != b->mapHash || !gMapHash)
+		ChangedMap(b->mapName);
 	
 	if (gMyBattle) {
 		battleToJoin = id;
 		free((void *)passwordToJoin);
 		passwordToJoin = strdup(password);
 		LeaveBattle();
+
 	} else if (id == -1) {
 		CreateSinglePlayerDlg();
+
 	} else {
 		battleToJoin = 0;
 		gMyUser.battleStatus = 0;
