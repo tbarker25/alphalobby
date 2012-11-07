@@ -1,7 +1,8 @@
 #include <assert.h>
-#include <stdio.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <malloc.h>
+#include <stdio.h>
 
 #include <windows.h>
 #include <windowsx.h>
@@ -143,7 +144,7 @@ static const DialogItem dialogItems[] = {
 		.style = WS_VISIBLE | LVS_SHAREIMAGELISTS | LVS_SINGLESEL | LVS_REPORT | LVS_NOCOLUMNHEADER,
 	}, [DLG_BATTLE_INFO] = {
 		.class = WC_LISTVIEW,
-		.style = WS_VISIBLE | LVS_SINGLESEL | LVS_NOCOLUMNHEADER | LVS_REPORT,
+		.style = WS_VISIBLE | LVS_SINGLESEL | LVS_REPORT,
 
 	}, [DLG_VOTEBOX] = {
 		.class = WC_BUTTON,
@@ -924,7 +925,7 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 	return 1;
 }
 
-static void BattleRoom_OnResync(void)
+void BattleRoom_OnResync(void)
 {
 	const char *def; int defIndex;
 
@@ -954,38 +955,42 @@ void BattleRoom_OnSetModDetails(void)
 {
 	HWND infoList = GetDlgItem(gBattleRoom, DLG_BATTLE_INFO);
 
-	int gid = SendMessage(infoList, LVM_INSERTGROUP, -1, (LPARAM)&(LVGROUP){
-			sizeof(LVGROUP), LVGF_HEADER, L"group1"});
-	printf("gid: %d\n", gid);
-
-
-
+	SendMessage(infoList, LVM_REMOVEALLGROUPS, 0, 0);
 	ListView_DeleteAllItems(infoList);
+
 	for (ssize_t i=0; i<gNbModOptions; ++i) {
-		SendMessageA(infoList, LVM_INSERTITEMA, 0,
-				(LPARAM)&(LVITEMA){
-				LVIF_GROUPID | LVIF_TEXT, i,
-				.pszText = gModOptions[i].name,
-				.iGroupId = gid
-				});
-		SendMessageA(infoList, LVM_SETITEMA, 0,
-				(LPARAM)&(LVITEMA){LVIF_TEXT, i, 1,
-				.pszText = gModOptions[i].val});
+		if (gModOptions[i].type != opt_section)
+			continue;
+		LVGROUP group = {
+			sizeof(LVGROUP),
+			LVGF_HEADER | LVGF_GROUPID,
+			utf8to16(gModOptions[i].name),
+			.iGroupId = (intptr_t)&gModOptions[i]
+		};
+		SendMessage(infoList, LVM_INSERTGROUP, -1, (LPARAM)&group);
 	}
+
+	for (ssize_t i=0; i<gNbModOptions; ++i) {
+		if (gModOptions[i].type == opt_section)
+			continue;
+
+		LVITEMA item = {
+			LVIF_GROUPID | LVIF_TEXT, INT_MAX,
+			.pszText = gModOptions[i].name,
+			.iGroupId = (intptr_t)gModOptions[i].section
+		};
+
+		int id = SendMessageA(infoList, LVM_INSERTITEMA, 0, (LPARAM)&item);
+
+		item.mask = LVIF_TEXT;
+		item.iItem = id;
+		item.iSubItem = 1;
+		item.pszText = gModOptions[i].val;
+		SendMessageA(infoList, LVM_SETITEMA, 0, (LPARAM)&item);
+	}
+
 	ListView_SetColumnWidth(infoList, 0, LVSCW_AUTOSIZE);
 	ListView_SetColumnWidth(infoList, 1, LVSCW_AUTOSIZE);
-
-	/* POINT scrollPosition; */
-	/* SendMessage(infoWindow, EM_GETSCROLLPOS, 0, (LPARAM)&scrollPosition); */
-	/* SendMessage(infoWindow, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){.codepage = 65001}, lParam); */
-	/* free((void *)lParam); */
-	/* for (int startPos, endPos=0; (startPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{endPos,-1}, L":<"})) >= 0; ) { */
-	/* endPos = SendMessage(infoWindow, EM_FINDTEXT, FR_DOWN, (LPARAM)&(FINDTEXT){{startPos, -1}, L">:"}); */
-	/* SendMessage(infoWindow, EM_SETSEL, startPos, endPos); */
-	/* SendMessage(infoWindow, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&(CHARFORMAT2){.cbSize = sizeof(CHARFORMAT2), .dwMask = CFM_LINK, .dwEffects = CFE_LINK}); */
-	/* } */
-	/* SendMessage(infoWindow, EM_SETSEL, 0, 0); */
-	/* SendMessage(infoWindow, EM_SETSCROLLPOS, 0, (LPARAM)&scrollPosition); */
 }
 
 void BattleRoom_OnChangeMod(void)
@@ -1063,15 +1068,6 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		return 0;
 	case WM_COMMAND:
 		return onCommand(wParam, (HWND)lParam);
-	case WM_RESYNC:
-		BattleRoom_OnResync();
-		return 0;
-	case WM_SETMODDETAILS:
-		BattleRoom_OnSetModDetails();
-		return 0;
-	case WM_CHANGEMOD:
-		BattleRoom_OnChangeMod();
-		return 0;
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
 }

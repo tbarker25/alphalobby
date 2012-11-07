@@ -2,10 +2,6 @@
 
 #define WC_BATTLEROOM L"BattleRoom"
 
-#define WM_SETMODDETAILS (WM_APP+202)
-#define WM_CHANGEMOD     (WM_APP+204)
-#define WM_RESYNC        (WM_APP+206)
-
 struct User;
 union UserOrBot;
 typedef void * HWND;
@@ -27,4 +23,7 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *mapPixels,
 void BattleRoom_StartPositionsChanged(void);
 void BattleRoom_VoteStarted(const char *topic);
 #define BattleRoom_VoteEnded() (BattleRoom_VoteStarted(NULL))
-extern void BattleRoom_RedrawMinimap(void);
+void BattleRoom_RedrawMinimap(void);
+void BattleRoom_OnChangeMod(void);
+void BattleRoom_OnSetModDetails(void);
+void BattleRoom_OnResync(void);

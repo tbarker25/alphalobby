@@ -108,7 +108,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			for (int i=0; i<gNbMaps; ++i)
 				gMaps[i] = strdup(GetMapName(i));
 			
-			SendMessage(gBattleRoom, WM_RESYNC, 0, 0);
+			ExecuteInMainThread(BattleRoom_OnResync);
 			void resetMapAndMod(void) {
 				if (gMyBattle) {
 					ChangedMod(gMyBattle->modName);
@@ -154,7 +154,7 @@ uint32_t GetSyncStatus(void)
 
 static void setModInfo(void)
 {
-	PostMessage(gBattleRoom, WM_SETMODDETAILS, 0, 0);
+	ExecuteInMainThreadAsync(BattleRoom_OnSetModDetails);
 }
 
 void Sync_Init(void)
@@ -453,7 +453,7 @@ void ChangedMod(const char *modName)
 	
 	gzclose(fd);
 	
-	PostMessage(gBattleRoom, WM_CHANGEMOD, 0, 0);
+	ExecuteInMainThreadAsync(BattleRoom_OnChangeMod);
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
@@ -648,7 +648,7 @@ void _ChangeOption(uint8_t i, int isModOption)
 				       *i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, gMainWindow, NULL);
 			       }
 			       int clicked;
-			       SendMessage(gMainWindow, WM_EXEC_FUNC, (WPARAM)func, (LPARAM)&clicked);
+			       SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
 			       if (!clicked)
 				       return;
 			       val = strcpy(alloca(128), options[i].listItems[clicked - 1].key);
