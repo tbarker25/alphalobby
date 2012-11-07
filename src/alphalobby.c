@@ -96,7 +96,7 @@ void MainWindow_SetActiveTab(HWND newTab)
 	
 	void changeCheck(char enable) {
 		int tabIndex = currentTab == gBattleListWindow  ? ID_BATTLELIST
-	                 : currentTab == gBattleRoomWindow  ? ID_BATTLEROOM
+	                 : currentTab == gBattleRoom  ? ID_BATTLEROOM
 		             : currentTab == gChatWindow        ? ID_CHAT
 					 : currentTab == gDownloadTabWindow ? ID_DOWNLOADS
 		             : -1;
@@ -125,12 +125,12 @@ void Ring(void)
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */ 
 		           0x0000000C, /* FLASHW_TIMERNOFG */
 	});
-	MainWindow_SetActiveTab(gBattleRoomWindow);
+	MainWindow_SetActiveTab(gBattleRoom);
 }
 
 void MainWindow_DisableBattleroomButton(void)
 {
-	if (currentTab == gBattleRoomWindow)
+	if (currentTab == gBattleRoom)
 		MainWindow_SetActiveTab(gBattleListWindow);
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
 }
@@ -138,7 +138,7 @@ void MainWindow_DisableBattleroomButton(void)
 void MainWindow_EnableBattleroomButton(void)
 {
 	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
-	MainWindow_SetActiveTab(gBattleRoomWindow);
+	MainWindow_SetActiveTab(gBattleRoom);
 }
 
 
@@ -209,7 +209,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	}	//FALLTHROUGH:
 	case WM_EXITSIZEMOVE:
 		dontMoveMinimap = 0;
-		SendMessage(gBattleRoomWindow, WM_EXITSIZEMOVE, 0, 0);
+		SendMessage(gBattleRoom, WM_EXITSIZEMOVE, 0, 0);
 		return 0;
 	case WM_ENTERSIZEMOVE:
 		dontMoveMinimap = 1;
@@ -256,7 +256,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 			CreateLoginBox();
 			return 0;
 		case ID_BATTLEROOM:
-			MainWindow_SetActiveTab(gBattleRoomWindow);
+			MainWindow_SetActiveTab(gBattleRoom);
 			return 0;
 		case ID_BATTLELIST:
 			MainWindow_SetActiveTab(gBattleListWindow);
