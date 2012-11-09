@@ -241,6 +241,7 @@ void BattleList_UpdateBattle(Battle *b)
 	LVFINDINFO findInfo = {LVFI_PARAM, .lParam = (LPARAM)b};
 	LVITEM item;
 	item.iItem = ListView_FindItem(list, -1, &findInfo);
+	item.iSubItem = 0;
 
 	if (item.iItem == -1) {
 		item.iItem = 0;

@@ -285,8 +285,11 @@ void BattleRoom_Hide(void)
 
 static int findUser(const void *u)
 {
-	return SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_FINDITEM, -1,
-			(LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
+	LVFINDINFO findInfo;
+	findInfo.flags = LVFI_PARAM;
+	findInfo.lParam = (LPARAM)u;
+	return SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_FINDITEM,
+			-1, (LPARAM)&findInfo);
 }
 
 void BattleRoom_RemoveUser(const union UserOrBot *s)
@@ -317,12 +320,12 @@ static void updatePlayerListGroup(int groupId)
 		playersOnTeam += FROM_ALLY_MASK(p->battleStatus) == groupId;
 	swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
 	
-	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_SETGROUPINFO, groupId,
-		(LPARAM)&(LVGROUP){
-			.cbSize = sizeof(LVGROUP),
-			.mask = LVGF_HEADER,
-			.pszHeader = buff,
-		});
+	LVGROUP groupInfo;
+	groupInfo.cbSize = sizeof(groupInfo);
+	groupInfo.mask = LVGF_HEADER;
+	groupInfo.pszHeader = buff;
+	SendDlgItemMessage(gBattleRoom, DLG_PLAYER_LIST, LVM_SETGROUPINFO,
+			groupId, (LPARAM)&groupInfo);
 }
 
 char BattleRoom_IsAutoUnspec(void)
@@ -339,6 +342,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 
 	LVITEM item;
 	item.iItem = findUser(s);
+	item.iSubItem = 0;
 
 	if (item.iItem == -1) {
 		item.mask = LVIF_PARAM | LVIF_GROUPID,
@@ -620,13 +624,17 @@ static void onCreate(HWND window)
 	}
 
 	HWND infoList = GetDlgItem(window, DLG_BATTLE_INFO);
-	SendMessage(infoList, LVM_INSERTCOLUMN, 0, (LPARAM)&(LVCOLUMN){});
-	SendMessage(infoList, LVM_INSERTCOLUMN, 1, (LPARAM)&(LVCOLUMN){});
-	ListView_EnableGroupView(infoList, TRUE);
+#define INSERT_COLUMN(__w, __n) { \
+	LVCOLUMN c; c.mask = 0; \
+	ListView_InsertColumn((__w), (__n), &c); \
+}
+	INSERT_COLUMN(infoList, 0);
+	INSERT_COLUMN(infoList, 1);
 
 	HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
 	for (int i=0; i <= COLUMN_LAST; ++i)
-		SendMessage(playerList, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){});
+		INSERT_COLUMN(playerList, i);
+#undef INSERT_COLUMN
 
 	ListView_SetExtendedListViewStyle(playerList, LVS_EX_DOUBLEBUFFER |  LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
 	SendMessage(playerList, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);
