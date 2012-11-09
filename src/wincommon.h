@@ -22,3 +22,5 @@ int MyGetWindowTextA(HWND, char *str, int strLen);
 char * MyGetWindowTextA2(HWND window);
 #define GetWindowTextA2 MyGetWindowTextA2
 #define GetDlgItemTextA2(_win, _id) MyGetWindowTextA2(GetDlgItem((_win), (_id)))
+#define SendMsg(__window, __msg, __wparam, __lparam) \
+	SendMessage((HWND)__window, (UINT)__msg, (WPARAM)__wparam, (LPARAM)__lparam)

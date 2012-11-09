@@ -21,7 +21,7 @@ ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_a
 ICONS+=$(wildcard icons/flags/*)
 ICONS+= null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null:
 
-FILES1:=gzip.o client.o downloadtab.o chat_window.o client_message.o data.o alphalobby.o common.o sync.o settings.o wincommon.o userlist.o battlelist.o battleroom.o downloader.o imagelist.o layoutmetrics.o dialogboxes.o chat.o md5.o res.o countrycodes.o battletools.o spring.o usermenu.o messages.o user.o battle.o
+FILES1:=gzip.o client.o downloadtab.o chat_window.o client_message.o alphalobby.o common.o sync.o settings.o wincommon.o userlist.o battlelist.o battleroom.o downloader.o imagelist.o layoutmetrics.o dialogboxes.o chat.o md5.o res.o countrycodes.o battletools.o spring.o usermenu.o messages.o user.o battle.o
 
 FILES=$(addprefix $(BUILD_DIR)/, $(FILES1))
 
