@@ -2,9 +2,9 @@
 
 #define WC_BATTLELIST L"BattleListClass"
 
-struct battle;
-void BattleList_UpdateBattle(struct battle *);
-void BattleList_CloseBattle(struct battle *);
+struct Battle;
+void BattleList_UpdateBattle(struct Battle *);
+void BattleList_CloseBattle(struct Battle *);
 void BattleList_OnEndLoginInfo(void);
 void BattleList_Reset(void);
 

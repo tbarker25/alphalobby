@@ -49,10 +49,7 @@ void LaunchSpring(void)
 		gBattleOptions.startPosType = 3;
 	int startPosType = gBattleOptions.hostType == HOST_RELAY && gBattleOptions.startPosType != 2 ? 3 : gBattleOptions.startPosType;
 	
-	if (gBattleOptions.hostType == HOST_SP)
-		APPEND_LINE("[GAME]{IsHost=1;MyPlayerName=%s;", gMyUser.name);
-	else
-		APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;%sMyPlayerName=%s;MyPasswd=%s;",
+	APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;%sMyPlayerName=%s;MyPasswd=%s;",
 			b->ip, b->port, gBattleOptions.hostType & HOST_FLAG && 
 			!(gBattleOptions.hostType == HOST_RELAY && (gMyBattle->founder->clientStatus & CS_INGAME_MASK))
 			? "IsHost=1;" : ""

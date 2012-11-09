@@ -100,11 +100,11 @@ static void resizeColumns(void)
 }
 
 static Battle * getBattleFromIndex(int index) {
-	LV_ITEM item = {
+	LVITEM item = {
 		.mask = LVIF_PARAM,
 		.iItem = index
 	};
-	ListView_GetItem(GetDlgItem(gBattleList, DLG_LIST), &item);
+	SendDlgItemMessage(gBattleList, DLG_LIST, LVM_GETITEM, 0, (LPARAM)&item);
 	return (Battle *)item.lParam;
 }
 
@@ -140,7 +140,8 @@ static void onItemRightClick(POINT pt)
 	InsertMenu(userMenu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 	ClientToScreen(gBattleList, &pt);
 
-	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, gBattleList, NULL);
+	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
+			gBattleList, NULL);
 	switch (clicked) {
 	case 0:
 		break;
@@ -172,33 +173,41 @@ static void onGetInfoTip(NMLVGETINFOTIP *info)
 			b->nbParticipants);
 }
 
+static void onCreate(HWND window)
+{
+	gBattleList = window;
+	CreateDlgItems(window, dialogItems, DLG_LAST + 1);
+
+	HWND listDlg = GetDlgItem(gBattleList, DLG_LIST);
+
+	LVCOLUMN columnInfo = { LVCF_TEXT | LVCF_SUBITEM };
+	for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
+		columnInfo.pszText = (wchar_t *)columns[i];
+		columnInfo.iSubItem = i;
+		ListView_InsertColumn(listDlg, i, &columnInfo);
+	}
+
+	EnableIcons(listDlg);
+	ListView_SetExtendedListViewStyle(listDlg,
+			LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP
+			| LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
+}
+
 static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		gBattleList = window;
-		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
-		
-		HWND listDlg = GetDlgItem(gBattleList, DLG_LIST);
-		
-		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
-			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
-				.mask = LVCF_TEXT | LVCF_SUBITEM,
-				.pszText = (wchar_t *)columns[i],
-				.iSubItem = i,
-			}));
-		}
-		EnableIcons(listDlg);
-		ListView_SetExtendedListViewStyle(listDlg, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP | LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
+		onCreate(window);
+		return 0;
 	case WM_SIZE:
 		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
 		resizeColumns();
 		return 0;
 	case WM_NOTIFY:
 		switch (((LPNMHDR)lParam)->code) {
-		
+
 		case LVN_COLUMNCLICK:
 			SortBattleList(((NMLISTVIEW *)lParam)->iSubItem + 1);
 			return 0;
@@ -220,57 +229,60 @@ static LRESULT CALLBACK battleListProc(HWND window, UINT msg, WPARAM wParam, LPA
 
 void BattleList_CloseBattle(Battle *b)
 {
-	ListView_DeleteItem(GetDlgItem(gBattleList, DLG_LIST), ListView_FindItem(GetDlgItem(gBattleList, DLG_LIST), -1, (&(LVFINDINFO){
-		.flags = LVFI_PARAM,
-		.lParam = (LPARAM)b,
-	})));
+	LVFINDINFO findInfo = {.flags = LVFI_PARAM, .lParam = (LPARAM)b};
+	HWND list = GetDlgItem(gBattleList, DLG_LIST);
+	int index = ListView_FindItem(list, -1, &findInfo);
+	ListView_DeleteItem(list, index);
 }
 
 void BattleList_UpdateBattle(Battle *b)
 {
 	HWND list = GetDlgItem(gBattleList, DLG_LIST);
-	int item = ListView_FindItem(list, -1,
-		(&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)b})
-	);
+	LVFINDINFO findInfo = {LVFI_PARAM, .lParam = (LPARAM)b};
+	LVITEM item;
+	item.iItem = ListView_FindItem(list, -1, &findInfo);
 
-	if (item == -1)
-		item = SendMessage(list, LVM_INSERTITEMA, 0,
-				(LPARAM)&(LVITEMA){.mask = LVIF_PARAM | LVIF_TEXT, .lParam = (LPARAM)b, .pszText = b->founder->name});
+	if (item.iItem == -1) {
+		item.iItem = 0;
+		item.mask = LVIF_PARAM | LVIF_TEXT;
+		item.lParam = (LPARAM)b;
+		item.pszText = utf8to16(b->founder->name);
 
-	ListView_SetItem(list, (&(LVITEM){
-		.iItem = item,
-		.mask = LVIF_STATE | LVIF_IMAGE,
-		.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
-		.stateMask = LVIS_OVERLAYMASK,
-		.state = INDEXTOOVERLAYMASK(((b->founder->clientStatus & CS_INGAME_MASK) ? INGAME_MASK : 0)
-		       | b->passworded * PW_MASK
-			   | (b->maxPlayers == GetNumPlayers(b)) * FULL_MASK * !b->locked)
-		})
-	);
-
-	int column = 0;
-	void AddText(char text[])
-	{
-		SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
-			.mask = LVIF_TEXT,
-			.iItem = item,
-			.iSubItem = ++column,
-			.pszText = utf8to16(text)}
-		);
-	}
-	void AddInt(int64_t n)
-	{
-		char buff[128];
-		snprintf(buff, 128, "%" PRId64, n);
-		AddText(buff);
+		item.iItem = SendMessage(list, LVM_INSERTITEM, 0, (LPARAM)&item);
 	}
 
-	AddText(b->title);
-	AddText(b->modName);
-	AddText(b->mapName);
-	char buff[128];
-	sprintf(buff, "%d / %d +%d", GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
-	AddText(buff);
+	item.mask = LVIF_STATE | LVIF_IMAGE;
+
+	item.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
+	item.stateMask = LVIS_OVERLAYMASK;
+
+	size_t iconIndex = 0;
+	if (b->founder->clientStatus & CS_INGAME_MASK)
+		iconIndex |= INGAME_MASK;
+	if (b->passworded)
+		iconIndex |= PW_MASK;
+	if (!b->locked && b->maxPlayers == GetNumPlayers(b))
+		iconIndex |= FULL_MASK;
+	item.state = INDEXTOOVERLAYMASK(iconIndex);
+
+	ListView_SetItem(list, &item);
+
+	item.mask = LVIF_TEXT;
+
+#define ADD_STRING(s) \
+	++item.iSubItem; \
+	item.pszText = s; \
+	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&item); \
+
+	ADD_STRING(utf8to16(b->title));
+	ADD_STRING(utf8to16(b->modName));
+	ADD_STRING(utf8to16(b->mapName));
+	wchar_t buff[16];
+	swprintf(buff, L"%d / %d +%d",
+			GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
+	ADD_STRING(buff);
+
+#undef ADD_STRING
 
 	SortBattleList(0);
 }
@@ -281,16 +293,16 @@ void BattleList_OnEndLoginInfo(void)
 	resizeColumns();
 }
 
-static void
-__attribute__((constructor))
-_init_ (void)
+	__attribute__((constructor))
+static void _init_ (void)
 {
-	RegisterClassEx((&(WNDCLASSEX){
+	WNDCLASSEX classInfo = {
 		.lpszClassName = WC_BATTLELIST,
 		.cbSize        = sizeof(WNDCLASSEX),
 		.lpfnWndProc   = battleListProc,
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
-	}));
+	};
+	RegisterClassEx(&classInfo);
 }
 
 void BattleList_Reset(void)

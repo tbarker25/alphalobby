@@ -102,7 +102,7 @@ void Disconnect(void)
 	sock = INVALID_SOCKET;
 	WSACleanup();
 	MainWindow_ChangeConnect(CONNECTION_OFFLINE);
-	ResetData();
+	/* ResetData(); */
 }
 
 void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)

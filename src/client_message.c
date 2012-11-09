@@ -52,9 +52,6 @@ void JoinBattle(uint32_t id, const char *password)
 		passwordToJoin = strdup(password);
 		LeaveBattle();
 
-	} else if (id == -1) {
-		CreateSinglePlayerDlg();
-
 	} else {
 		battleToJoin = 0;
 		gMyUser.battleStatus = 0;
@@ -84,11 +81,6 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 	if (color == -1)
 		color = s->color;
 	uint32_t bs = ((orMask & nandMask) | (s->battleStatus & ~nandMask)) & ~INTERNAL_MASK;
-	
-	if (gBattleOptions.hostType == HOST_SP) {
-		UpdateBattleStatus(s, bs | (s->battleStatus & INTERNAL_MASK), color);
-		return;
-	}
 	
 	if (&s->user == &gMyUser) {
 		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask & ~SYNC_MASK) | GetSyncStatus() | READY_MASK;
@@ -130,10 +122,7 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 void Kick(union UserOrBot *s)
 {
 	if (s->battleStatus & AI_MASK) {
-		if (gBattleOptions.hostType == HOST_SP) {
-			DelBot(s->name);
-		} else
-			SendToServer("REMOVEBOT %s", s->name);
+		SendToServer("REMOVEBOT %s", s->name);
 	} else if (gBattleOptions.hostType & HOST_FLAG)
 		SendToServer("!KICKFROMBATTLE %s", s->name);
 	else if (gBattleOptions.hostType & HOST_SPADS)
@@ -163,10 +152,7 @@ void RequestIngameTime(const char username[])
 
 void LeaveBattle(void)
 {
-	if (gBattleOptions.hostType == HOST_SP)
-		LeftBattle();
-	else
-		SendToServer("LEAVEBATTLE");
+	SendToServer("LEAVEBATTLE");
 }
 
 void ChangeMap(const char *mapName)
