@@ -626,10 +626,11 @@ static void onCreate(HWND window)
 	HWND infoList = GetDlgItem(window, DLG_BATTLE_INFO);
 #define INSERT_COLUMN(__w, __n) { \
 	LVCOLUMN c; c.mask = 0; \
-	ListView_InsertColumn((__w), (__n), &c); \
-}
+	ListView_InsertColumn((__w), (__n), &c);} \
+
 	INSERT_COLUMN(infoList, 0);
 	INSERT_COLUMN(infoList, 1);
+	ListView_EnableGroupView(infoList, TRUE);
 
 	HWND playerList = GetDlgItem(window, DLG_PLAYER_LIST);
 	for (int i=0; i <= COLUMN_LAST; ++i)
@@ -642,12 +643,12 @@ static void onCreate(HWND window)
 	for (int i=0; i<=16; ++i) {
 		wchar_t buff[LENGTH("Spectators")];
 		swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
-		ListView_InsertGroup(playerList, -1, (&(LVGROUP){
-					.cbSize = sizeof(LVGROUP),
-					.mask = LVGF_HEADER | LVGF_GROUPID,
-					.pszHeader = buff,
-					.iGroupId = i})
-				);
+		LVGROUP groupInfo;
+		groupInfo.cbSize = sizeof(groupInfo);
+		groupInfo.mask = LVGF_HEADER | LVGF_GROUPID;
+		groupInfo.pszHeader = buff;
+		groupInfo.iGroupId = i;
+		ListView_InsertGroup(playerList, -1, &groupInfo);
 	}
 
 	HWND hwndTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, 0,
@@ -980,32 +981,32 @@ static void setDetails(const Option *options, ssize_t nbOptions)
 
 /* static void setMapInfo(void) */
 /* { */
-	/* HWND infoList = GetDlgItem(gBattleRoom, DLG_BATTLE_INFO); */
-	/* LVGROUP group; */
-	/* group.cbSize = sizeof(group); */
-	/* group.mask = LVGF_HEADER | LVGF_GROUPID; */
-	/* group.pszHeader = L"Map Info"; */
-	/* group.iGroupId = 1; */
-	/* SendMessage(infoList, LVM_INSERTGROUP, -1, (LPARAM)&group); */
+/* HWND infoList = GetDlgItem(gBattleRoom, DLG_BATTLE_INFO); */
+/* LVGROUP group; */
+/* group.cbSize = sizeof(group); */
+/* group.mask = LVGF_HEADER | LVGF_GROUPID; */
+/* group.pszHeader = L"Map Info"; */
+/* group.iGroupId = 1; */
+/* SendMessage(infoList, LVM_INSERTGROUP, -1, (LPARAM)&group); */
 
-	/* LVITEM item; */
+/* LVITEM item; */
 
 /* #define ADD_STR(s1, s2) \ */
-	/* item.mask = LVIF_TEXT | LVIF_GROUPID; \ */
-	/* item.iItem = INT_MAX; \ */
-	/* item.iSubItem = 0; \ */
-	/* item.pszText = s1; \ */
-	/* item.iGroupId = 1; \ */
-	/* \ */
-	/* item.iItem = SendMessage(infoList, LVM_INSERTITEM, 0, (LPARAM)&item); \ */
-	/* item.mask = LVIF_TEXT; \ */
-	/* item.iSubItem = 1; \ */
-	/* item.pszText = s2; \ */
-	/* SendMessage(infoList, LVM_SETITEM, 0, (LPARAM)&item); */
+/* item.mask = LVIF_TEXT | LVIF_GROUPID; \ */
+/* item.iItem = INT_MAX; \ */
+/* item.iSubItem = 0; \ */
+/* item.pszText = s1; \ */
+/* item.iGroupId = 1; \ */
+/* \ */
+/* item.iItem = SendMessage(infoList, LVM_INSERTITEM, 0, (LPARAM)&item); \ */
+/* item.mask = LVIF_TEXT; \ */
+/* item.iSubItem = 1; \ */
+/* item.pszText = s2; \ */
+/* SendMessage(infoList, LVM_SETITEM, 0, (LPARAM)&item); */
 
-	/* if (gMapInfo.author[0]) */
-		/* ADD_STR(L"Author", utf8to16(gMapInfo.author)); */
-	/* ADD_STR(L"Tidal: ", utf8to16(gMapInfo.author)); */
+/* if (gMapInfo.author[0]) */
+/* ADD_STR(L"Author", utf8to16(gMapInfo.author)); */
+/* ADD_STR(L"Tidal: ", utf8to16(gMapInfo.author)); */
 
 /* #undef ADD_STR */
 /* } */
