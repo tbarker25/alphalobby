@@ -35,13 +35,12 @@ static const struct {
 #undef EXPORT2
 };
 
-#define SYNCFILE_VERSION 0x02
+#define SYNCFILE_VERSION 0x03
 
 
 static void createModFile(const char *modName);
 static void createMapFile(const char *mapName);
 static void setModInfo(void);
-static void _setScriptTags(char *script);
 
 //Shared between threads:
 static uint8_t taskReload, /* taskSetMinimap, */ /* taskSetInfo, */ taskSetBattleStatus;
@@ -49,7 +48,6 @@ static HANDLE event;
 
 //malloc new value, swap atomically, and free old value:
 static const char *mapToSave, *modToSave;
-static char *scriptToSet;
 static char haveTriedToDownload;
 
 //Sync thread only:
@@ -108,7 +106,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			for (int i=0; i<gNbMaps; ++i)
 				gMaps[i] = strdup(GetMapName(i));
 			
-			ExecuteInMainThread(BattleRoom_OnResync);
 			void resetMapAndMod(void) {
 				if (gMyBattle) {
 					ChangedMod(gMyBattle->modName);
@@ -131,11 +128,6 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 		} else if (taskSetBattleStatus) {
 			SetBattleStatus(&gMyUser, 0, 0);
 			taskSetBattleStatus = 0;
-		} else if ((s = __sync_fetch_and_and(&scriptToSet, NULL))) {
-			STARTCLOCK();
-			_setScriptTags(s);
-			free(s);
-			ENDCLOCK();
 		} else {
 			STARTCLOCK();
 			ENDCLOCK();
@@ -162,15 +154,6 @@ void Sync_Init(void)
 	CreateThread(NULL, 0, syncThread, NULL, 0, NULL);
 }
 
-void RedrawMinimapBoxes(void)
-{
-	// ExecuteInMainThread(BattleRoom_StartPositionsChanged);
-	// if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
-		// taskSetMinimap = 1;
-		// SetEvent(event);
-	// }
-}
-
 static void initOptions(size_t nbOptions, gzFile *fd)
 {
 	assert(nbOptions < 256);
@@ -180,11 +163,15 @@ static void initOptions(size_t nbOptions, gzFile *fd)
 	for (int i=0; i<nbOptions; ++i) {
 		options[i].type = GetOptionType(i);
 		assert(options[i].type != opt_error);
+
 		options[i].key = s - (size_t)options;
 		s += sprintf(s, "%s", GetOptionKey(i)) + 1;
 		
 		options[i].name = s - (size_t)options;
 		s += sprintf(s, "%s", GetOptionName(i)) + 1;
+		
+		options[i].desc = s - (size_t)options;
+		s += sprintf(s, "%s", GetOptionDesc(i)) + 1;
 		
 		options[i].def = s - (size_t)options;
 		switch (GetOptionType(i)) {
@@ -256,6 +243,7 @@ static OptionList loadOptions(gzFile *fd)
 	for (int i=0; i<nbOptions; ++i) {
 		options[i].key += (size_t)options;
 		options[i].name += (size_t)options;
+		options[i].desc += (size_t)options;
 		options[i].def += (size_t)options;
 		options[i].val = strdup(options[i].def);
 		if (options[i].section)
@@ -530,7 +518,9 @@ void ChangedMap(const char *mapName)
 	metalMapPixels = malloc(d[0] * d[1]);
 	gzread(fd, metalMapPixels, d[0] *  d[1]);
 
-	BattleRoom_ChangeMinimapBitmap(pixels, d[0], d[1], metalMapPixels, h[0], h[1], heightMapPixels);
+	BattleRoom_ChangeMinimapBitmap(pixels,
+			d[0], d[1], metalMapPixels,
+			h[0], h[1], heightMapPixels);
 
 	gzclose(fd);
 
@@ -561,112 +551,9 @@ uint32_t GetModHash(const char *modName)
 	return GetPrimaryModChecksumFromName(modName);
 }
 
-static void _setScriptTags(char *script)
-{
-	for (char *key, *val; (key = strsep(&script, "=")) && (val = strsep(&script, "\t"));) {
-		if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
-			StartPosType startPosType = atoi(val);
-			if (startPosType != gBattleOptions.startPosType)
-				;// taskSetMinimap = 1;
-			gBattleOptions.startPosType = startPosType;
-			// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
-			continue;
-		} else if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
-			int team = atoi(key + sizeof("game/team") - 1);
-			char type = key[sizeof("game/team/startpos") + (team > 10)];
-			((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
-			// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
-		} else if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
-			for (int i=0; i<gNbModOptions; ++i) {
-				if (!strcmp(gModOptions[i].key, key + sizeof("game/modoptions/") - 1)) {
-					free(gModOptions[i].val);
-					gModOptions[i].val = strdup(val);
-				}
-			}
-		} else if (!_strnicmp(key, "game/mapoptions/", sizeof("game/mapoptions/") - 1)) {
-			for (int i=0; i<gNbMapOptions; ++i) {
-				if (!strcmp(gMapOptions[i].key, key + sizeof("game/mapoptions/") - 1)) {
-					free(gMapOptions[i].val);
-					gMapOptions[i].val = strdup(val);
-				}
-			}
-		} else {
-			printf("unrecognized script key %s=%s\n", key, val);
-		}
-	}
-	ExecuteInMainThread(setModInfo);
-	ExecuteInMainThread(BattleRoom_StartPositionsChanged);
-}
-
-void SetScriptTags(char *script)
-{
-	if (gModOptions && gMapOptions)
-		_setScriptTags(script);
-	else {
-		script = strdup(script);
-		while (!__sync_bool_compare_and_swap(&scriptToSet, 0, script)) {
-			char *oldScript = __sync_fetch_and_and(&scriptToSet, 0);
-			char *s = strcat(strcpy(malloc(strlen(script) + strlen(oldScript) + 1), script), oldScript);
-			free(script);
-			script = s;
-		}
-	}
-	SetEvent(event);
-}
-
 const char * _GetSpringVersion(void)
 {
 	return GetSpringVersion();
-}
-
-void _ChangeOption(uint8_t i, int isModOption)
-{
-	Option *options  = isModOption ? gModOptions : gMapOptions;
-	const char *path = isModOption ? "modoptions/" : "mapoptions/";
-	const char *key  = options[i].key;
-	const char *val  = options[i].val;
-
-	switch (options[i].type) {
-	case opt_bool: {
-			       val = (char [2]){val[0] ^ ('0' ^ '1')};
-			       break;
-		       } case opt_number: {
-			       char *tmp = alloca(128);
-			       tmp[0] = '\0';
-			       if (GetTextDlg(options[i].name, tmp, 128))
-				       return;
-			       val = tmp;
-		       } break;
-	case opt_list: {
-			       HMENU menu = CreatePopupMenu();
-			       for (int j=0; j < options[i].nbListItems; ++j)
-				       AppendMenuA(menu, 0, j+1, options[i].listItems[j].name);
-			       SetLastError(0);
-			       POINT point;
-			       GetCursorPos(&point);
-			       void func(int *i) {
-				       *i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, gMainWindow, NULL);
-			       }
-			       int clicked;
-			       SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
-			       if (!clicked)
-				       return;
-			       val = strcpy(alloca(128), options[i].listItems[clicked - 1].key);
-			       DestroyMenu(menu);
-		       } break;
-	default:
-		       return;
-	}
-
-	if (gBattleOptions.hostType == HOST_SPADS) {
-		SpadsMessageF("!bSet %s %s", key, val);
-	} else if (gBattleOptions.hostType == HOST_SP) {
-		free(options[i].val);
-		options[i].val = strdup(val);
-		setModInfo();
-	} else if (gBattleOptions.hostType & HOST_FLAG) {
-		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", key, val);
-	}
 }
 
 void ForEachAiName(void (*func)(const char *, void *), void *arg)

@@ -32,8 +32,6 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		menus[i] = CreatePopupMenu();
 
 	uint32_t battleStatus = s->battleStatus;
-	// HMENU menus[0] = CreatePopupMenu(), menus[TEAM_MENU] = CreatePopupMenu(), menus[ALLY_MENU] = CreatePopupMenu(), menus[SIDE_MENU] = CreatePopupMenu();
-	// HMENU menus[AI_MENU+100] = {};
 	
 	for (int i=0; i<16; ++i) {
 		wchar_t buff[3];
@@ -49,40 +47,12 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	if (battleStatus & AI_MASK) {
 		if (!(gBattleOptions.hostType & HOST_FLAG))
 			goto cleanup;
-		if (gBattleOptions.hostType != HOST_SP)
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
+		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[SIDE_MENU], L"Set faction");
 		AppendMenu(menus[0], 0, COLOR, L"Set color");
 		AppendMenu(menus[0], 0, KICK, L"Remove bot");
-		if (gBattleOptions.hostType == HOST_SP) {
-			int i=0;
-			void appendAi(const char *name, void *unused)
-			{
-				AppendMenuA(menus[AI_MENU], MF_CHECKED * !strcmp(s->bot.dll, name), AI_FLAG | i++, name);
-			}
-			ForEachAiName(appendAi, NULL);
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[AI_MENU ], L"Change ai");
-		}
-		// if (s->bot.nbOptions)
-			// AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		// for (int i=0;i < s->bot.nbOptions; ++i) {
-			// Option2 *opt = &s->bot.options[i];
-			// switch (opt->type) {
-			// case opt_list:
-				// menus[++lastMenu] = CreatePopupMenu();
-				// for (int j=0; j<opt->nbListItems; ++j)
-					// AppendMenuA(menus[lastMenu], MF_CHECKED * (!strcmp(opt->listItems[j].key, opt->val)), AI_OPTIONS_FLAG | i | j<<8, opt->listItems[j].name);
-				// AppendMenuA(menus[0], MF_POPUP, (UINT_PTR)menus[lastMenu], opt->name);
-				// break;
-			// case opt_bool: case opt_number:
-				// AppendMenuA(menus[0], MF_CHECKED * (opt->type == opt_bool && opt->val[0] != '0'), AI_OPTIONS_FLAG | i, opt->name);
-				// break;
-			// default:
-				// break;
-			// }
-		// }
-	} else if (&s->user != &gMyUser && gBattleOptions.hostType != HOST_SP) {
+	} else if (&s->user != &gMyUser) {
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
 		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
@@ -104,10 +74,8 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		}
 	} else { //(u == &gMyUser)
 		if (battleStatus & MODE_MASK) {
-			if (gBattleOptions.hostType != HOST_SP) {
-				AppendMenu(menus[0], 0, SPEC, L"Spectate");
-				AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
-			}
+			AppendMenu(menus[0], 0, SPEC, L"Spectate");
+			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[SIDE_MENU], L"Set faction");
 			AppendMenu(menus[0], 0, COLOR, L"Set color");

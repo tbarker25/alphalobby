@@ -76,7 +76,7 @@ enum USER_SYNC_STATUS {
 typedef struct UserBot {
 	char name[MAX_NAME_LENGTH_NUL];
 	uint32_t battleStatus;
-	struct battle *battle;
+	struct Battle *battle;
 	union {
 		uint32_t color;
 		struct {
@@ -112,3 +112,13 @@ typedef union UserOrBot {
 	User user;
 	Bot bot;
 }UserOrBot;
+
+extern User gMyUser;
+
+User * FindUser(const char username[]);
+User * NewUser(uint32_t id, const char *name);
+User *GetNextUser(void);
+void DelUser(User *u);
+void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll);
+void DelBot(const char *name);
+void UpdateBattleStatus(UserOrBot *s, uint32_t battleStatus, uint32_t color);

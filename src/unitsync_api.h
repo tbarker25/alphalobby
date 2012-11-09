@@ -640,7 +640,7 @@ EXPORT2(const char* , GetOptionSection, (int optIndex))
  * Be sure you've made a call to either GetMapOptionCount, ()
  * or GetModOptionCount, (, prior to using this.
  */
-// EXPORT2(const char* , GetOptionDesc, (int optIndex))
+EXPORT2(const char* , GetOptionDesc, (int optIndex))
 /**
  * @brief Retrieve an option's type
  * @param optIndex option index/id

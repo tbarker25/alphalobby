@@ -7,8 +7,6 @@
 #define MAX_NAME_LENGTH_NUL 22 //Hardcoded into Uberserver
 #define MAX_PASSWORD_LENGTH 24 //Length of the md5hash
 #define MAX_TITLE 128 //Also used for mapnames, modnames. Overflow is truncated to fit
-#define NUM_TEAMS 16
-#define NUM_ALLIANCES 16
 
 #define _STR(x) #x
 #define STRINGIFY(x) _STR(x)

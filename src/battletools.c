@@ -1,16 +1,62 @@
+#include <stdio.h>
+#include <assert.h>
+#include <malloc.h>
 #include <inttypes.h>
 #include <unistd.h>
 #include <stdlib.h>
 
 #include <windows.h>
 
+#include "alphalobby.h"
+#include "battlelist.h"
+#include "battleroom.h"
 #include "battletools.h"
 #include "client_message.h"
 #include "data.h"
+#include "dialogboxes.h"
 #include "settings.h"
 #include "sync.h"
 
 static uint32_t balance;
+uint32_t gUdpHelpPort;
+
+uint32_t battleToJoin;
+
+extern uint32_t gLastBattleStatus;
+
+uint32_t gMapHash, gModHash;
+size_t gNbModOptions, gNbMapOptions;
+Option *gModOptions, *gMapOptions;
+BattleOption gBattleOptions;
+
+uint8_t gNbSides;
+char gSideNames[16][32];
+
+char **gMaps, **gMods;
+ssize_t gNbMaps = -1, gNbMods = -1;
+
+static char *currentScript;
+
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
+void ResetData (void)
+{
+	/* nbBattles = 0; */
+	/* for (int i=0; i<nbUsers; ++i) { */
+		/* users[i]->name[0] = 0; */
+	/* } */
+	/* for (int i=0; i<nbBattles; ++i) { */
+		/* free(battles[i]); */
+		/* battles[i] = NULL; */
+	/* } */
+	
+	/* if (gMyBattle && gBattleOptions.hostType != HOST_SP) */
+		/* LeftBattle(); */
+	
+	/* BattleList_Reset(); */
+}
+
+struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 
 static void addStartBox(int i, int left, int top, int right, int bottom)
 {
@@ -72,7 +118,8 @@ void SetSplit(SplitType type, int size)
 		return;
 	}
 	if (gBattleOptions.hostType == HOST_LOCAL)
-		RedrawMinimapBoxes();		
+		;
+		/* RedrawMinimapBoxes();		 */
 }
 
 void SetMap(const char *name)
@@ -86,7 +133,7 @@ void SetMap(const char *name)
 void Rebalance(void)
 //NB: this function is cpu expensive
 {
-	if (!LoadSettingInt("host_autobalance") || gBattleOptions.hostType == HOST_SP)
+	if (!LoadSettingInt("host_autobalance"))
 		return;
 	
 	int playerCount = gMyBattle->nbParticipants - gMyBattle->nbSpectators;
@@ -196,3 +243,180 @@ uint32_t GetNewBattleStatus(void)
 	return MODE_MASK | READY_MASK | teamMask | TO_ALLY_MASK(ally > 0);
 }
 
+
+void ResetBattleOptions(void)
+{
+	memset(&gBattleOptions, 0, sizeof(gBattleOptions));
+	for (int i=0; i<LENGTH(gBattleOptions.positions); ++i)
+		gBattleOptions.positions[i] = INVALID_STARTPOS;
+
+}
+
+void JoinedBattle(Battle *b, uint32_t modHash)
+{
+	gMyBattle = b;
+	ResetBattleOptions();
+	gBattleOptions.modHash = modHash;
+
+	if (!strcmp(b->founder->name, relayHoster)) {
+		gBattleOptions.hostType = HOST_RELAY;
+		SendToServer("!SUPPORTSCRIPTPASSWORD");
+	} else if (b->founder ==  &gMyUser)
+		gBattleOptions.hostType = HOST_LOCAL;
+
+	gMyUser.battleStatus = 0;
+	gLastBattleStatus = LOCK_BS_MASK;
+
+	if (gModHash !=modHash)
+		ChangedMod(b->modName);
+	if (gMapHash != b->mapHash || !gMapHash)
+		ChangedMap(b->mapName);
+
+	BattleRoom_Show();
+}
+
+void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
+{
+	uint32_t lastBS = s->battleStatus;
+	s->battleStatus = bs;
+	uint32_t lastColor = s->color;
+	s->color = color;
+	
+	#ifdef NDEBUG
+	if (!s || !gMyBattle || gMyBattle != s->battle)
+		return;
+	#endif
+	
+	BattleRoom_UpdateUser(s);
+	
+	if (&s->user == &gMyUser)
+		gLastBattleStatus = bs;
+	
+	if ((lastBS ^ bs) & MODE_MASK) {
+		if (!(bs & MODE_MASK) && BattleRoom_IsAutoUnspec())
+			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
+		gMyBattle->nbSpectators = 0;
+		for (int i=0; i < gMyBattle->nbParticipants; ++i)
+			gMyBattle->nbSpectators += !(gMyBattle->users[i]->battleStatus & MODE_MASK);
+		BattleList_UpdateBattle(gMyBattle);
+		Rebalance();
+	} else if (bs & MODE_MASK
+			&& ((lastBS ^ bs) & (TEAM_MASK | ALLY_MASK)
+			   ||  lastColor != color)) {
+		FixPlayerStatus((void *)s);
+	} else
+		return;
+	BattleRoom_StartPositionsChanged();
+
+	if (&s->user == &gMyUser && (lastBS ^ bs) & (MODE_MASK | ALLY_MASK))
+		BattleRoom_StartPositionsChanged();
+
+}
+
+void ChangeOption(Option *opt)
+{
+	const char *path;
+	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
+		path = "modoptions/";
+	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
+		path = "mapoptions/";
+	else
+		assert(0);
+
+	switch (opt->type) {
+		char *tmp;
+		HMENU menu;
+	case opt_bool:
+		opt->val = (char [2]){opt->val[0] ^ ('0' ^ '1')};
+		break;
+	case opt_number:
+		tmp = alloca(128);
+		tmp[0] = '\0';
+		if (GetTextDlg(opt->name, tmp, 128))
+			return;
+		opt->val = tmp;
+		break;
+	case opt_list:
+		menu = CreatePopupMenu();
+		for (int j=0; j < opt->nbListItems; ++j)
+			AppendMenuA(menu, 0, j+1, opt->listItems[j].name);
+		SetLastError(0);
+		POINT point;
+		GetCursorPos(&point);
+		void func(int *i) {
+			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, gMainWindow, NULL);
+		}
+		int clicked;
+		SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
+		if (!clicked)
+			return;
+		opt->val = strcpy(alloca(128), opt->listItems[clicked - 1].key);
+		DestroyMenu(menu);
+		break;
+	default:
+		return;
+	}
+
+	if (gBattleOptions.hostType == HOST_SPADS) {
+		SpadsMessageF("!bSet %s %s", opt->key, opt->val);
+	} else if (gBattleOptions.hostType & HOST_FLAG) {
+		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
+	}
+}
+
+static void setScriptTag(const char *key, const char *val)
+{
+	if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
+		StartPosType startPosType = atoi(val);
+		if (startPosType != gBattleOptions.startPosType)
+			;// taskSetMinimap = 1;
+		gBattleOptions.startPosType = startPosType;
+		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
+		return;
+	}
+	
+	if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
+		int team = atoi(key + sizeof("game/team") - 1);
+		char type = key[sizeof("game/team/startpos") + (team > 10)];
+		((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
+		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
+		return;
+	}
+	
+	size_t nbOptions;
+	Option *options;
+	if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
+		options = gModOptions;
+		nbOptions = gNbModOptions;
+	} else if (!_strnicmp(key, "game/mapoptions/", sizeof("game/mapoptions/") - 1)) {
+		options = gMapOptions;
+		nbOptions = gNbMapOptions;
+	} else {
+		printf("unrecognized script key %s=%s\n", key, val);
+		return;
+	}
+
+	key += sizeof("game/modoptions/") - 1;
+	for (int i=0; i<nbOptions; ++i) {
+		if (strcmp(options[i].key, key))
+			continue;
+		free(options[i].val);
+		options[i].val = strdup(val);
+		BattleRoom_OnSetOption(&options[i]);
+	}
+}
+
+void SetScriptTags(char *script)
+{
+	if (script) {
+		free(currentScript);
+		currentScript = strdup(script);
+	}
+
+	if (!gModOptions || !gMapOptions)
+		return;
+
+	char *key, *val;
+	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
+		setScriptTag(key, val);
+}

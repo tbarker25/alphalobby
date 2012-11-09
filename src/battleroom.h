@@ -3,6 +3,7 @@
 #define WC_BATTLEROOM L"BattleRoom"
 
 struct User;
+struct Option;
 union UserOrBot;
 typedef void * HWND;
 
@@ -26,4 +27,4 @@ void BattleRoom_VoteStarted(const char *topic);
 void BattleRoom_RedrawMinimap(void);
 void BattleRoom_OnChangeMod(void);
 void BattleRoom_OnSetModDetails(void);
-void BattleRoom_OnResync(void);
+void BattleRoom_OnSetOption(struct Option *opt);
