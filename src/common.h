@@ -19,16 +19,3 @@ wchar_t *utf8to16(const char *str);
 char *utf16to8(const wchar_t *wStr);
 #endif
 
-#ifndef NDEBUG
-	#define STARTCLOCK()\
-		long _startTime = GetTickCount();\
-		printf("entering %s %s %d\n", __FUNCTION__, __FILE__, __LINE__)
-	#define ENDCLOCK() {\
-		long _lastTime = _startTime;\
-		printf("\ntotal time:%ld\nIn %s %s %d\n\n", (_startTime=GetTickCount()) - _lastTime, __FUNCTION__, __FILE__, __LINE__);\
-	}
-#else 
-	#define STARTCLOCK()
-	#define ENDCLOCK()
-#endif
-

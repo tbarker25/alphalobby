@@ -83,10 +83,8 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 	taskReload=1;
 	while (1) {
 		if (taskReload) {
-			STARTCLOCK();
 			taskReload = 0;
 			Init(0, 0);
-			ENDCLOCK();
 			
 			taskSetBattleStatus = 1;
 			
@@ -114,23 +112,16 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			}
 			ExecuteInMainThread(resetMapAndMod);
 			haveTriedToDownload = 1;
-			ENDCLOCK();
 		} else if ((s = (void *)__sync_fetch_and_and(&modToSave, NULL))) {
-			STARTCLOCK();
 			createModFile(s);
 			free(s);
-			ENDCLOCK();
 		} else if ((s = (void *)__sync_fetch_and_and(&mapToSave, NULL))) {
-			STARTCLOCK();
 			createMapFile(s);
 			free(s);
-			ENDCLOCK();
 		} else if (taskSetBattleStatus) {
 			SetBattleStatus(&gMyUser, 0, 0);
 			taskSetBattleStatus = 0;
 		} else {
-			STARTCLOCK();
-			ENDCLOCK();
 			WaitForSingleObject(event, INFINITE);
 		}
 	};
@@ -263,7 +254,6 @@ static OptionList loadOptions(gzFile *fd)
 
 static void createMapFile(const char *mapName)
 {
-	STARTCLOCK();
 	uint32_t mapHash = GetMapChecksumFromName(mapName);
 	if (!mapHash) {
 		if (!haveTriedToDownload)
@@ -311,12 +301,10 @@ static void createMapFile(const char *mapName)
 
 	ExecuteInMainThreadParam(ChangedMap, mapName);
 	
-	ENDCLOCK();
 }
 
 static void createModFile(const char *modName)
 {
-	STARTCLOCK();
 	RemoveAllArchives();
 	GetPrimaryModCount(); //todo investigate if we only need it on reinit
 	int modIndex = GetPrimaryModIndex(modName);
@@ -389,12 +377,10 @@ static void createModFile(const char *modName)
 	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	
 	ExecuteInMainThreadParam(ChangedMod, modName);
-	ENDCLOCK();
 }
 
 void ChangedMod(const char *modName)
 {
-	STARTCLOCK();
 	if (!stricmp(currentMod, modName))
 		return;
 
@@ -444,12 +430,10 @@ void ChangedMod(const char *modName)
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
-	ENDCLOCK();
 }
 
 void ChangedMap(const char *mapName)
 {
-	STARTCLOCK();
 	if (!stricmp(currentMap, mapName))
 		return;
 
@@ -527,7 +511,6 @@ void ChangedMap(const char *mapName)
 	setModInfo();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
-	ENDCLOCK();
 }
 
 void ReloadMapsAndMod(void)
