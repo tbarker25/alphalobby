@@ -165,8 +165,9 @@ void LeftBattle(void)
 	while (gMyBattle->nbBots)
 		DelBot(gMyBattle->users[gMyBattle->nbParticipants - 1]->bot.name);
 	
-	gMyUser.battleStatus = LOCK_BS_MASK;
-	gLastBattleStatus = LOCK_BS_MASK;
+	gMyUser.battleStatus = 0;
+	gLastBattleStatus = 0;
+	battleInfoFinished = 0;
 	
 	gMyBattle = NULL;
 	if (battleToJoin)
@@ -502,7 +503,7 @@ static void loginInfoEnd(void)
 	OpenDefaultChannels();
 	BattleList_OnEndLoginInfo();
 	MainWindow_ChangeConnect(CONNECTION_ONLINE);
-	SendToServer("SAYPRIVATE RelayHostManagerList !listmanagers");
+	/* SendToServer("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
 }
 
 static void messageOfTheDay(void)
@@ -558,7 +559,8 @@ static void removeUser(void)
 static void requestBattleStatus(void)
 {
 	gMyUser.battleStatus &= ~MODE_MASK;
-	SetBattleStatus(&gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | LOCK_BS_MASK | READY_MASK);
+	battleInfoFinished = 1;
+	SetBattleStatus(&gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | READY_MASK);
 	extern void resizePlayerListTabs(void);
 	resizePlayerListTabs();
 }

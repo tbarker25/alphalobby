@@ -136,7 +136,7 @@ static void onSessionEnd(SessionContext *ses)
 	free(ses->packageBytes);
 	ses->status = 0;
 	if (ses->name) {
-		BattleRoom_RedrawMinimap();
+		/* BattleRoom_RedrawMinimap(); */
 		RemoveDownload(ses->name);
 		ReloadMapsAndMod();
 	}
@@ -160,7 +160,7 @@ static void onReadComplete(HINTERNET handle, RequestContext *req, DWORD numRead)
 	if (req->ses->totalBytes) {
 		req->ses->fetchedBytes += numRead;
 		assert(req->ses->totalBytes);
-		BattleRoom_RedrawMinimap();
+		/* BattleRoom_RedrawMinimap(); */
 		wchar_t text[128];
 		swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
 				(float)req->ses->fetchedBytes / 1000000,

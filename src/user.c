@@ -13,6 +13,7 @@
 User gMyUser;
 static User **users;
 static size_t nbUsers;
+char battleInfoFinished;
 
 User * FindUser(const char *name)
 {
@@ -32,7 +33,6 @@ User *GetNextUser(void)
 
 User * NewUser(uint32_t id, const char *name)
 {
-
 	if (!strcmp(gMyUser.name, name)) {
 		gMyUser.id = id;
 		return &gMyUser;
@@ -59,7 +59,8 @@ void DelUser(User *u)
 	u->name[0] = 0;
 }
 
-void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll)
+void AddBot(const char *name, User *owner, uint32_t battleStatus,
+		uint32_t color, const char *aiDll)
 {
 	Bot *bot = calloc(1, sizeof(*bot));
 	strcpy(bot->name, name);
@@ -70,7 +71,8 @@ void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color
 	
 	Battle *b = gMyBattle;
 	int i=b->nbParticipants - b->nbBots;
-	while (i<b->nbParticipants && strcmpi(b->users[i]->name, bot->name) < 0)
+	while (i<b->nbParticipants
+			&& strcmpi(b->users[i]->name, bot->name) < 0)
 		++i;
 	for (int j=b->nbParticipants; j>i; --j)
 		b->users[j] = b->users[j-1];
@@ -86,7 +88,8 @@ void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color
 void DelBot(const char *name)
 {
 	int i = gMyBattle->nbParticipants - gMyBattle->nbBots;
-	while (i < gMyBattle->nbParticipants && strcmpi(gMyBattle->users[i]->name, name) < 0)
+	while (i < gMyBattle->nbParticipants
+			&& strcmpi(gMyBattle->users[i]->name, name) < 0)
 		++i;
 	BattleRoom_RemoveUser(gMyBattle->users[i]);
 	free(gMyBattle->users[i]->bot.dll);
@@ -100,3 +103,8 @@ void DelBot(const char *name)
 	BattleRoom_StartPositionsChanged();
 }
 
+void ResetUsers(void)
+{
+	for (int i=0; i<nbUsers; ++i)
+		*users[i]->name = '\0';
+}

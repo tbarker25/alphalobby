@@ -23,13 +23,10 @@ typedef struct Battle {
 	};
 }Battle;
 
-
-extern Battle *gMyBattle;
-extern uint32_t battleToJoin;
-
 Battle * FindBattle(uint32_t id);
 Battle *NewBattle(void);
 void DelBattle(Battle *);
+void ResetBattles(void);
 
 #define FOR_EACH_PARTICIPANT(_u, _b)\
 	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->nbParticipants; ++__u)

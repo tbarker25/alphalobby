@@ -1,6 +1,7 @@
 #pragma once
 
 typedef void * HWND;
+extern char battleInfoFinished;
 
 enum modeType {
 	MODE_SPECTATOR = 0,
@@ -14,7 +15,6 @@ enum modeType {
 #define HANDICAP_OFFSET 11
 #define SYNC_OFFSET 22
 #define SIDE_OFFSET 24
-#define LOCK_BS_OFFSET 30
 #define AI_OFFSET 31
 enum {
 	READY_MASK    = 0x01 << READY_OFFSET,
@@ -25,11 +25,10 @@ enum {
 	SYNC_MASK     = 0x03 << SYNC_OFFSET,
 	SIDE_MASK     = 0x0F << SIDE_OFFSET,
 	
-	LOCK_BS_MASK  = 0x01 << LOCK_BS_OFFSET,
 	AI_MASK       = 0x01 << AI_OFFSET,
 };
 
-#define INTERNAL_MASK (AI_MASK | LOCK_BS_MASK)
+#define INTERNAL_MASK (AI_MASK)
 
 #define TO_TEAM_MASK(x) ((x) << TEAM_OFFSET)
 #define TO_ALLY_MASK(x) ((x) << ALLY_OFFSET)
@@ -122,3 +121,4 @@ void DelUser(User *u);
 void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll);
 void DelBot(const char *name);
 void UpdateBattleStatus(UserOrBot *s, uint32_t battleStatus, uint32_t color);
+void ResetUsers(void);

@@ -311,7 +311,6 @@ static void createMapFile(const char *mapName)
 
 	ExecuteInMainThreadParam(ChangedMap, mapName);
 	
-	
 	ENDCLOCK();
 }
 

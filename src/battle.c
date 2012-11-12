@@ -11,7 +11,6 @@
 
 static size_t nbBattles;
 static Battle **battles;
-Battle *gMyBattle;
 
 Battle * FindBattle(uint32_t id)
 {
@@ -43,3 +42,11 @@ void DelBattle(Battle *b)
 	b = NULL;
 }
 
+void ResetBattles(void)
+{
+	for (int i=0; i<nbBattles; ++i)
+		free(battles[i]);
+	nbBattles = 0;
+	free(battles);
+	battles = NULL;
+}
