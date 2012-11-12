@@ -6,6 +6,7 @@
 #include <winsock2.h>
 
 #include "alphalobby.h"
+#include "battlelist.h"
 #include "chat.h"
 #include "client.h"
 #include "client_message.h"
@@ -102,7 +103,12 @@ void Disconnect(void)
 	sock = INVALID_SOCKET;
 	WSACleanup();
 	MainWindow_ChangeConnect(CONNECTION_OFFLINE);
-	/* ResetData(); */
+
+	if (gMyBattle)
+		LeftBattle();
+	BattleList_Reset();
+	ResetBattles();
+	ResetUsers();
 }
 
 void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)

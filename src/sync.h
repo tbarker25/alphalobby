@@ -8,7 +8,6 @@ struct Option;
 
 uint32_t GetMapHash(const char *mapName);
 uint32_t GetModHash(const char *modName);
-void RedrawMinimapBoxes(void);
 void ReloadMapsAndMod(void);
 void ChangedMod(const char *modName);
 void ChangedMap(const char *mapName);

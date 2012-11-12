@@ -22,6 +22,7 @@ uint32_t gUdpHelpPort;
 
 uint32_t battleToJoin;
 
+Battle *gMyBattle;
 extern uint32_t gLastBattleStatus;
 
 uint32_t gMapHash, gModHash;
@@ -38,23 +39,6 @@ ssize_t gNbMaps = -1, gNbMods = -1;
 static char *currentScript;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
-
-void ResetData (void)
-{
-	/* nbBattles = 0; */
-	/* for (int i=0; i<nbUsers; ++i) { */
-		/* users[i]->name[0] = 0; */
-	/* } */
-	/* for (int i=0; i<nbBattles; ++i) { */
-		/* free(battles[i]); */
-		/* battles[i] = NULL; */
-	/* } */
-	
-	/* if (gMyBattle && gBattleOptions.hostType != HOST_SP) */
-		/* LeftBattle(); */
-	
-	/* BattleList_Reset(); */
-}
 
 struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 
@@ -265,7 +249,7 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 		gBattleOptions.hostType = HOST_LOCAL;
 
 	gMyUser.battleStatus = 0;
-	gLastBattleStatus = LOCK_BS_MASK;
+	gLastBattleStatus = 0;
 
 	if (gModHash !=modHash)
 		ChangedMod(b->modName);
@@ -306,11 +290,9 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 		FixPlayerStatus((void *)s);
 	} else
 		return;
-	BattleRoom_StartPositionsChanged();
-
-	if (&s->user == &gMyUser && (lastBS ^ bs) & (MODE_MASK | ALLY_MASK))
+	if ((lastBS ^ bs) & MODE_MASK
+			|| ((lastBS ^ bs) & ALLY_MASK && &s->user == &gMyUser))
 		BattleRoom_StartPositionsChanged();
-
 }
 
 void ChangeOption(Option *opt)

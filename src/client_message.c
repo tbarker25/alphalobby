@@ -22,7 +22,7 @@
 int lastStatusUpdate, gLastAutoMessage;
 static char myPassword[BASE16_MD5_LENGTH];
 static char myUserName[MAX_NAME_LENGTH+1];
-uint32_t gLastBattleStatus = LOCK_BS_MASK;
+uint32_t gLastBattleStatus;
 uint8_t gLastClientStatus;
 char relayCmd[1024], relayHoster[1024], relayManager[1024], relayPassword[1024];
 
@@ -86,7 +86,7 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask & ~SYNC_MASK) | GetSyncStatus() | READY_MASK;
 		if (bs != gLastBattleStatus || color != gMyUser.color) {
 			gLastBattleStatus=bs;
-			if (!(bs & LOCK_BS_MASK))
+			if (battleInfoFinished)
 				SendToServer("MYBATTLESTATUS %d %d", bs & ~INTERNAL_MASK, color);
 		}
 		return;

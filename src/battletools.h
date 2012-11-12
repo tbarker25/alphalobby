@@ -80,6 +80,10 @@ struct Battle;
 extern struct _LargeMapInfo _gLargeMapInfo;
 #define gMapInfo (_gLargeMapInfo.mapInfo)
 
+struct Battle;
+extern struct Battle *gMyBattle;
+extern uint32_t battleToJoin;
+
 extern size_t gNbModOptions, gNbMapOptions;
 extern Option *gModOptions, *gMapOptions;
 extern uint32_t gMapHash, gModHash;
@@ -106,5 +110,4 @@ uint32_t GetNewBattleStatus(void);
 void JoinedBattle(struct Battle *b, uint32_t modHash);
 void SetScriptTags(char *);
 void ChangeOption(struct Option *opt);
-void ResetData(void);
 void ResetBattleOptions(void);
