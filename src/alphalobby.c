@@ -95,11 +95,11 @@ void MainWindow_SetActiveTab(HWND newTab)
 		return;
 	
 	void changeCheck(char enable) {
-		int tabIndex = currentTab == gBattleList  ? ID_BATTLELIST
-	                 : currentTab == gBattleRoom  ? ID_BATTLEROOM
-		             : currentTab == gChatWindow        ? ID_CHAT
-					 : currentTab == gDownloadTabWindow ? ID_DOWNLOADS
-		             : -1;
+		int tabIndex = currentTab == gBattleList   ? ID_BATTLELIST
+			: currentTab == gBattleRoom        ? ID_BATTLEROOM
+			: currentTab == gChatWindow        ? ID_CHAT
+			: currentTab == gDownloadTabWindow ? ID_DOWNLOADS
+			: -1;
 		WPARAM state = SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_GETSTATE, tabIndex, 0);
 		if (enable)
 			state |= TBSTATE_CHECKED;
@@ -111,7 +111,7 @@ void MainWindow_SetActiveTab(HWND newTab)
 	changeCheck(0);
 	currentTab = newTab;
 	changeCheck(1);
-	
+
 	RECT rect;
 	GetClientRect(gMainWindow, &rect);
 	resizeCurrentTab(rect.right, rect.bottom);
@@ -119,12 +119,13 @@ void MainWindow_SetActiveTab(HWND newTab)
 
 void Ring(void)
 {
-	FlashWindowEx(&(FLASHWINFO){
+	FLASHWINFO flashInfo = {
 		.cbSize = sizeof(FLASHWINFO),
 		.hwnd = gMainWindow,
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */ 
 		           0x0000000C, /* FLASHW_TIMERNOFG */
-	});
+	};
+	FlashWindowEx(&flashInfo);
 	MainWindow_SetActiveTab(gBattleRoom);
 }
 
@@ -141,6 +142,22 @@ void MainWindow_EnableBattleroomButton(void)
 	MainWindow_SetActiveTab(gBattleRoom);
 }
 
+static const TBBUTTON tbButtons[] = {
+	{ ICONS_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
+	{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
+	{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
+
+	{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
+#ifndef NDEBUG
+	{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
+	{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
+	{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
+#endif
+	{ ICONS_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
+	// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
+	{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+	{ I_IMAGENONE,       ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
+};
 
 static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -153,25 +170,6 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
 		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
 		
-
-		TBBUTTON tbButtons[] = {
-			{ ICONS_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
-			{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
-			{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
-			
-			{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
-			#ifndef NDEBUG
-			{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
-			{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
-			{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
-			#endif
-			{ I_IMAGENONE,       ID_CHAT,         TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
-			// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
-			{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
-			{ I_IMAGENONE,       ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
-		};
-		
-
 		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
 		SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
 		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
@@ -227,13 +225,23 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
 				AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
 				// #ifndef NDEBUG
-				AppendMenu(menu, 0, ID_SERVERLOG, L"Open Server Log");
+				AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
 				// #endif
 				break;
 			case ID_OPTIONS:
-				AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby Options");
-				AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring Options");
+				AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby options");
+				AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring options");
 				break;
+			case ID_CHAT:
+				AppendMenu(menu, 0, ID_CHAT, L"Open chat tab");
+				SetMenuDefaultItem(menu, ID_CHAT, 0);
+				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
+				AppendMenu(menu, 0, ID_SERVERLOG, L"Open channel...");
+				AppendMenu(menu, 0, ID_SERVERLOG, L"Open private chat with...");
+				AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
+				// #ifndef NDEBUG
+				break;
+				// #endif
 			default:
 				return 0;
 			}

@@ -269,6 +269,8 @@ static void battleOpened(void)
 
 	if (!strcmp(founderName, relayHoster))
 		JoinBattle(b->id, relayPassword);
+
+	ChatWindow_UpdateUser(b->founder);
 }
 
 static void battleClosed(void)
@@ -335,22 +337,30 @@ static void clientStatus(void)
 	User *u = FindUser(getNextWord());
 	if (!u)
 		return;
-	uint8_t oldStatus = u->clientStatus;
-	u->clientStatus = getNextInt();
-	// UserList_AddUser(u);
+
+	uint8_t status = getNextInt();
+	uint8_t diff = status ^ u->clientStatus;
+	u->clientStatus = status;
+
 	if (gMyBattle && u->battle == gMyBattle)
 		BattleRoom_UpdateUser((void *)u);
-	/* UpdateUser(u); */
+
+	if (diff & (CS_INGAME_MASK | CS_AWAY_MASK))
+		ChatWindow_UpdateUser(u);
+
 	if (!u->battle)
 		return;
+
 	if (u == &gMyUser)
-		gLastClientStatus = (u->clientStatus & ~CS_INGAME_MASK) | (gLastClientStatus & CS_INGAME_MASK);
-	if (u == u->battle->founder && (oldStatus ^ u->clientStatus) & CS_INGAME_MASK)
+		gLastClientStatus = (status & ~CS_INGAME_MASK)
+			| (gLastClientStatus & CS_INGAME_MASK);
+
+	if (diff & CS_INGAME_MASK && u == u->battle->founder)
 		BattleList_UpdateBattle(u->battle);
 
 	if (gMyBattle == u->battle
-			&& !(oldStatus & CS_INGAME_MASK)
-			&& u->clientStatus & CS_INGAME_MASK
+			&& diff & CS_INGAME_MASK
+			&& status & CS_INGAME_MASK
 			&& u == u->battle->founder
 			&& u != &gMyUser)
 		LaunchSpring();
@@ -418,7 +428,7 @@ static void joinedBattle(void)
 	++b->nbParticipants;
 	u->battleStatus = 0;
 	BattleList_UpdateBattle(b);
-	/* UpdateUser(u); */
+	ChatWindow_UpdateUser(u);
 
 	if (b == gMyBattle){
 		if (gSettings.flags & (1<<DEST_BATTLE))
@@ -467,7 +477,7 @@ static void leftBattle(void)
 	if (u == &gMyUser)
 		LeftBattle();
 
-	/* UpdateUser(u); */
+	ChatWindow_UpdateUser(u);
 	BattleList_UpdateBattle(b);
 
 	if (b == gMyBattle){

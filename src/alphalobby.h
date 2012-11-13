@@ -27,9 +27,6 @@ void MainWindow_SetActiveTab(HWND newTab);
 
 #endif
 
-#define RemoveTab(x) (ShowWindow(x, 0))
-#define GetTabIndex(x) -1
-
 enum ConnectionState;
 void MainWindow_ChangeConnect(enum ConnectionState);
 
