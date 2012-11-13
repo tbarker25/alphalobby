@@ -801,6 +801,8 @@ static LRESULT onNotify(WPARAM wParam, NMHDR *note)
 		return 1;
 
 	case NM_RCLICK:
+		if (note->idFrom != DLG_PLAYERLIST)
+			return 0;
 		hitTestInfo.pt =  ((LPNMITEMACTIVATE)note)->ptAction;
 		item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0,
 				(LPARAM)&hitTestInfo);
@@ -898,25 +900,19 @@ static void setDetails(const Option *options, ssize_t nbOptions)
 	}
 
 	LVITEMA item;
+	item.mask = LVIF_GROUPID | LVIF_TEXT | LVIF_PARAM;
+	item.iItem = INT_MAX;
+	item.iSubItem = 0;
 
 	for (ssize_t i=0; i<nbOptions; ++i) {
 		if (options[i].type == opt_section)
 			continue;
 
-		item.mask = LVIF_GROUPID | LVIF_TEXT | LVIF_PARAM;
-		item.iItem = INT_MAX;
-		item.iSubItem = 0;
 		item.pszText = options[i].name;
 		item.lParam = (LPARAM)&options[i];
 		item.iGroupId = (intptr_t)options[i].section;
 
-		item.iItem = SendMessageA(infoList, LVM_INSERTITEMA, 0, (LPARAM)&item);
-
-		item.mask = LVIF_TEXT;
-		item.iSubItem = 1;
-		item.pszText = options[i].val;
-
-		SendMessageA(infoList, LVM_SETITEMA, 0, (LPARAM)&item);
+		SendMessageA(infoList, LVM_INSERTITEMA, 0, (LPARAM)&item);
 	}
 }
 
@@ -962,16 +958,24 @@ void BattleRoom_OnSetModDetails(void)
 	setDetails(gMapOptions, gNbMapOptions);
 	/* setMapInfo(); */
 
-	ListView_SetColumnWidth(infoList, 0, LVSCW_AUTOSIZE);
-	ListView_SetColumnWidth(infoList, 1, LVSCW_AUTOSIZE);
+	ListView_SetColumnWidth(infoList, 0, LVSCW_AUTOSIZE_USEHEADER);
+	ListView_SetColumnWidth(infoList, 1, LVSCW_AUTOSIZE_USEHEADER);
 }
 
 void BattleRoom_OnSetOption(Option *opt)
 {
-	LVFINDINFO findInfo = {LVFI_PARAM, .lParam = (LPARAM)opt};
-	LVITEMA item = {LVIF_TEXT, .iSubItem = 1, .pszText = opt->val};
 	HWND infoList = GetDlgItem(gBattleRoom, DLG_INFOLIST);
+
+	LVFINDINFO findInfo;
+	findInfo.flags = LVFI_PARAM;
+	findInfo.lParam = (LPARAM)opt;
+
+	LVITEMA item;
+	item.mask = LVIF_TEXT;
+	item.iSubItem = 1;
+	item.pszText = opt->val ?: opt->def;
 	item.iItem = ListView_FindItem(infoList, -1, &findInfo);
+
 	SendMessageA(infoList, LVM_SETITEMA, 0, (LPARAM)&item);
 }
 
@@ -1005,8 +1009,8 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 		resizeAll(lParam);
 		break;
 	case WM_DRAWITEM:
-		assert(wParam == DLG_MINIMAP);
-		onDraw((void *)lParam);
+		if (wParam == DLG_MINIMAP)
+			onDraw((void *)lParam);
 		return 1;
 	case WM_NOTIFY:
 		return onNotify(wParam, (NMHDR *)lParam);

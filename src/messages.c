@@ -158,24 +158,6 @@ static void copyNextSentence(char *s) {
 	memcpy(s, word, len + 1);
 }
 
-void LeftBattle(void)
-{
-	BattleRoom_Hide();
-	
-	while (gMyBattle->nbBots)
-		DelBot(gMyBattle->users[gMyBattle->nbParticipants - 1]->bot.name);
-	
-	gMyUser.battleStatus = 0;
-	gLastBattleStatus = 0;
-	battleInfoFinished = 0;
-	
-	gMyBattle = NULL;
-	if (battleToJoin)
-		JoinBattle(battleToJoin, NULL);
-
-	*relayHoster = '\0';
-}
-
 void handleCommand(char *s)
 {
 

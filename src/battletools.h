@@ -84,7 +84,7 @@ struct Battle;
 extern struct Battle *gMyBattle;
 extern uint32_t battleToJoin;
 
-extern size_t gNbModOptions, gNbMapOptions;
+extern ssize_t gNbModOptions, gNbMapOptions;
 extern Option *gModOptions, *gMapOptions;
 extern uint32_t gMapHash, gModHash;
 
@@ -108,6 +108,7 @@ void Rebalance(void);
 
 uint32_t GetNewBattleStatus(void);
 void JoinedBattle(struct Battle *b, uint32_t modHash);
-void SetScriptTags(char *);
 void ChangeOption(struct Option *opt);
 void ResetBattleOptions(void);
+void LeftBattle(void);
+void UpdateModOptions(void);

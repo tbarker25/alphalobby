@@ -578,14 +578,12 @@ void SaveLastChatWindows(void)
 
 static void __attribute__((constructor)) init (void)
 {
-	RegisterClass((&(WNDCLASS){
+	WNDCLASS windowClass = {
 		.lpszClassName = WC_CHATBOX,
 		.lpfnWndProc   = chatBoxProc,
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
-	}));
+	};
+
+	RegisterClass(&windowClass);
 }
-
-
-
-
