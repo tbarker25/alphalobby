@@ -15,13 +15,13 @@ CFLAGS+= -D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_A
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:
-ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_away user_ignore user_unsync_ignore user_away_ignore user_unsync_away_ignore closed open host spectator host_spectator ingame rank0 rank1 rank2 rank3 rank4 rank5 rank6 rank7 connecting battlelist replays chat options split_vert split_horz split_corner1 split_corner2 split_rand))
+ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_away user_ignore user_unsync_ignore user_away_ignore user_unsync_away_ignore closed open host spectator host_spectator ingame rank0 rank1 rank2 rank3 rank4 rank5 rank6 rank7 connecting battlelist replays chat options downloads split_vert split_horz split_corner1 split_corner2 split_rand))
 
 
 ICONS+=$(wildcard icons/flags/*)
 ICONS+= null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null:
 
-FILES1:=gzip.o client.o downloadtab.o chat_window.o client_message.o alphalobby.o common.o sync.o settings.o wincommon.o userlist.o battlelist.o battleroom.o downloader.o imagelist.o layoutmetrics.o dialogboxes.o chat.o md5.o res.o countrycodes.o battletools.o spring.o usermenu.o messages.o user.o battle.o
+FILES1:=alphalobby.o battle.o battlelist.o battleroom.o battletools.o chat.o chat_window.o client.o client_message.o common.o countrycodes.o dialogboxes.o downloader.o downloadtab.o gzip.o imagelist.o layoutmetrics.o md5.o messages.o res.o settings.o spring.o sync.o user.o userlist.o usermenu.o wincommon.o 
 
 FILES=$(addprefix $(BUILD_DIR)/, $(FILES1))
 
