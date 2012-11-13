@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -28,12 +29,11 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-// #define SERVER_ID 0x2000
-// #define CHANNEL_ID 0x2001
-// #define PRIVATE_CHAT_ID 0x2002
+#define ICON_SIZE 22
 
 static HWND channelWindows[128];
 static HWND serverChatWindow;
+extern HWND tabControl;
 
 #define MARGIN (MAP_X(115))
 
@@ -79,7 +79,7 @@ void ChatWindow_RemoveUser(HWND window, User *u)
 	SendMessage(window, LVM_DELETEITEM, i, 0);
 }
 
-static void updateUser(HWND window, User *u, int item)
+static void updateUser(HWND window, User *u, int index)
 {
 	char *name;
 	if (!strcmp(GetAliasOf(u->name), u->alias))
@@ -89,40 +89,72 @@ static void updateUser(HWND window, User *u, int item)
 		sprintf(name, "%s (%s)", u->name, u->alias);
 	}
 
-	SendMessage(window, LVM_SETITEMA, 0, (LPARAM)&(LVITEMA){
-		.mask = LVIF_IMAGE | LVIF_STATE | LVIF_TEXT,
-		.iItem = item,
-		.pszText = name,
-		.iImage = (u->clientStatus & CS_INGAME_MASK) ? ICONS_INGAME : u->battle ? INGAME_MASK : -1,
-		.stateMask = LVIS_OVERLAYMASK,
-		.state = INDEXTOOVERLAYMASK(USER_MASK | !!(u->clientStatus & CS_AWAY_MASK) * AWAY_MASK | u->ignore * IGNORE_MASK)
-	});
-	SendMessage(window, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
-		.mask = LVIF_IMAGE, .iImage = ICONS_FIRST_FLAG + u->country,
-		.iItem = item, .iSubItem = COLUMN_COUNTRY,
-	});
+	LVITEMA item;
+	item.mask = LVIF_IMAGE | LVIF_STATE | LVIF_TEXT;
+	item.iItem = index;
+	item.iSubItem = 0;
+	item.pszText = name;
+	item.iImage = u->clientStatus & CS_INGAME_MASK ? ICONS_INGAME
+		    : u->battle ? INGAME_MASK
+		    : -1;
+	item.stateMask = LVIS_OVERLAYMASK;
+
+	int imageIndex = USER_MASK;
+	if (u->clientStatus & CS_AWAY_MASK)
+		imageIndex |= AWAY_MASK;
+	if (u->ignore)
+		imageIndex |= IGNORE_MASK;
+
+	item.state = INDEXTOOVERLAYMASK(imageIndex);
+
+	SendMessage(window, LVM_SETITEMA, 0, (LPARAM)&item);
 }
 
-/* void UpdateUser(User *u) */
-/* { */
-	// int i=0x2000;
-	// HWND window = GetServerChat();
-	// do {
-		// window = GetDlgItem(window, DLG_LIST);
-		// int item = SendMessage(window, LVM_FINDITEM, -1,
-			// (LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
-		// if (item >= 0)
-			// updateUser(window, u, item);
-	// } while ((window = GetDlgItem(gMainWindow, i++)));
-/* } */
+static BOOL CALLBACK EnumChildProc(HWND window, LPARAM user)
+{
+	HWND list = GetDlgItem(window, DLG_LIST);
+	if (!list)
+		return 1;
+
+	LVFINDINFO findInfo;
+	findInfo.flags = LVFI_PARAM;
+	findInfo.lParam = user;
+
+	int index = SendMessage(list, LVM_FINDITEM, -1,
+			(LPARAM)&findInfo);
+
+	if (index >= 0)
+		updateUser(list, (User *)user, index);
+
+	return 1;
+}
+
+void ChatWindow_UpdateUser(User *u)
+{
+	EnumChildWindows(tabControl, EnumChildProc, (LPARAM)u);
+}
 
 void ChatWindow_AddUser(HWND window, User *u)
 {
-	window = GetDlgItem(window, DLG_LIST);
-	int item = SendMessage(window, LVM_INSERTITEMA, 0, (LPARAM)&(LVITEMA){
-				.mask = LVIF_PARAM | LVIF_TEXT, .lParam = (LPARAM)u, .pszText = u->name,
-			});
-	updateUser(window, u, item);
+	HWND list = GetDlgItem(window, DLG_LIST);
+	LVITEMA item;
+	item.mask = LVIF_PARAM | LVIF_TEXT;
+	item.iSubItem = 0;
+	item.pszText = u->name;
+	item.lParam = (LPARAM)u;
+
+	int index = SendMessage(list, LVM_INSERTITEMA, 0, (LPARAM)&item);
+	updateUser(list, u, index);
+
+	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
+		.mask = LVIF_IMAGE, .iImage = ICONS_FIRST_FLAG + u->country,
+		.iItem = index, .iSubItem = COLUMN_COUNTRY,
+	});
+
+	RECT rect;
+	GetClientRect(list, &rect);
+	SendMessage(list, LVM_SETCOLUMNWIDTH, 0, rect.right - ICON_SIZE);
+	SendMessage(list, LVM_SETCOLUMNWIDTH, 1, ICON_SIZE);
 }
 
 
@@ -135,7 +167,99 @@ typedef struct inputBoxData_t {
 	wchar_t textBuff[8192], *inputHint, *buffTail;
 }inputBoxData_t;
 
-static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR type, inputBoxData_t *data)
+static void onTab(HWND window, UINT_PTR type, inputBoxData_t *data)
+{
+
+	char text[MAX_TEXT_MESSAGE_LENGTH];
+	GetWindowTextA(window, text, LENGTH(text));
+
+	if (data->lastPos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
+		data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
+		data->offset = 0;
+		data->lastIndex = 0;
+	}
+	int offset = data->offset;
+	int end = data->end + offset;
+	int start = data->end + offset;
+
+	while (start - offset && !isspace(text[start - 1 - offset]))
+		--start;
+
+	text[end] = L'\0';
+
+	HWND list = GetDlgItem(GetParent(type ? window : GetParent(window)), DLG_LIST);
+
+	if (!list)
+		return;
+
+	int count = ListView_GetItemCount(list);
+	if (!count)
+		return;
+
+	data->lastIndex %= count;
+	LVITEM itemInfo = {LVIF_PARAM, data->lastIndex};
+	do {
+		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&itemInfo);
+		const char *name = ((User *)itemInfo.lParam)->name;
+		const char *s = NULL;
+		if (!_strnicmp(name, text+start, strlen(text+start))
+				|| ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
+			data->lastIndex = itemInfo.iItem + 1;
+			SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
+			data->offset = s ? s - name + 1 : 0;
+			SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
+			break;
+		}
+		itemInfo.iItem = (itemInfo.iItem + 1) % count;
+	} while (itemInfo.iItem != data->lastIndex);
+
+	data->lastPos = SendMessage(window, EM_GETSEL, 0, 0);
+}
+
+static void onEscapeCommand(char *s, UINT_PTR type, const wchar_t *destName,
+		HWND window)
+{
+	char *code = strsep(&s, " ");
+
+	if (!strcmp(code, "me"))
+		SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), s + LENGTH("me ") - 1);
+	else if (!strcmp(code, "resync"))
+		ReloadMapsAndMod();
+	else if (!strcmp(code, "dlmap"))
+		DownloadMap(s);
+	else if (!strcmp(code, "start"))
+		LaunchSpring();
+	else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
+		char *username = strsep(&s, " ");
+		User *u = FindUser(username);
+		if (u) {
+			SendToServer("SAYPRIVATE %s %s", u->name, s);
+			ChatWindow_SetActiveTab(GetPrivateChat(u));
+		} else {
+			char buff[128];
+			sprintf(buff, "Could not send message: %s is not logged in.", username);
+			Chat_Said(GetParent(window), NULL, CHAT_SYSTEM, buff);
+		}
+	} else if (!strcmp(code, "j") || !strcmp(code, "join"))
+		JoinChannel(s, 1);
+	else if (!strcmp(code, "away"))
+		SetClientStatus(~gMyUser.clientStatus, CS_AWAY_MASK);
+	else if (!strcmp(code, "ingame"))
+		SendToServer("GETINGAMETIME");
+	else if (!strcmp(code, "split")) {
+		char *splitType = strsep(&s, " ");
+		SplitType type = !strcmp(splitType, "h") ? SPLIT_HORZ
+			: !strcmp(splitType, "v") ? SPLIT_VERT
+			: !strcmp(splitType, "c1") ? SPLIT_CORNERS1
+			: !strcmp(splitType, "c2") ? SPLIT_CORNERS2
+			: SPLIT_LAST+1;
+		if (type <= SPLIT_LAST)
+			SetSplit(type, atoi(s));
+	}
+}
+
+static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam,
+		LPARAM lParam, UINT_PTR type, inputBoxData_t *data)
 {
 	if (msg != WM_KEYDOWN)
 		goto done;
@@ -144,46 +268,9 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		data->end = -1;
 
 	switch (wParam) {
-	case VK_TAB: {
-		char text[MAX_TEXT_MESSAGE_LENGTH];
-		GetWindowTextA(window, text, LENGTH(text));
-		
-		if (data->lastPos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
-			data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
-			data->offset = 0;
-			data->lastIndex = 0;
-		}
-		int offset = data->offset, end = data->end + offset, start = data->end + offset;
-		while (start - offset && !isspace(text[start - 1 - offset]))
-			--start;
-
-		text[end] = L'\0';
-		
-		HWND list = GetDlgItem(GetParent(type ? window : GetParent(window)), DLG_LIST);
-
-		if (!list)
-			return 0;
-		
-		int count = ListView_GetItemCount(list);
-		if (!count)
-			return 0;
-		data->lastIndex %= count;
-		LVITEM itemInfo = {LVIF_PARAM, data->lastIndex};
-		do {
-			SendMessage(list, LVM_GETITEM, 0, (LPARAM)&itemInfo);
-			const char *name = ((User *)itemInfo.lParam)->name;
-			const char *s = NULL;
-			if (!_strnicmp(name, text+start, strlen(text+start)) || ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
-				data->lastIndex = itemInfo.iItem + 1;
-				SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
-				data->offset = s ? s - name + 1 : 0;
-				SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
-				break;
-			}
-			itemInfo.iItem = (itemInfo.iItem + 1) % count;
-		} while (itemInfo.iItem != data->lastIndex);
-		data->lastPos = SendMessage(window, EM_GETSEL, 0, 0);
-	}	return 0;
+	case VK_TAB:
+		onTab(window, type, data);
+		return 0;
 	case VK_DOWN:
 		if (!data->inputHint)
 			return 0;
@@ -220,44 +307,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		wchar_t destName[128];
 		GetWindowText(GetParent(window), destName, sizeof(destName));
 		if (textA[0] == '/') {
-			char *s = textA + 1;
-			char *code = strsep(&s, " ");
-			
-			if (!strcmp(code, "me"))
-				SendToServer("%s%s %s", chatStringsEx[type], utf16to8(destName), textA + LENGTH("/me ") - 1);
-			else if (!strcmp(code, "resync"))
-				ReloadMapsAndMod();
-			else if (!strcmp(code, "dlmap"))
-				DownloadMap(s);
-			else if (!strcmp(code, "start"))
-				LaunchSpring();
-			else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
-				char *username = strsep(&s, " ");
-				User *u = FindUser(username);
-				if (u) {
-					SendToServer("SAYPRIVATE %s %s", u->name, s);
-					ChatWindow_SetActiveTab(GetPrivateChat(u));
-				} else {
-					char buff[128];
-					sprintf(buff, "Could not send message: %s is not logged in.", username);
-					Chat_Said(GetParent(window), NULL, CHAT_SYSTEM, buff);
-				}
-			} else if (!strcmp(code, "j") || !strcmp(code, "join"))
-				JoinChannel(s, 1);
-			else if (!strcmp(code, "away"))
-				SetClientStatus(~gMyUser.clientStatus, CS_AWAY_MASK);
-			else if (!strcmp(code, "ingame"))
-				SendToServer("GETINGAMETIME");
-			else if (!strcmp(code, "split")) {
-				char *splitType = strsep(&s, " ");
-				SplitType type = !strcmp(splitType, "h") ? SPLIT_HORZ
-						 : !strcmp(splitType, "v") ? SPLIT_VERT
-						 : !strcmp(splitType, "c1") ? SPLIT_CORNERS1
-						 : !strcmp(splitType, "c2") ? SPLIT_CORNERS2
-						 : SPLIT_LAST+1;
-				if (type <= SPLIT_LAST)
-					SetSplit(type, atoi(s));
-			}
+			onEscapeCommand(textA + 1, type, destName, window);
 		} else if (type == DEST_SERVER)
 			SendToServer("%s", textA);
 		else 
@@ -273,7 +323,8 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam, LPARA
 }
 
 
-static LRESULT CALLBACK logProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+static LRESULT CALLBACK logProc(HWND window, UINT msg, WPARAM wParam, LPARAM
+		lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	if (msg == WM_VSCROLL)
 		SetWindowLongPtr(window, GWLP_USERDATA, GetTickCount());
@@ -281,7 +332,25 @@ static LRESULT CALLBACK logProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPa
 	return DefSubclassProc(window, msg, wParam, lParam);
 }
 
-static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static void onSize(HWND window, int width, int height)
+{
+	HWND list = GetDlgItem(window, DLG_LIST);
+	HWND input = GetDlgItem(window, DLG_INPUT);
+	HWND log = GetDlgItem(window, DLG_LOG);
+	MoveWindow(log, 0, 0, width - (list ? MAP_X(MARGIN) : 0),
+			height - !!input * MAP_Y(14), 1);
+	MoveWindow(input, 0, height - MAP_Y(14),
+			width - (list ? MAP_X(MARGIN): 0), MAP_Y(14), 1);
+	BringWindowToTop(list);
+	MoveWindow(list, width - MAP_X(MARGIN), 0, MAP_X(MARGIN), height, 1);
+	RECT rect;
+	GetClientRect(list, &rect);
+	SendMessage(list, LVM_SETCOLUMNWIDTH, 0, rect.right - ICON_SIZE);
+	SendMessage(list, LVM_SETCOLUMNWIDTH, 1, ICON_SIZE);
+}
+
+static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
+		LPARAM lParam)
 {
     switch (msg) {
 	case WM_CREATE: {
@@ -315,21 +384,11 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		chatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 		if (data->type == DEST_CHANNEL)
 			LeaveChannel(data->name);
-		RemoveTab(window);
+		ChatWindow_RemoveTab(window);
 	}	return 0;
-	case WM_SIZE: {
-		HWND list = GetDlgItem(window, DLG_LIST);
-		HWND input = GetDlgItem(window, DLG_INPUT);
-		MoveWindow(GetDlgItem(window, DLG_LOG),
-			0, 0, LOWORD(lParam) - (list ? MAP_X(MARGIN) : 0), HIWORD(lParam) - !!input * MAP_Y(14), 1);
-		MoveWindow(input,
-			0, HIWORD(lParam) - MAP_Y(14), LOWORD(lParam) - (list ? MAP_X(MARGIN): 0), MAP_Y(14), 1);
-		MoveWindow(list, LOWORD(lParam) - MAP_X(MARGIN), 0, MAP_X(MARGIN),HIWORD(lParam), 1);
-		RECT rect;
-		GetClientRect(list, &rect);
-		SendMessage(list, LVM_SETCOLUMNWIDTH, 0, rect.right - 22);
-		SendMessage(list, LVM_SETCOLUMNWIDTH, 1, 22);
-	}	return 1;
+	case WM_SIZE:
+		onSize(window, LOWORD(lParam), HIWORD(lParam));
+		return 1;
 	case WM_COMMAND:
 		if (wParam == MAKEWPARAM(DLG_LOG, EN_VSCROLL))
 			SetWindowLongPtr((HWND)lParam, GWLP_USERDATA, GetTickCount());
@@ -527,7 +586,7 @@ HWND GetChannelChat(const char *name)
 			*data = (chatWindowData){strdup(name), DEST_CHANNEL};
 			channelWindows[i] = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 0, 0,
-			gChatWindow, (HMENU)DEST_CHANNEL, NULL, (void *)data);
+			tabControl, (HMENU)DEST_CHANNEL, NULL, (void *)data);
 			return channelWindows[i];
 		}
 		chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
@@ -544,7 +603,7 @@ HWND GetPrivateChat(User *u)
 		*data = (chatWindowData){u->name, DEST_PRIVATE};
 		u->chatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 400, 400,
-			gChatWindow, (HMENU)DEST_PRIVATE, NULL, (void *)data);
+			tabControl, (HMENU)DEST_PRIVATE, NULL, (void *)data);
 	}
 	return u->chatWindow;
 }
@@ -554,7 +613,7 @@ HWND GetServerChat(void)
 	if (!serverChatWindow) {
 		chatWindowData *data = malloc(sizeof(chatWindowData));
 		*data = (chatWindowData){"TAS Server", DEST_SERVER};
-		serverChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, gChatWindow, (HMENU)0, NULL, (void *)data);
+		serverChatWindow = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, tabControl, (HMENU)0, NULL, (void *)data);
 		ChatWindow_AddTab(serverChatWindow);
 	}
 	return serverChatWindow;
@@ -566,10 +625,12 @@ void SaveLastChatWindows(void)
 	autojoinChannels[0] = 0;
 	size_t len = 0;
 	for (int i=0; i<LENGTH(channelWindows); ++i) {
-		SendDlgItemMessage(channelWindows[i], DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
-		if (GetTabIndex(channelWindows[i]) >= 0) {
-			chatWindowData *data = (void *)GetWindowLongPtr(channelWindows[i], GWLP_USERDATA);
-			len += sprintf(&autojoinChannels[len], "%s%s", len ? ";" : "", data->name);
+		extern int getTabIndex(HWND tabItem);
+		if (getTabIndex(channelWindows[i]) >= 0) {
+			chatWindowData *data = (void *)GetWindowLongPtr(
+					channelWindows[i], GWLP_USERDATA);
+			len += sprintf(&autojoinChannels[len],
+					len ? ";%s" : "%s", data->name);
 		}
 	}
 	free(gSettings.autojoin);
@@ -586,4 +647,15 @@ static void __attribute__((constructor)) init (void)
 	};
 
 	RegisterClass(&windowClass);
+}
+
+void Chat_OnDisconnect(void)
+{
+	SendDlgItemMessage(serverChatWindow, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
+	for (int i=0; i<LENGTH(channelWindows); ++i) {
+		if (!channelWindows[i])
+			continue;
+		SendDlgItemMessage(channelWindows[i], DLG_LIST,
+				LVM_DELETEALLITEMS, 0, 0);
+	}
 }

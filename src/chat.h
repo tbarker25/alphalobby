@@ -35,4 +35,6 @@ HWND GetServerChat(void);
 void ChatWindow_AddUser(HWND window, struct User *u);
 void ChatWindow_RemoveUser(HWND window, struct User *u);
 void SaveLastChatWindows(void);
+void Chat_OnDisconnect(void);
+void ChatWindow_UpdateUser(struct User *u);
 

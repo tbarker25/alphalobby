@@ -112,3 +112,4 @@ void ChangeOption(struct Option *opt);
 void ResetBattleOptions(void);
 void LeftBattle(void);
 void UpdateModOptions(void);
+void SetScriptTags(char *script);

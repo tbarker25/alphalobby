@@ -43,9 +43,8 @@ void PollServer(void)
 		#ifndef NDEBUG
 		printf("> %s\n", s);
 		#endif
-		HWND serverWindow = GetServerChat();
-		if (GetTabIndex(serverWindow) >= 0)
-			Chat_Said(serverWindow, NULL, CHAT_SERVERIN, s);
+		/* HWND serverWindow = GetServerChat(); */
+		/* Chat_Said(serverWindow, NULL, CHAT_SERVERIN, s); */
 		handleCommand(s);
 		
 		s = buffer + i + 1;
@@ -82,9 +81,9 @@ void SendToServer(const char *format, ...)
 	printf("< %s\n", buff);
 	#endif
 
-	HWND serverWindow = GetServerChat();
-	if (GetTabIndex(serverWindow) >= 0)
-		Chat_Said(serverWindow, NULL, CHAT_SERVEROUT, buff);
+	/* HWND serverWindow = GetServerChat(); */
+	/* if (GetTabIndex(serverWindow) >= 0) */
+		/* Chat_Said(serverWindow, NULL, CHAT_SERVEROUT, buff); */
 	buff[len] = '\n';
 
 	if (send(sock, buff, len+1, 0) == SOCKET_ERROR) {
@@ -109,6 +108,7 @@ void Disconnect(void)
 	BattleList_Reset();
 	ResetBattles();
 	ResetUsers();
+	Chat_OnDisconnect();
 }
 
 void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
