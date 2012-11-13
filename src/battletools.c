@@ -26,7 +26,7 @@ Battle *gMyBattle;
 extern uint32_t gLastBattleStatus;
 
 uint32_t gMapHash, gModHash;
-size_t gNbModOptions, gNbMapOptions;
+ssize_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
 
@@ -227,19 +227,9 @@ uint32_t GetNewBattleStatus(void)
 	return MODE_MASK | READY_MASK | teamMask | TO_ALLY_MASK(ally > 0);
 }
 
-
-void ResetBattleOptions(void)
-{
-	memset(&gBattleOptions, 0, sizeof(gBattleOptions));
-	for (int i=0; i<LENGTH(gBattleOptions.positions); ++i)
-		gBattleOptions.positions[i] = INVALID_STARTPOS;
-
-}
-
 void JoinedBattle(Battle *b, uint32_t modHash)
 {
 	gMyBattle = b;
-	ResetBattleOptions();
 	gBattleOptions.modHash = modHash;
 
 	if (!strcmp(b->founder->name, relayHoster)) {
@@ -258,6 +248,34 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 
 	BattleRoom_Show();
 }
+
+void LeftBattle(void)
+{
+	BattleRoom_Hide();
+
+	memset(&gBattleOptions, 0, sizeof(gBattleOptions));
+	for (int i=0; i<LENGTH(gBattleOptions.positions); ++i)
+		gBattleOptions.positions[i] = INVALID_STARTPOS;
+
+	free(currentScript);
+	currentScript = NULL;
+
+	BattleRoom_OnSetModDetails();
+	
+	while (gMyBattle->nbBots)
+		DelBot(gMyBattle->users[gMyBattle->nbParticipants - 1]->bot.name);
+	
+	gMyUser.battleStatus = 0;
+	gLastBattleStatus = 0;
+	battleInfoFinished = 0;
+	
+	gMyBattle = NULL;
+	if (battleToJoin)
+		JoinBattle(battleToJoin, NULL);
+
+	*relayHoster = '\0';
+}
+
 
 void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 {
@@ -390,15 +408,44 @@ static void setScriptTag(const char *key, const char *val)
 
 void SetScriptTags(char *script)
 {
-	if (script) {
-		free(currentScript);
+	if (!currentScript)
 		currentScript = strdup(script);
+	else {
+		size_t currentLen = strlen(currentScript) + 1;
+		size_t extraLen = strlen(script) + 1;
+		currentScript = realloc(currentScript,
+				currentLen + extraLen);
+		currentScript[currentLen - 1] = '\t';
+		memcpy(currentScript + currentLen, script, extraLen);
 	}
 
-	if (!gModOptions || !gMapOptions)
+	if (!gModHash)
 		return;
 
 	char *key, *val;
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
 		setScriptTag(key, val);
 }
+
+void UpdateModOptions(void)
+{
+	BattleRoom_OnSetModDetails();
+
+	if (!currentScript)
+		return;
+
+	char *key, *val;
+	char *script = strdup(currentScript);
+	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
+		setScriptTag(key, val);
+	free(script);
+
+	/* Set default values */
+	for (int i=0; i<gNbModOptions; ++i)
+		if (!gModOptions[i].val)
+			BattleRoom_OnSetOption(&gModOptions[i]);
+	for (int i=0; i<gNbMapOptions; ++i)
+		if (!gMapOptions[i].val)
+			BattleRoom_OnSetOption(&gMapOptions[i]);
+}
+

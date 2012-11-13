@@ -40,7 +40,6 @@ static const struct {
 
 static void createModFile(const char *modName);
 static void createMapFile(const char *mapName);
-static void setModInfo(void);
 
 //Shared between threads:
 static uint8_t taskReload, /* taskSetMinimap, */ /* taskSetInfo, */ taskSetBattleStatus;
@@ -133,11 +132,6 @@ uint32_t GetSyncStatus(void)
 			&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
 			&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash))
 		? SYNCED : UNSYNCED;
-}
-
-static void setModInfo(void)
-{
-	ExecuteInMainThreadAsync(BattleRoom_OnSetModDetails);
 }
 
 void Sync_Init(void)
@@ -236,7 +230,6 @@ static OptionList loadOptions(gzFile *fd)
 		options[i].name += (size_t)options;
 		options[i].desc += (size_t)options;
 		options[i].def += (size_t)options;
-		options[i].val = strdup(options[i].def);
 		if (options[i].section)
 			options[i].section = &options[*(size_t *)&options[i].section - 1];
 		
@@ -300,7 +293,6 @@ static void createMapFile(const char *mapName)
 	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 
 	ExecuteInMainThreadParam(ChangedMap, mapName);
-	
 }
 
 static void createModFile(const char *modName)
@@ -381,8 +373,15 @@ static void createModFile(const char *modName)
 
 void ChangedMod(const char *modName)
 {
+	assert(GetCurrentThreadId() == GetWindowThreadProcessId(gMainWindow, NULL));
 	if (!stricmp(currentMod, modName))
 		return;
+
+	for (int i=0; i<gNbModOptions; ++i)
+		free(gModOptions[i].val);
+	free(gModOptions);
+	gModOptions = NULL;
+	gNbModOptions = 0;
 
 	char filePath[MAX_PATH];
 	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
@@ -401,14 +400,13 @@ void ChangedMod(const char *modName)
 		currentMod[0] = 0;
 		free(InterlockedExchangePointer(&modToSave, strdup(modName)));
 		SetEvent(event);
-		setModInfo();
+		UpdateModOptions();
 		return;
 	}
 	strcpy(currentMod, modName);
 
 	gzread(fd, &gModHash, sizeof(gModHash));
 	OptionList modOptionList = loadOptions(fd);
-	free(gModOptions);
 	gModOptions = modOptionList.xs;
 	gNbModOptions = modOptionList.len;
 	
@@ -426,16 +424,24 @@ void ChangedMod(const char *modName)
 	
 	gzclose(fd);
 	
-	ExecuteInMainThreadAsync(BattleRoom_OnChangeMod);
-	setModInfo();
+	BattleRoom_OnChangeMod();
+	UpdateModOptions();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
 }
 
 void ChangedMap(const char *mapName)
 {
+	assert(GetCurrentThreadId() == GetWindowThreadProcessId(gMainWindow, NULL));
+
 	if (!stricmp(currentMap, mapName))
 		return;
+
+	for (int i=0; i<gNbMapOptions; ++i)
+		free(gMapOptions[i].val);
+	free(gMapOptions);
+	gMapOptions = NULL;
+	gNbMapOptions = 0;
 
 	char filePath[MAX_PATH];
 	sprintf(filePath, "%lscache\\alphalobby\\%s.MapData", gDataDir, mapName);
@@ -462,7 +468,7 @@ void ChangedMap(const char *mapName)
 		BattleRoom_ChangeMinimapBitmap(NULL, 0, 0, NULL, 0, 0, NULL);
 		free(InterlockedExchangePointer(&mapToSave, strdup(mapName)));
 		SetEvent(event);
-		setModInfo();
+		UpdateModOptions();
 		return;
 	}
 
@@ -474,7 +480,6 @@ void ChangedMap(const char *mapName)
 	gMapInfo.author = _gLargeMapInfo.author;
 
 	OptionList optionList = loadOptions(fd);
-	free(gMapOptions);
 	gMapOptions = optionList.xs;
 	gNbMapOptions = optionList.len;
 
@@ -508,7 +513,7 @@ void ChangedMap(const char *mapName)
 	gzclose(fd);
 
 	// taskSetMinimap = 1;
-	setModInfo();
+	UpdateModOptions();
 	taskSetBattleStatus = 1;
 	SetEvent(event);
 }

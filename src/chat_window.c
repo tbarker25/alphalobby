@@ -127,6 +127,4 @@ static void __attribute__((constructor)) init (void)
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	}));
-	
-	// CreateWindow(WC_CHATWINDOW, L"Chat Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 0, 0, 800, 800, NULL, NULL, NULL, NULL);
 }

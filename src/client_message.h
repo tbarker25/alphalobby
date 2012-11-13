@@ -32,4 +32,3 @@ void ChangeMap(const char *mapName);
 
 extern char relayCmd[1024], relayHoster[1024], relayManager[1024], relayPassword[1024];
 extern int lastStatusUpdate, gLastAutoMessage;
-void LeftBattle(void);
