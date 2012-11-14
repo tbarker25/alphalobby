@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <malloc.h>
 #include <inttypes.h>
 #include <unistd.h>
@@ -39,7 +40,13 @@ Battle *NewBattle(void)
 void DelBattle(Battle *b)
 {
 	free(b);
-	b = NULL;
+	for (int i=0; i<nbBattles; ++i) {
+		if (battles[i] == b) {
+			battles[i] = NULL;
+			return;
+		}
+	}
+	assert(0);
 }
 
 void ResetBattles(void)

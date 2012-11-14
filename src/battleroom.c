@@ -426,7 +426,7 @@ sort:;
 		if ((u->battleStatus & MODE_MASK) && teamSizes[FROM_TEAM_MASK(u->battleStatus)] > 1)
 			s += swprintf(s, L"%d: ", FROM_TEAM_MASK(u->battleStatus)+1);
 		s += swprintf(s, L"%hs", u->name);
-		if (strcmp(GetAliasOf(u->name), u->alias))
+		if (strcmp(UNTAGGED_NAME(u->name), u->alias))
 			s += swprintf(s, L" (%hs)", u->alias);
 
 		item.mask = LVIF_TEXT;
@@ -729,7 +729,7 @@ static void getUserTooltip(User *u, wchar_t *buff)
 	wchar_t *s = buff;
 
 	s += swprintf(s, L"%hs", u->name);
-	if (strcmp(GetAliasOf(u->name), u->alias))
+	if (strcmp(UNTAGGED_NAME(u->name), u->alias))
 		s += swprintf(s, L" (%hs)", u->alias);
 
 	if (!(u->battleStatus & AI_MASK))

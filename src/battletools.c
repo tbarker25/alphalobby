@@ -406,11 +406,19 @@ static void setScriptTag(const char *key, const char *val)
 	}
 }
 
+static void setScriptTags(char *script)
+{
+	char *key, *val;
+	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
+		setScriptTag(key, val);
+}
+
 void SetScriptTags(char *script)
 {
-	if (!currentScript)
+	if (!currentScript) {
 		currentScript = strdup(script);
-	else {
+
+	} else {
 		size_t currentLen = strlen(currentScript) + 1;
 		size_t extraLen = strlen(script) + 1;
 		currentScript = realloc(currentScript,
@@ -422,9 +430,7 @@ void SetScriptTags(char *script)
 	if (!gModHash)
 		return;
 
-	char *key, *val;
-	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
-		setScriptTag(key, val);
+	setScriptTags(script);
 }
 
 void UpdateModOptions(void)
@@ -434,16 +440,15 @@ void UpdateModOptions(void)
 	if (!currentScript)
 		return;
 
-	char *key, *val;
 	char *script = strdup(currentScript);
-	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
-		setScriptTag(key, val);
+	setScriptTags(script);
 	free(script);
 
 	/* Set default values */
 	for (int i=0; i<gNbModOptions; ++i)
 		if (!gModOptions[i].val)
 			BattleRoom_OnSetOption(&gModOptions[i]);
+
 	for (int i=0; i<gNbMapOptions; ++i)
 		if (!gMapOptions[i].val)
 			BattleRoom_OnSetOption(&gMapOptions[i]);

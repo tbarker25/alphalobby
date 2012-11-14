@@ -1,91 +1,130 @@
+#include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <stdio.h>
 
 #include <windows.h>
 #include <Commctrl.h>
 
 #include "client_message.h"
 #include "common.h"
+#include "imagelist.h"
 #include "layoutmetrics.h"
 #include "listview.h"
 #include "resource.h"
+#include "user.h"
+#include "userlist.h"
+#include "chat_window.h"
+#include "chat.h"
 
-HWND /* userList,  */chanList;
+static HWND userList;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static BOOL CALLBACK listDialogProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static void activate(int itemIndex)
 {
-	int item;
+	LVITEM itemInfo;
+	itemInfo.mask = LVIF_PARAM;
+	itemInfo.iItem = itemIndex;
+	itemInfo.iSubItem = 2;
+	ListView_GetItem(userList, &itemInfo);
+	ChatWindow_SetActiveTab(GetPrivateChat((User *)itemInfo.lParam));
+}
+
+static void onInit(HWND window)
+{
+	RECT rect;
+	LVCOLUMN columnInfo;
+
+	userList = GetDlgItem(window, IDC_USERLIST_LIST);
+
+	SetWindowLongPtr(userList, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
+			| LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING |
+			LVS_NOCOLUMNHEADER);
+
+	ListView_SetExtendedListViewStyle(userList, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+	EnableIcons(userList);
+
+	GetClientRect(userList, &rect);
+	columnInfo.mask = LVCF_SUBITEM | LVCF_WIDTH;
+
+	columnInfo.cx = rect.right - ICON_SIZE - scrollWidth;
+	columnInfo.iSubItem = 0;
+	ListView_InsertColumn(userList, 0, (LPARAM)&columnInfo);
+
+	columnInfo.cx = ICON_SIZE;
+	columnInfo.iSubItem = 1;
+	ListView_InsertColumn(userList, 1, (LPARAM)&columnInfo);
+
+	for (const User *u; (u = GetNextUser());) {
+		if (!*u->name)
+			continue;
+		LVITEM item = {};
+		item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
+		item.iItem = INT_MAX;
+		item.iSubItem = 0;
+		item.lParam = (LPARAM)u;
+
+		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
+		swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
+				? L"%hs (%hs)" : L"%hs",
+				u->name, u->alias);
+		item.pszText = name;
+
+		item.iImage = u->clientStatus & CS_INGAME_MASK ? ICONS_INGAME
+			: u->battle ? INGAME_MASK
+			: -1;
+
+		int imageIndex = USER_MASK;
+		if (u->clientStatus & CS_AWAY_MASK)
+		imageIndex |= AWAY_MASK;
+		if (u->ignore)
+		imageIndex |= IGNORE_MASK;
+		item.state = INDEXTOOVERLAYMASK(imageIndex);
+		item.stateMask = LVIS_OVERLAYMASK;
+
+		item.iItem = ListView_InsertItem(userList, &item);
+
+		item.mask = LVIF_IMAGE;
+		item.iImage = ICONS_FIRST_FLAG + u->country;
+		item.iSubItem = 1;
+		ListView_SetItem(userList, &item);
+	}
+}
+
+static BOOL CALLBACK userListProc(HWND window, UINT msg, WPARAM wParam,
+		LPARAM lParam)
+{
 	switch (msg) {
-	case WM_INITDIALOG: {
-		HWND list = GetDlgItem(window, IDC_USERLIST_LIST);
-		RECT rect;
-		GetClientRect(list, &rect);
-		const wchar_t *columnNames[] = {L"name", L"users", L"description"};
-		for (int i=0; i < LENGTH(columnNames); ++i) {
-			SendMessage(list, LVM_INSERTCOLUMN, i, (LPARAM)&(LVCOLUMN){
-				.mask = LVCF_TEXT | LVCF_SUBITEM,
-				// .cx = columnWidth + (i == 0) * (rect.right - scrollWidth) % 3,
-				.pszText = (wchar_t *)columnNames[i],
-				.iSubItem = i,
-			});
-		}
-		ListView_SetColumnWidth(list, 0, MAP_X(55));
-		ListView_SetColumnWidth(list, 1, LVSCW_AUTOSIZE_USEHEADER);
-		ListView_SetColumnWidth(list, 2, LVSCW_AUTOSIZE_USEHEADER);
-		
-		ListView_SetExtendedListViewStyleEx(list, LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
-	} break;
-	case WM_COMMAND: {
+	case WM_INITDIALOG:
+		onInit(window);
+		return 0;
+	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			item = SendDlgItemMessage(window, IDC_USERLIST_LIST, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
-			goto activate;
+			activate(ListView_GetNextItem(userList, -1, LVNI_SELECTED));
+			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
-			break;
+			return 0;
 		}
-	} break;
-	case WM_NOTIFY: {
+		return 0;
+	case WM_NOTIFY:
 		if (((LPNMHDR)lParam)->code == LVN_ITEMACTIVATE) {
-			item = ((LPNMITEMACTIVATE)lParam)->iItem;
-			goto activate;
+			activate(((LPNMITEMACTIVATE)lParam)->iItem);
+			DestroyWindow(window);
 		}
-	} break;
-	case WM_DESTROY: {
-		chanList = NULL;
-	} break;
+		return 0;
+	case WM_DESTROY:
+		userList = NULL;
+		return 0;
+	default:
+		return 0;
 	}
-	return 0;
-	
-	activate:;
-	wchar_t name[MAX_NAME_LENGTH_NUL];
-	SendDlgItemMessage(window, IDC_USERLIST_LIST, LVM_GETITEMTEXT, item,
-		(LPARAM)&(LVITEM){.pszText = name, .cchTextMax = LENGTH(name)});
-	JoinChannel(utf16to8(name), 1);
-	DestroyWindow(window);
-	return 0;
 }
 
-void ChannelList_AddChannel(const char *channame, const char *usercount, const char *description)
+void UserList_Show(void)
 {
-	int i = SendDlgItemMessage(chanList, IDC_USERLIST_LIST, LVM_INSERTITEM, 0, (LPARAM)&(LVITEM){
-			.mask = LVIF_TEXT, .pszText = utf8to16(channame),
-		}
-	);
-	SendDlgItemMessage(chanList, IDC_USERLIST_LIST, LVM_SETITEMTEXT, i, (LPARAM)&(LVITEM){
-			.iSubItem = 1, .pszText = utf8to16(usercount),
-		}
-	);
-	SendDlgItemMessage(chanList, IDC_USERLIST_LIST, LVM_SETITEMTEXT, i, (LPARAM)&(LVITEM){
-			.iSubItem = 2, .pszText = utf8to16(description),
-		}
-	);
-}
-
-void ChannelList_Show(void)
-{
-	DestroyWindow(chanList);
-	chanList = CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, listDialogProc);
-	RequestChannels();
+	DestroyWindow(userList);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, userListProc);
 }
