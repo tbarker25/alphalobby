@@ -31,6 +31,7 @@
 #define UNRELATED_SPACING_X MAP_X(7)
 #define UNRELATED_SPACING_Y MAP_Y(7)
 
+#define ICON_SIZE 22
 
 typedef void * HFONT;
 extern HFONT gFont;

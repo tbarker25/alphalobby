@@ -10,8 +10,8 @@ else
 	CFLAGS+= -g3 -O0  -Wall -Werror -Wno-unknown-pragmas
 endif
 
-CFLAGS+= -Iinclude -I$(BUILD_DIR) -DUNICODE -DNO_STRICT
-CFLAGS+= -D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN
+WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DNO_STRICT
+CFLAGS+= -Iinclude -I$(BUILD_DIR) $(WIN_CFLAGS)
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:
@@ -21,7 +21,7 @@ ICONS+=$(addsuffix .png, $(addprefix icons/, user_unsync user_away user_unsync_a
 ICONS+=$(wildcard icons/flags/*)
 ICONS+= null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null: null:
 
-FILES1:=alphalobby.o battle.o battlelist.o battleroom.o battletools.o chat.o chat_window.o client.o client_message.o common.o countrycodes.o dialogboxes.o downloader.o downloadtab.o gzip.o imagelist.o layoutmetrics.o md5.o messages.o res.o settings.o spring.o sync.o user.o userlist.o usermenu.o wincommon.o 
+FILES1:=alphalobby.o battle.o battlelist.o battleroom.o battletools.o chat.o chat_window.o client.o client_message.o common.o countrycodes.o dialogboxes.o downloader.o downloadtab.o gzip.o imagelist.o layoutmetrics.o md5.o messages.o res.o settings.o spring.o sync.o user.o userlist.o usermenu.o wincommon.o channellist.o
 
 FILES=$(addprefix $(BUILD_DIR)/, $(FILES1))
 
@@ -41,7 +41,7 @@ $(BUILD_DIR)/rgba2c.exe : src/rgba2c.c
 	$(CC) -std=c99 $< -o $@
 
 $(BUILD_DIR)/res.o: src/res.rc
-	windres $< $@
+	windres $< $@ $(WIN_CFLAGS)
 
 $(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h src/user.h src/battle.h src/data.h
 	$(CC) -c $< -o $@ $(CFLAGS)

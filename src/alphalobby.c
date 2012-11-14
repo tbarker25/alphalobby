@@ -10,6 +10,7 @@
 #include "alphalobby.h"
 #include "battlelist.h"
 #include "battleroom.h"
+#include "channellist.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client.h"
@@ -22,6 +23,7 @@
 #include "layoutmetrics.h"
 #include "settings.h"
 #include "sync.h"
+#include "userlist.h"
 #include "wincommon.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
@@ -59,8 +61,12 @@ enum {
 	
 	ID_LOGINBOX,
 	ID_SERVERLOG,
+	ID_CHANNEL,
+	ID_PRIVATE,
 	ID_LOBBY_PREFERENCES,
 	ID_SPRING_SETTINGS,
+	ID_ABOUT,
+	ID_RESYNC,
 };
 	
 
@@ -159,176 +165,192 @@ static const TBBUTTON tbButtons[] = {
 	{ ICONS_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
 };
 
+static void onDestroy()
+{
+	char windowPlacementText[128];
+	WINDOWPLACEMENT windowPlacement;
+	RECT *r;
+
+	Disconnect();
+	SaveLastChatWindows();
+	windowPlacement.length = sizeof(windowPlacement);
+	GetWindowPlacement(gMainWindow, &windowPlacement);
+	r = &windowPlacement.rcNormalPosition;
+	r->bottom -= r->top;
+	r->right -= r->left;
+	if (windowPlacement.showCmd == SW_MAXIMIZE) {
+		r->left = CW_USEDEFAULT;
+		r->top = SW_SHOWMAXIMIZED;
+	}
+	sprintf(windowPlacementText, "%ld,%ld,%ld,%ld", r->left, r->top, r->right, r->bottom);
+	SaveSetting("window_placement", windowPlacementText);
+	UnitSync_Cleanup();
+	SaveAliases();
+	PostQuitMessage(0);
+}
+
+static void onCreate(HWND window)
+{
+	gMainWindow = window;
+	CreateDlgItems(window, dialogItems, DLG_LAST+1);
+
+	HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
+	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
+	SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
+
+	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
+	SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
+	SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
+
+	MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
+}
+#include "userlist.h"
+static LRESULT onCommand(int dialogID)
+{
+	switch (dialogID) {
+	case ID_CONNECT:
+		if (GetConnectionState())
+			Disconnect();
+		else if (!Autologin())
+			CreateLoginBox();
+		return 0;
+	case ID_LOGINBOX:
+		CreateLoginBox();
+		return 0;
+	case ID_BATTLEROOM:
+		MainWindow_SetActiveTab(gBattleRoom);
+		return 0;
+	case ID_BATTLELIST:
+		MainWindow_SetActiveTab(gBattleList);
+		return 0;
+	case ID_DOWNLOADS:
+		MainWindow_SetActiveTab(gDownloadTabWindow);
+		return 0;
+	/* case ID_SINGLEPLAYER: */
+		/* JoinBattle(-1, NULL); */
+		/* return 0; */
+	case ID_REPLAY:
+		return 0;
+	case ID_HOSTBATTLE:
+		CreateHostBattleDlg();
+		return 0;
+	case ID_CHAT:
+		MainWindow_SetActiveTab(gChatWindow);
+		return 0;
+	case ID_PRIVATE:
+		UserList_Show();
+		return 0;
+	case ID_CHANNEL:
+		ChannelList_Show();
+		return 0;
+	case ID_SERVERLOG:
+		ChatWindow_SetActiveTab(GetServerChat());
+		return 0;
+	case ID_SPRING_SETTINGS:
+		CreateProcess(L"springsettings.exe", L"springsettings.exe",
+				NULL, NULL, 0, 0, NULL,NULL,
+				&(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
+				&(PROCESS_INFORMATION){}
+			     );
+		return 0;
+	case ID_LOBBY_PREFERENCES:
+		CreatePreferencesDlg();
+		return 0;
+	case ID_ABOUT:
+		CreateAboutDlg();
+		return 0;
+	case ID_RESYNC:
+		ReloadMapsAndMod();
+		return 0;
+		// case IDM_SPRING_RTS:
+		// ShellExecute(NULL, NULL, L"http://springrts.com/", NULL, NULL, SW_SHOWNORMAL);
+		// return 0;
+		// case IDM_SPRINGLOBBY:
+		// ShellExecute(NULL, NULL, L"http://springlobby.info/landing/index.php", NULL, NULL, SW_SHOWNORMAL);
+		// return 0;
+		// case IDM_TASCLIENT:
+		// ShellExecute(NULL, NULL, L"http://tasclient.licho.eu/TASClientLatest.7z", NULL, NULL, SW_SHOWNORMAL);
+		// return 0;
+		// case IDM_ZERO_K:
+		// ShellExecute(NULL, NULL, L"http://zero-k.info/", NULL, NULL, SW_SHOWNORMAL);
+		// return 0;
+		// case IDM_UPDATE:
+		// ShellExecute(NULL, NULL, L"http://springfiles.com/spring/lobby-clients/alphalobby", NULL, NULL, SW_SHOWNORMAL);
+		// return 0;
+		// case IDM_RENAME: {
+		// char name[MAX_NAME_LENGTH_NUL];
+		// *name = '\0';
+		// if (!GetTextDlg("Change username", name, MAX_NAME_LENGTH_NUL))
+		// RenameAccount(name);
+		// } return 0;
+		// case IDM_CHANGE_PASSWORD:
+		// CreateChangePasswordDlg();
+		// return 0;
+	}
+	return 1;
+}
+
 static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
-	case WM_CREATE: {
-		gMainWindow = window;
-		CreateDlgItems(window, dialogItems, DLG_LAST+1);
-		
-		HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
-		SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-		SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
-		
-		SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
-		SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
-		SendMessage(toolbar, TB_AUTOSIZE, 0, 0); 
-		
-		MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
-	}	break;
-	case WM_DESTROY: {
-		Disconnect();
-		SaveLastChatWindows();
-		WINDOWPLACEMENT windowPlacement;
-		windowPlacement.length = sizeof(windowPlacement);
-		GetWindowPlacement(gMainWindow, &windowPlacement);
-		RECT *r = &windowPlacement.rcNormalPosition;
-		r->bottom -= r->top;
-		r->right -= r->left;
-		if (windowPlacement.showCmd == SW_MAXIMIZE) {
-			r->left = CW_USEDEFAULT;
-			r->top = SW_SHOWMAXIMIZED;
-		}
-		char windowPlacementText[128];
-		sprintf(windowPlacementText, "%ld,%ld,%ld,%ld", r->left, r->top, r->right, r->bottom);
-		SaveSetting("window_placement", windowPlacementText);
-		UnitSync_Cleanup();
-		SaveAliases();
-		PostQuitMessage(0);
-	}	return 0;
-	static int dontMoveMinimap;
-	case WM_SIZE: {
-		
+	case WM_CREATE:
+		onCreate(window);
+		return 0;
+
+	case WM_DESTROY:
+		onDestroy();
+		return 0;
+
+	case WM_SIZE:
 		MoveWindow(GetDlgItem(window, DLG_TOOLBAR), 0, 0, LOWORD(lParam), 0, 0);
 		resizeCurrentTab(LOWORD(lParam), HIWORD(lParam));
+		return 0;
 
-		if (dontMoveMinimap)
-			return 0;
-	}	//FALLTHROUGH:
-	case WM_EXITSIZEMOVE:
-		dontMoveMinimap = 0;
-		SendMessage(gBattleRoom, WM_EXITSIZEMOVE, 0, 0);
-		return 0;
-	case WM_ENTERSIZEMOVE:
-		dontMoveMinimap = 1;
-		return 0;
 	case WM_NOTIFY: {
-		NMHDR *info = (void *)lParam;
-		if (info->idFrom == DLG_TOOLBAR && info->code == TBN_DROPDOWN) {
-			NMTOOLBAR *info = (void *)lParam;
-			HMENU menu = CreatePopupMenu();
-			
-			switch (info->iItem) {
-			case ID_CONNECT:
-				AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
-				SetMenuDefaultItem(menu, ID_CONNECT, 0);
-				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
-				AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
-				// #ifndef NDEBUG
-				AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
-				// #endif
-				break;
-			case ID_OPTIONS:
-				AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby options");
-				AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring options");
-				break;
-			case ID_CHAT:
-				AppendMenu(menu, 0, ID_CHAT, L"Open chat tab");
-				SetMenuDefaultItem(menu, ID_CHAT, 0);
-				AppendMenu(menu, MF_SEPARATOR, 0, NULL);
-				AppendMenu(menu, 0, ID_SERVERLOG, L"Open channel...");
-				AppendMenu(menu, 0, ID_SERVERLOG, L"Open private chat with...");
-				AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
-				// #ifndef NDEBUG
-				break;
-				// #endif
-			default:
-				return 0;
-			}
-			
-			ClientToScreen(window, (POINT *)&info->rcButton);
-			TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, info->rcButton.left, info->rcButton.top + info->rcButton.bottom, window, NULL);
-			DestroyMenu(menu);
-			return TBDDRET_DEFAULT;
-		}
-	}	break;
-	case WM_COMMAND:
-		switch (wParam) {
+		NMTOOLBAR *info = (void *)lParam;
+		if (info->hdr.idFrom != DLG_TOOLBAR || info->hdr.code != TBN_DROPDOWN)
+			break;
+
+		HMENU menu = CreatePopupMenu();
+
+		switch (info->iItem) {
 		case ID_CONNECT:
-			if (GetConnectionState())
-				Disconnect();
-			else if (!Autologin())
-				CreateLoginBox();
-			return 0;
-		case ID_LOGINBOX:
-			CreateLoginBox();
-			return 0;
-		case ID_BATTLEROOM:
-			MainWindow_SetActiveTab(gBattleRoom);
-			return 0;
-		case ID_BATTLELIST:
-			MainWindow_SetActiveTab(gBattleList);
-			return 0;
-		case ID_DOWNLOADS:
-			MainWindow_SetActiveTab(gDownloadTabWindow);
-			return 0;
-		case ID_SINGLEPLAYER:
-			// JoinBattle(-1, NULL);
-			return 0;
-		case ID_REPLAY:
-			return 0;
-		case ID_HOSTBATTLE:
-			CreateHostBattleDlg();
-			return 0;
+			AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
+			SetMenuDefaultItem(menu, ID_CONNECT, 0);
+			AppendMenu(menu, MF_SEPARATOR, 0, NULL);
+			AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
+			// #ifndef NDEBUG
+			AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
+			// #endif
+			break;
 		case ID_OPTIONS:
-			return 0;
+			AppendMenu(menu, 0, ID_LOBBY_PREFERENCES, L"Lobby options");
+			AppendMenu(menu, 0, ID_SPRING_SETTINGS, L"Spring options");
+			AppendMenu(menu, MF_SEPARATOR, 0, NULL);
+			AppendMenu(menu, 0, ID_RESYNC, L"Reload maps and mod");
+			AppendMenu(menu, 0, ID_ABOUT, L"About AlphaLobby");
+			break;
 		case ID_CHAT:
-			MainWindow_SetActiveTab(gChatWindow);
+			AppendMenu(menu, 0, ID_CHAT, L"Open chat tab");
+			SetMenuDefaultItem(menu, ID_CHAT, 0);
+			AppendMenu(menu, MF_SEPARATOR, 0, NULL);
+			AppendMenu(menu, 0, ID_CHANNEL, L"Open channel...");
+			AppendMenu(menu, 0, ID_PRIVATE, L"Open private chat with...");
+			AppendMenu(menu, 0, ID_SERVERLOG, L"Open server log");
+			// #ifndef NDEBUG
+			break;
+			// #endif
+		default:
 			return 0;
-		case ID_SERVERLOG:
-			ChatWindow_SetActiveTab(GetServerChat());
-			return 0;
-		case ID_SPRING_SETTINGS:
-			CreateProcess(L"springsettings.exe", L"springsettings.exe", NULL, NULL, 0, 0, NULL,NULL,
-				&(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
-				&(PROCESS_INFORMATION){}
-			);
-			return 0;
-		case ID_LOBBY_PREFERENCES:
-			CreatePreferencesDlg();
-			return 0;
-		// case IDM_ABOUT:
-			// CreateAboutDlg();
-			// return 0;
-		// case IDM_SPRING_RTS:
-			// ShellExecute(NULL, NULL, L"http://springrts.com/", NULL, NULL, SW_SHOWNORMAL);
-			// return 0;
-		// case IDM_SPRINGLOBBY:
-			// ShellExecute(NULL, NULL, L"http://springlobby.info/landing/index.php", NULL, NULL, SW_SHOWNORMAL);
-			// return 0;
-		// case IDM_TASCLIENT:
-			// ShellExecute(NULL, NULL, L"http://tasclient.licho.eu/TASClientLatest.7z", NULL, NULL, SW_SHOWNORMAL);
-			// return 0;
-		// case IDM_ZERO_K:
-			// ShellExecute(NULL, NULL, L"http://zero-k.info/", NULL, NULL, SW_SHOWNORMAL);
-			// return 0;
-		// case IDM_UPDATE:
-			// ShellExecute(NULL, NULL, L"http://springfiles.com/spring/lobby-clients/alphalobby", NULL, NULL, SW_SHOWNORMAL);
-			// return 0;
-		// case IDM_RENAME: {
-			// char name[MAX_NAME_LENGTH_NUL];
-			// *name = '\0';
-			// if (!GetTextDlg("Change username", name, MAX_NAME_LENGTH_NUL))
-				// RenameAccount(name);
-			// } return 0;
-		// case IDM_CHANGE_PASSWORD:
-			// CreateChangePasswordDlg();
-			// return 0;
-		// case IDM_RELOAD_MAPS_MODS:
-			// ReloadMapsAndMod();
-			// return 0;
 		}
-		break;
+
+		ClientToScreen(window, (POINT *)&info->rcButton);
+		TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, info->rcButton.left, info->rcButton.top + info->rcButton.bottom, window, NULL);
+		DestroyMenu(menu);
+		return TBDDRET_DEFAULT;
+	}
+	case WM_COMMAND:
+		return onCommand(wParam);
 	case WM_MAKE_MESSAGEBOX:
 		MessageBoxA(window, (char *)wParam, (char *)lParam, 0);
 		free((void *)wParam);

@@ -100,7 +100,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	case ALIAS: {
 		char title[128], buff[MAX_NAME_LENGTH_NUL];
 		sprintf(title, "Set alias for %s", s->name);
-		if (!GetTextDlg(title, strcpy(buff, GetAliasOf(s->name)), sizeof(buff))) {
+		if (!GetTextDlg(title, strcpy(buff, UNTAGGED_NAME(s->name)), sizeof(buff))) {
 			strcpy(s->user.alias, buff);
 			/* UpdateUser(&s->user); */
 		}

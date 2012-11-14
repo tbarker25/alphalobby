@@ -10,6 +10,7 @@
 #include "battlelist.h"
 #include "battleroom.h"
 #include "battletools.h"
+#include "channellist.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client.h"
@@ -173,7 +174,7 @@ void handleCommand(char *s)
 static void accepted(void)
 {
 	copyNextWord(gMyUser.name);
-	strcpy(gMyUser.alias, GetAliasOf(gMyUser.name));
+	strcpy(gMyUser.alias, UNTAGGED_NAME(gMyUser.name));
 }
 
 

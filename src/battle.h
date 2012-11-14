@@ -46,5 +46,3 @@ void ResetBattles(void);
 
 #define GetNumPlayers(_b)\
 	((_b)->nbParticipants - (_b)->nbSpectators - (_b)->nbBots)
-
-#define GetAliasOf(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))

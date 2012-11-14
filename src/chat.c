@@ -29,8 +29,6 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-#define ICON_SIZE 22
-
 static HWND channelWindows[128];
 static HWND serverChatWindow;
 extern HWND tabControl;
@@ -82,7 +80,7 @@ void ChatWindow_RemoveUser(HWND window, User *u)
 static void updateUser(HWND window, User *u, int index)
 {
 	char *name;
-	if (!strcmp(GetAliasOf(u->name), u->alias))
+	if (!strcmp(UNTAGGED_NAME(u->name), u->alias))
 		name = u->name;
 	else {
 		name = alloca(MAX_NAME_LENGTH * 2 + sizeof(" ()"));
@@ -431,7 +429,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 			} else if (clicked == 3) {
 				char title[128], buff[MAX_NAME_LENGTH_NUL];
 				sprintf(title, "Set alias for %s", u->name);
-				if (!GetTextDlg(title, strcpy(buff, GetAliasOf(u->name)), MAX_NAME_LENGTH_NUL)) {
+				if (!GetTextDlg(title, strcpy(buff, UNTAGGED_NAME(u->name)), MAX_NAME_LENGTH_NUL)) {
 					strcpy(u->alias, buff);
 				}
 			}
@@ -562,7 +560,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 		putText(window, username, color, !(type & CHAT_SYSTEM) * CFE_BOLD);
 		const User *u = FindUser(username);
 		const char *alias = u ? u->alias : "logged out";
-		if (strcmp(alias, GetAliasOf(username))) {
+		if (strcmp(alias, UNTAGGED_NAME(username))) {
 			sprintf(buff, " (%s)", alias);
 			putText(window, buff, ALIAS(color), 0);
 		}

@@ -72,6 +72,8 @@ enum USER_SYNC_STATUS {
 	USER_SYNC_UNSYNCED = 2,
 };
 
+#define UNTAGGED_NAME(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))
+
 typedef struct UserBot {
 	char name[MAX_NAME_LENGTH_NUL];
 	uint32_t battleStatus;
