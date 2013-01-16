@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef _WINDOWS_H
+#ifdef _WINDOWS_
 enum {
 	WM_POLL_SERVER = WM_APP + 0x0100,
 	WM_DESTROY_WINDOW,

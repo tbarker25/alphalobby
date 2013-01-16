@@ -1,4 +1,5 @@
 #pragma once
+#if 0
 #define LVM_MAPINDEXTOID     (LVM_FIRST + 180)
 
 typedef struct LVGROUP {
@@ -80,3 +81,4 @@ typedef struct tagLVSETINFOTIP
 
 
 
+#endif

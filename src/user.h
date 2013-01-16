@@ -1,6 +1,6 @@
 #pragma once
 
-typedef void * HWND;
+typedef struct HWND__* HWND;
 extern char battleInfoFinished;
 
 enum modeType {

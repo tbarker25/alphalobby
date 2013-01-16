@@ -35,7 +35,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	
 	for (int i=0; i<16; ++i) {
 		wchar_t buff[3];
-		swprintf(buff, L"%d", i+1);
+		_swprintf(buff, L"%d", i+1);
 		AppendMenu(menus[TEAM_MENU], MF_CHECKED * (i == FROM_TEAM_MASK(battleStatus)), FLAG_TEAM | i, buff);
 		AppendMenu(menus[ALLY_MENU], MF_CHECKED * (i == FROM_ALLY_MASK(battleStatus)), FLAG_ALLY | i, buff);
 	}

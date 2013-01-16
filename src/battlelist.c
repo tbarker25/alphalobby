@@ -4,17 +4,18 @@
 
 #include <windows.h>
 #include <Commctrl.h>
-#include "wincommon.h"
 
 #include "battlelist.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
+#include "common.h"
 #include "data.h"
 #include "downloader.h"
 #include "imagelist.h"
 #include "listview.h"
 #include "sync.h"
+#include "wincommon.h"
 
 HWND gBattleList;
 
@@ -166,7 +167,7 @@ static void onItemRightClick(POINT pt)
 static void onGetInfoTip(NMLVGETINFOTIP *info)
 {
 	Battle *b = getBattleFromIndex(info->iItem);
-	swprintf(info->pszText,
+	_swprintf(info->pszText,
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->modName, b->mapName,
 			utf8to16(b->title), GetNumPlayers(b), b->maxPlayers,
@@ -279,7 +280,7 @@ void BattleList_UpdateBattle(Battle *b)
 	ADD_STRING(utf8to16(b->modName));
 	ADD_STRING(utf8to16(b->mapName));
 	wchar_t buff[16];
-	swprintf(buff, L"%d / %d +%d",
+	_swprintf(buff, L"%d / %d +%d",
 			GetNumPlayers(b), b->maxPlayers, b->nbSpectators);
 	ADD_STRING(buff);
 

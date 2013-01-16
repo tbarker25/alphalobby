@@ -139,7 +139,7 @@ void Sync_Init(void)
 	CreateThread(NULL, 0, syncThread, NULL, 0, NULL);
 }
 
-static void initOptions(size_t nbOptions, gzFile *fd)
+static void initOptions(size_t nbOptions, gzFile fd)
 {
 	assert(nbOptions < 256);
 	Option *options = calloc(10000, 1);
@@ -209,7 +209,7 @@ typedef struct OptionList {
 	size_t len;
 }OptionList;
 
-static OptionList loadOptions(gzFile *fd)
+static OptionList loadOptions(gzFile fd)
 {
 	size_t optionsSize;
 	size_t nbOptions;
