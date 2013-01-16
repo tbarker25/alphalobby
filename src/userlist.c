@@ -6,14 +6,12 @@
 #include <windows.h>
 #include <Commctrl.h>
 
-#include "client_message.h"
 #include "common.h"
 #include "imagelist.h"
 #include "layoutmetrics.h"
 #include "listview.h"
 #include "resource.h"
 #include "user.h"
-#include "userlist.h"
 #include "chat_window.h"
 #include "chat.h"
 
@@ -36,6 +34,7 @@ static void onInit(HWND window)
 	RECT rect;
 	LVCOLUMN columnInfo;
 
+	DestroyWindow(GetParent(userList));
 	userList = GetDlgItem(window, IDC_USERLIST_LIST);
 
 	SetWindowLongPtr(userList, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
@@ -125,6 +124,5 @@ static BOOL CALLBACK userListProc(HWND window, UINT msg, WPARAM wParam,
 
 void UserList_Show(void)
 {
-	DestroyWindow(userList);
 	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, userListProc);
 }

@@ -57,6 +57,8 @@ enum ICONS {
 	ICONS_SINGLEPLAYER = INGAME_MASK,
 };
 
+union UserOrBot;
+
 int GetColorIndex(const union UserOrBot *);
 #ifdef WINVER
 extern HIMAGELIST gIconList;
