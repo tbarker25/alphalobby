@@ -101,8 +101,9 @@ void SetSplit(SplitType type, int size)
 	default:
 		return;
 	}
-	if (gBattleOptions.hostType == HOST_LOCAL)
+	if (gBattleOptions.hostType == HOST_LOCAL) {
 		;
+	}
 		/* RedrawMinimapBoxes();		 */
 }
 
@@ -368,8 +369,9 @@ static void setScriptTag(const char *key, const char *val)
 {
 	if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
 		StartPosType startPosType = atoi(val);
-		if (startPosType != gBattleOptions.startPosType)
+		if (startPosType != gBattleOptions.startPosType) {
 			;// taskSetMinimap = 1;
+		}
 		gBattleOptions.startPosType = startPosType;
 		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;

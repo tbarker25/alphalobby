@@ -1,7 +1,7 @@
 #pragma once
 
 typedef struct DialogItem {
-	wchar_t *class, *name;
+	const wchar_t *class, *name;
 	DWORD style, exStyle;
 	// uint8_t flags;
 } DialogItem;

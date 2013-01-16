@@ -1,4 +1,4 @@
-LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lshell32 -lmsvcrt -lShlwapi -lzlib1 -ldevil -lshell32 -Llib
+LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lshell32 -lmsvcrt -lShlwapi -lz -ldevil -lshell32 -Llib
 CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions
 
 ifdef VERSION 
@@ -7,7 +7,7 @@ ifdef VERSION
 	CFLAGS+= -s -Os -mwindows
 else
 	BUILD_DIR:=debug
-	CFLAGS+= -g3 -O0  -Wall -Werror -Wno-unknown-pragmas
+	CFLAGS+= -g3 -O0 -Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized
 endif
 
 WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DNO_STRICT

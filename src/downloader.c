@@ -91,8 +91,8 @@ static void _handlePackage(RequestContext *req);
 static void handleRepoList(RequestContext *req);
 static void handleRepo(const wchar_t *path, SessionContext *ses);
 
-	__attribute__((always_inline, optimize(("O3"))))
-static void getPathFromMD5(uint8_t *md5, wchar_t *path)
+	__attribute__((optimize(("O3"))))
+static inline void getPathFromMD5(uint8_t *md5, wchar_t *path)
 {
 	static const char conv[] = "0123456789abcdef";
 	((uint32_t *)path)[0] = 'p' | 'o' << 16;
@@ -162,7 +162,7 @@ static void onReadComplete(HINTERNET handle, RequestContext *req, DWORD numRead)
 		assert(req->ses->totalBytes);
 		/* BattleRoom_RedrawMinimap(); */
 		wchar_t text[128];
-		swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
+		_swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
 				(float)req->ses->fetchedBytes / 1000000,
 				(float)req->ses->totalBytes / 1000000,
 				(float)100 * req->ses->fetchedBytes / (req->ses->totalBytes?:1));
@@ -313,7 +313,7 @@ static void handleMapSources(RequestContext *req)
 		size_t size = sizeof(wchar_t) * (wcslen(name) + wcslen(gDataDir) + LENGTH(L"maps"));
 
 		RequestContext *req2 = calloc(1, sizeof(*req2) + size);
-		swprintf(req2->wcharParam, L"%s%s%s",
+		_swprintf(req2->wcharParam, L"%s%s%s",
 				gDataDir, req->ses->status & DL_MAP ? L"maps" : L"mods", name);
 		req2->ses = req->ses;
 		req2->con = makeConnect(req->ses, host);
@@ -337,7 +337,7 @@ void Downloader_Init(void)
 
 	for (int i=0; i<256; ++i) {
 		wchar_t path[MAX_PATH];
-		swprintf(path, L"%spool/%02x", gDataDir, i);
+		_swprintf(path, L"%spool/%02x", gDataDir, i);
 		CreateDirectory(path, NULL);
 	}
 
@@ -375,14 +375,14 @@ static void downloadPackage(SessionContext *ses)
 
 	WIN32_FIND_DATA findFileData;
 	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + swprintf(path, L"%srepos\\*",
+	wchar_t *pathEnd = path + _swprintf(path, L"%srepos\\*",
 			gDataDir) - 1;
 
 	HANDLE find = FindFirstFile(path, &findFileData);
 	do {
 		if (findFileData.cFileName[0] == L'.')
 			continue;
-		swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
+		_swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
 		handleRepo(path, ses);
 	} while (FindNextFile(find, &findFileData));
 	FindClose(find);
@@ -401,14 +401,14 @@ void GetSelectedPackages(void)
 	}
 	WIN32_FIND_DATA findFileData;
 	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + swprintf(path, L"%srepos\\*",
+	wchar_t *pathEnd = path + _swprintf(path, L"%srepos\\*",
 			gDataDir) - 1;
 
 	HANDLE find = FindFirstFile(path, &findFileData);
 	do {
 		if (findFileData.cFileName[0] == L'.')
 			continue;
-		swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
+		_swprintf(pathEnd, L"%s\\versions.gz", findFileData.cFileName);
 		handleRepo2(path);
 	} while (FindNextFile(find, &findFileData));
 	FindClose(find);
@@ -537,7 +537,7 @@ void DownloadFile(const char *name, enum DLTYPE type)
 {
 	SessionContext *ses = NULL;
 	wchar_t buff[128];
-	swprintf(buff, L"%hs", name);
+	_swprintf(buff, L"%hs", name);
 	for (int i=0; i<LENGTH(sessions); ++i) {
 		if (sessions[i].status && !wcscmp(sessions[i].name, buff))
 			return;
@@ -556,7 +556,7 @@ void DownloadFile(const char *name, enum DLTYPE type)
 			// .button = (HWND)SendMessage(gMainWindow, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dialogItems[DLG_PROGRESS_BUTTON_]),
 			.handle = handle,
 	};
-	swprintf(ses->name, L"%hs", name);
+	_swprintf(ses->name, L"%hs", name);
 	UpdateDownload(ses->name, L"Initializing");
 	// SetWindowLongPtr(ses->button, GWLP_USERDATA, (LONG_PTR)ses);
 	// SendMessage(ses->progressBar, PBM_SETMARQUEE, 1, 0);
@@ -823,7 +823,7 @@ static void handleRepo(const wchar_t *path, SessionContext *ses)
 			FromBase16(strchr(s, ',') + 1, req->md5Param[0]);
 #endif
 
-			swprintf(ses->packagePath, L"packages/%.32hs.sdp", strchr(s, ',') + 1);
+			_swprintf(ses->packagePath, L"packages/%.32hs.sdp", strchr(s, ',') + 1);
 
 			req->ses = ses;
 
@@ -854,7 +854,7 @@ static void handleRepoList(RequestContext *req)
 
 		MultiByteToWideChar(CP_UTF8, 0, hostName, -1, path, hostNameEnd - hostName + 1);
 
-		swprintf(req2->wcharParam + wcslen(gDataDir), L"%srepos\\%s\\", gDataDir, path);
+		_swprintf(req2->wcharParam + wcslen(gDataDir), L"%srepos\\%s\\", gDataDir, path);
 		CreateDirectory(req2->wcharParam, NULL);
 		wcscat(req2->wcharParam, L"versions.gz");
 

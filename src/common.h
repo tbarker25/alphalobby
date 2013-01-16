@@ -14,8 +14,6 @@
 char *strsep(char **restrict s, const char * delim);
 char *strpcpy(char *dst, const char *src);
 
-#ifdef _WCHAR_T
 wchar_t *utf8to16(const char *str);
 char *utf16to8(const wchar_t *wStr);
-#endif
 

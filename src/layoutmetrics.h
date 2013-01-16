@@ -33,7 +33,7 @@
 
 #define ICON_SIZE 22
 
-typedef void * HFONT;
+typedef struct HFONT__* HFONT;
 extern HFONT gFont;
 extern uint16_t baseUnitX;
 extern uint16_t baseUnitY;

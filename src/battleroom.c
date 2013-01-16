@@ -236,7 +236,8 @@ void BattleRoom_StartPositionsChanged(void)
 	
 	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
 	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
-	if (splitType >= 0)
+	//TODO: what the hell was this for????
+	/* if (splitType >= 0) */
 		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
 
 	BattleRoom_RedrawMinimap();
@@ -291,7 +292,7 @@ static void updatePlayerListGroup(int groupId)
 	int playersOnTeam = 0;
 	FOR_EACH_PLAYER(p, gMyBattle)
 		playersOnTeam += FROM_ALLY_MASK(p->battleStatus) == groupId;
-	swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
+	_swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
 	
 	LVGROUP groupInfo;
 	groupInfo.cbSize = sizeof(groupInfo);
@@ -373,7 +374,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 
 	if (battleStatus & AI_MASK) {
 		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
-		swprintf(name, L"%hs (%hs)", s->name, s->bot.dll);
+		_swprintf(name, L"%hs (%hs)", s->name, s->bot.dll);
 		item.mask = LVIF_TEXT;
 		item.iSubItem = COLUMN_NAME;
 		item.pszText = name;
@@ -424,10 +425,10 @@ sort:;
 	FOR_EACH_USER(u, gMyBattle) {
 		wchar_t buff[128], *s=buff;
 		if ((u->battleStatus & MODE_MASK) && teamSizes[FROM_TEAM_MASK(u->battleStatus)] > 1)
-			s += swprintf(s, L"%d: ", FROM_TEAM_MASK(u->battleStatus)+1);
-		s += swprintf(s, L"%hs", u->name);
+			s += _swprintf(s, L"%d: ", FROM_TEAM_MASK(u->battleStatus)+1);
+		s += _swprintf(s, L"%hs", u->name);
 		if (strcmp(UNTAGGED_NAME(u->name), u->alias))
-			s += swprintf(s, L" (%hs)", u->alias);
+			s += _swprintf(s, L" (%hs)", u->alias);
 
 		item.mask = LVIF_TEXT;
 		item.iItem = findUser(u);
@@ -541,7 +542,7 @@ static void onCreate(HWND window)
 	CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 	for (int i=0; i<16; ++i) {
 		wchar_t buff[LENGTH("Team 16")];
-		swprintf(buff, L"Team %d", i+1);
+		_swprintf(buff, L"Team %d", i+1);
 		SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buff);
 	}
 
@@ -565,7 +566,7 @@ static void onCreate(HWND window)
 	ListView_EnableGroupView(playerList, TRUE);
 	for (int i=0; i<=16; ++i) {
 		wchar_t buff[LENGTH("Spectators")];
-		swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
+		_swprintf(buff, i<16 ? L"Team %d" : L"Spectators", i+1);
 		LVGROUP groupInfo;
 		groupInfo.cbSize = sizeof(groupInfo);
 		groupInfo.mask = LVGF_HEADER | LVGF_GROUPID;
@@ -728,31 +729,31 @@ static void getUserTooltip(User *u, wchar_t *buff)
 {
 	wchar_t *s = buff;
 
-	s += swprintf(s, L"%hs", u->name);
+	s += _swprintf(s, L"%hs", u->name);
 	if (strcmp(UNTAGGED_NAME(u->name), u->alias))
-		s += swprintf(s, L" (%hs)", u->alias);
+		s += _swprintf(s, L" (%hs)", u->alias);
 
 	if (!(u->battleStatus & AI_MASK))
-		s += swprintf(s, L"\nRank %d - %hs - %.2fGHz\n",
+		s += _swprintf(s, L"\nRank %d - %hs - %.2fGHz\n",
 				FROM_RANK_MASK(u->clientStatus),
 				countryNames[u->country],
 				(float)u->cpu / 1000);
 
 	if (!(u->battleStatus & MODE_MASK)) {
-		s += swprintf(s, L"Spectator");
+		s += _swprintf(s, L"Spectator");
 		return;
 	}
 
 	const char *sideName = gSideNames[FROM_SIDE_MASK(u->battleStatus)];
 
-	s += swprintf(s, L"Player %d - Team %d",
+	s += _swprintf(s, L"Player %d - Team %d",
 			FROM_TEAM_MASK(u->battleStatus),
 			FROM_ALLY_MASK(u->battleStatus));
 	if (*sideName)
-		s += swprintf(s, L" - %hs", sideName);
+		s += _swprintf(s, L" - %hs", sideName);
 
 	if (u->battleStatus & HANDICAP_MASK)
-		s += swprintf(s, L"\nHandicap: %d",
+		s += _swprintf(s, L"\nHandicap: %d",
 				FROM_HANDICAP_MASK(u->battleStatus));
 
 	assert(s - buff < INFOTIPSIZE);

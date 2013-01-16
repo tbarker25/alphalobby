@@ -5,7 +5,7 @@
 struct User;
 struct Option;
 union UserOrBot;
-typedef void * HWND;
+typedef struct HWND__* HWND;
 
 extern HWND gBattleRoom;
 

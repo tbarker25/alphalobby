@@ -65,7 +65,7 @@ static void onInit(HWND window)
 		item.lParam = (LPARAM)u;
 
 		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
-		swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
+		_swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
 				? L"%hs (%hs)" : L"%hs",
 				u->name, u->alias);
 		item.pszText = name;

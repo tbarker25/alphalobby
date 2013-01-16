@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <windows.h>
 #include <Commctrl.h>
