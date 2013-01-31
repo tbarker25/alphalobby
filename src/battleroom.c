@@ -427,9 +427,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 
 	if (u->battle->founder == u) {
 		HWND startButton = GetDlgItem(gBattleRoom, DLG_START);
-		int canJoin = !(gMyUser.clientStatus & CS_INGAME_MASK)
-			&& (u->clientStatus & CS_INGAME_MASK
-					|| gBattleOptions.hostType & HOST_FLAG);
+		int canJoin = !(gMyUser.clientStatus & CS_INGAME_MASK);
 		EnableWindow(startButton, canJoin);
 	}
 
@@ -889,10 +887,8 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 		/* Fallthrough: */
 
 	case MAKEWPARAM(DLG_VOTENO, BN_CLICKED):
-		if (gBattleOptions.hostType == HOST_SPADS)
-		SendToServer("SAYPRIVATE %s !vote %c", gMyBattle->founder, voteYes ? 'y' : 'n');
-		else if (gBattleOptions.hostType == HOST_SPRINGIE)
-			SendToServer("SAYBATTLE !vote %c", '2' - (char)voteYes);
+		if (gHostType->vote)
+			gHostType->vote(voteYes);
 		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTEYES), 0);
 		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTENO), 0);
 		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTETEXT), 0);
