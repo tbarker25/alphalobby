@@ -36,6 +36,8 @@
 #include "countrycodes.h"
 #include "data.h"
 #include "dialogboxes.h"
+#include "host_spads.h"
+#include "host_springie.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
@@ -591,54 +593,32 @@ static void said(void)
 
 static void saidBattle(void)
 {
-	const char *username = getNextWord();
+	const char *userName = getNextWord();
 	char *text = command;
 
-	char ingameUserName[MAX_NAME_LENGTH_NUL];
-
-	if (gBattleOptions.hostType == HOST_SPADS
-			&& !strcmp(username, gMyBattle->founder->name)
-			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingameUserName) == 1){
-		text += 3 + strlen(ingameUserName);
-		Chat_Said(GetBattleChat(), ingameUserName, CHAT_INGAME, text);
+	if (gHostType->saidBattle) {
+		gHostType->saidBattle(userName, text);
 		return;
 	}
-
-	if (gBattleOptions.hostType == HOST_SPRINGIE
-			&& !strcmp(username, gMyBattle->founder->name)
-			&& text[0] == '['){
-
-		int braces = 1;
-		for (char *s = text + 1; *s; ++s){
-			braces += *s == '[';
-			braces -= *s == ']';
-			if (braces == 0){
-				*s = '\0';
-				Chat_Said(GetBattleChat(), text + 1, CHAT_INGAME, s + 1);
-				return;
-			}
-		}
-	}
-
-	Chat_Said(GetBattleChat(), username, 0, text);
+	Chat_Said(GetBattleChat(), userName, 0, text);
 }
 
 static void saidBattleEx(void)
 {
-	const char *username = getNextWord();
-	const char *text = command;
+	const char *userName = getNextWord();
+	char *text = command;
 
 	// Check for autohost
 	// welcome message is configurable, but chanceOfAutohost should usually be between 5 and 8.
 	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
-	if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && GetTickCount() - timeJoinedBattle < 10000){
+	if (gMyBattle && !strcmp(userName, gMyBattle->founder->name) && GetTickCount() - timeJoinedBattle < 10000){
 		int chanceOfAutohost = 0;
 		chanceOfAutohost += GetTickCount() - timeJoinedBattle < 2000;
 		chanceOfAutohost += text[0] == '*' && text[1] == ' ';
 		chanceOfAutohost += StrStrIA(text, "hi ") != NULL;
 		chanceOfAutohost += StrStrIA(text, "welcome ") != NULL;
 		chanceOfAutohost += strstr(text, gMyUser.name) != NULL;
-		chanceOfAutohost += strstr(text, username) != NULL;
+		chanceOfAutohost += strstr(text, userName) != NULL;
 		chanceOfAutohost += strstr(text, "!help") != NULL;
 
 		char saidSpads = strstr(text, "SPADS") != NULL;
@@ -647,70 +627,23 @@ static void saidBattleEx(void)
 		chanceOfAutohost += saidSpringie;
 
 		if (chanceOfAutohost > 3){
-			if (saidSpads)
-				gBattleOptions.hostType = HOST_SPADS;
-			else if (saidSpringie)
-				gBattleOptions.hostType = HOST_SPRINGIE;
-			else{
+			if (saidSpads) {
+				gHostType = &gHostSpads;
+			} else if (saidSpringie) {
+				gHostType = &gHostSpringie;
+			} else {
 				gLastAutoMessage = GetTickCount();
-				SendToServer("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
+				SendToServer("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", userName, userName);
 			}
 		}
 	}
 
-
-	if (gBattleOptions.hostType == HOST_SPRINGIE){
-
-		// Check for callvote:
-		// "Do you want to apply options " + wordFormat + "? !vote 1 = yes, !vote 2 = no"
-		// "Do you want to remove current boss " + ah.BossName + "? !vote 1 = yes, !vote 2 = no"
-		if (!memcmp("Do you want to ", command, sizeof("Do you want to ") - 1)){
-			char *commandStart = command + sizeof("Do you want to ") - 1;
-			char *commandEnd = strchr(commandStart, '?');
-			if (commandEnd){
-				commandStart[0] = toupper(commandStart[0]);
-				commandEnd[1] = '\0';
-				BattleRoom_VoteStarted(commandStart);
-				commandStart[0] = tolower(commandStart[0]);
-				commandEnd[1] = ' ';
-			}
-		}
-		// "Springie option 1 has 1 of 1 votes"
-
-		// Check for endvote:
-		if (!memcmp("vote successful", command, sizeof("vote successful") - 1)
-				|| !memcmp("not enough votes", command, sizeof("not enough votes") - 1)
-				|| !memcmp(" poll cancelled", command, sizeof(" poll cancelled") - 1))
-			BattleRoom_VoteEnded();
+	if (gHostType->saidBattleEx) {
+		gHostType->saidBattleEx(userName, text); 
+		return;
 	}
 
-	if (gBattleOptions.hostType == HOST_SPADS
-			&& command[0] == '*' && command[1] == ' '){
-
-		// Check for callvote:
-		// "$user called a vote for command \"".join(" ",@{$p_params}."\" [!vote y, !vote n, !vote b]"
-		if (!memcmp(" called a vote for command ", strchr(command + 2, ' ') ?: "", sizeof(" called a vote for command ") - 1)){
-			char *commandStart = strchr(command, '"');
-			if (commandStart){
-				++commandStart;
-				char *commandEnd = strchr(commandStart, '"');
-				if (commandEnd){
-					commandStart[0] = toupper(commandStart[0]);
-					commandEnd[0] = '\0';
-					BattleRoom_VoteStarted(commandStart);
-					commandStart[0] = tolower(commandStart[0]);
-					commandEnd[0] = '"';
-				}
-			}
-		}
-
-		// Check for endvote:
-		if (!memcmp("* Vote for command \"", command, sizeof("* Vote for command \"") - 1)
-				|| !memcmp("* Vote cancelled by ", command, sizeof("* Vote cancelled by ") - 1))
-			BattleRoom_VoteEnded();
-	}			
-
-	Chat_Said(GetBattleChat(), username, CHAT_EX, text);
+	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
 }
 
 static void saidEx(void)
@@ -764,13 +697,13 @@ static void saidPrivate(void)
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
 		if (!memcmp(command + strlen(username), " (Springie ", sizeof(" (Springie ") - 1)
 				&& strstr(command, " running for "))
-			gBattleOptions.hostType = HOST_SPRINGIE;
+			gHostType = &gHostSpringie;
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
 		else if (!memcmp(command + strlen(username), " is running SPADS v", sizeof(" is running SPADS v") - 1)
 				&& strstr(command, ", with following components:"))
-			gBattleOptions.hostType = HOST_SPADS;
+			gHostType = &gHostSpads;
 		else
 			goto normal;
 

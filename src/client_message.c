@@ -83,7 +83,7 @@ void JoinBattle(uint32_t id, const char *password)
 				return;
 			password = buff;
 		}
-		gBattleOptions.hostType = 0;
+		gHostType = &gNullHost;
 		BattleRoom_Show();
 		SendToServer("JOINBATTLE %u %s %x",
 				id, password ?: "",
@@ -119,22 +119,16 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		return;
 	}
 
-	if (gBattleOptions.hostType == HOST_SPADS) {
-		if (nandMask & TEAM_MASK)
-			SpadsMessageF("!force %s id %d" , s->name, FROM_TEAM_MASK(orMask));
-		if (nandMask & ALLY_MASK)
-			SpadsMessageF("!force %s team %d" , s->name, FROM_ALLY_MASK(orMask));
+	if (nandMask & TEAM_MASK)
+		if (gHostType->forceTeam)
+			gHostType->forceTeam(s->name, FROM_TEAM_MASK(orMask));
+	if (nandMask & ALLY_MASK)
+		if (gHostType->forceAlly)
+			gHostType->forceAlly(s->name, FROM_ALLY_MASK(orMask));
+
+	if (gHostType->forceTeam)
 		return;
-	}
-	if (gBattleOptions.hostType & HOST_FLAG) {
-		if (nandMask & TEAM_MASK)
-			SendToServer("!FORCETEAMNO %s %d" , s->name, FROM_TEAM_MASK(orMask));
-		if (nandMask & ALLY_MASK)
-			SendToServer("!FORCEALLYNO %s %d" , s->name, FROM_ALLY_MASK(orMask));
-		if (color != s->color)
-			SendToServer("!FORCETEAMCOLOR %s %d", s->name, color);
-		return;
-	}
+
 	assert(0);
 }
 
@@ -142,12 +136,11 @@ void Kick(union UserOrBot *s)
 {
 	if (s->battleStatus & AI_MASK) {
 		SendToServer("REMOVEBOT %s", s->name);
-	} else if (gBattleOptions.hostType & HOST_FLAG)
-		SendToServer("!KICKFROMBATTLE %s", s->name);
-	else if (gBattleOptions.hostType & HOST_SPADS)
-		SpadsMessageF("!kick %s", s->name);
-	else
+	} else if (gHostType->kick) {
+		gHostType->kick(s->name);
+	} else {
 		assert(0);
+	}
 }
 
 void SetClientStatus(uint8_t s, uint8_t mask)
@@ -176,10 +169,12 @@ void LeaveBattle(void)
 
 void ChangeMap(const char *mapName)
 {
-	if (gBattleOptions.hostType == HOST_SPADS)
-		SpadsMessageF("!map %s", mapName);
-	else
-		SendToServer("!UPDATEBATTLEINFO 0 0 %d %s", GetMapHash(mapName), mapName);
+	if (gHostType->setMap) {
+		gHostType->setMap(mapName);
+	} else {
+		SendToServer("!UPDATEBATTLEINFO 0 0 %d %s",
+				GetMapHash(mapName), mapName);
+	}
 }
 
 void RequestChannels(void)

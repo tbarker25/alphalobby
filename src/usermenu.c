@@ -34,9 +34,8 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	
 	enum menuID {
 		CHAT = 1, IGNORED, ALIAS, ID, ALLY, SIDE, COLOR, KICK,
-			//MUST BE CONSECUTIVE:
-			RING, SPEC, KICKBAN,
-		LAST=KICKBAN,
+			RING, SPEC,
+		LAST=SPEC,
 		FLAG_TEAM = 0x0100, FLAG_ALLY = 0x0200, FLAG_SIDE = 0x0400,
 		AI_FLAG = 0x0800, AI_OPTIONS_FLAG = 0x10000,
 		
@@ -63,8 +62,6 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 
 	
 	if (battleStatus & AI_MASK) {
-		if (!(gBattleOptions.hostType & HOST_FLAG))
-			goto cleanup;
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[SIDE_MENU], L"Set faction");
@@ -74,22 +71,14 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
 		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
-		if (gBattleOptions.hostType) {
-			AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-			AppendMenu(menus[0], 0, RING, L"Ring");
-			if (battleStatus & MODE_MASK)
-				AppendMenu(menus[0], 0, SPEC, L"Force spectate");
-			AppendMenu(menus[0], 0, KICK, L"Kick");
-			if (gBattleOptions.hostType == HOST_SPADS)
-				AppendMenu(menus[0], 0, KICKBAN, L"Kick and ban");
-		}
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		if (gBattleOptions.hostType) {
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[TEAM_MENU], L"Set ID");
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
-			if (gBattleOptions.hostType == HOST_RELAY)
-				AppendMenu(menus[0], 0, COLOR, L"Set color");
-		}
+		AppendMenu(menus[0], 0, RING, L"Ring");
+		if (battleStatus & MODE_MASK)
+			AppendMenu(menus[0], 0, SPEC, L"Force spectate");
+		AppendMenu(menus[0], 0, KICK, L"Kick");
+		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
+		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[TEAM_MENU], L"Set ID");
+		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
 	} else { //(u == &gMyUser)
 		if (battleStatus & MODE_MASK) {
 			AppendMenu(menus[0], 0, SPEC, L"Spectate");
@@ -126,25 +115,12 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	case COLOR:
 		CreateColorDlg(s);
 		break;
-	case KICK: {
-		printf("kicking %s %s\n", s->name, s->bot.dll);
+	case KICK:
 		Kick(s);
-		}break;
+		break;
 	case SPEC:
-		if (&s->user == &gMyUser) {
-			SetBattleStatus(&gMyUser, ~s->user.battleStatus, MODE_MASK);
-			break;
-		}
-		//FALLTHROUGH:
+		break;
 	case RING:
-		if (gBattleOptions.hostType & HOST_FLAG) {
-			SendToServer("!%s %s", clicked == RING ? "RING" : "FORCESPECTATORMODE", s->name);
-			break;
-		}
-		//FALLTHROUGH:
-	case KICKBAN:
-		assert(gBattleOptions.hostType == HOST_SPADS);
-		SpadsMessageF("!%s %s", (char *[]){"ring", "spec", "kickban"}[clicked - SPEC], s->name);
 		break;
 	default:
 		if (clicked & AI_FLAG) {
@@ -178,7 +154,6 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 
 		break;
 	}
-	cleanup:
 
 	for (int i=0; i<=lastMenu; ++i)
 		DestroyMenu(menus[i]);

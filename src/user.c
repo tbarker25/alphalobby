@@ -98,7 +98,7 @@ void AddBot(const char *name, User *owner, uint32_t battleStatus,
 	++b->nbParticipants;
 	++b->nbBots;
 	
-	Rebalance();
+	/* Rebalance(); */
 	BattleRoom_StartPositionsChanged();
 	BattleRoom_UpdateUser((void *)bot);
 }
@@ -117,7 +117,7 @@ void DelBot(const char *name)
 		gMyBattle->users[i - 1] = gMyBattle->users[i];
 	--gMyBattle->nbParticipants;
 	--gMyBattle->nbBots;
-	Rebalance();
+	/* Rebalance(); */
 	BattleRoom_StartPositionsChanged();
 }
 

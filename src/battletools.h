@@ -32,7 +32,7 @@ typedef enum SplitType {
 	SPLIT_RAND,
 	
 	SPLIT_LAST = SPLIT_RAND,
-}SplitType;
+} SplitType;
 
 typedef enum OptionType{
   opt_error = 0, opt_bool = 1, opt_list = 2, opt_number = 3,
@@ -41,7 +41,7 @@ typedef enum OptionType{
 
 typedef struct OptionListItem {
 	char *key, *name;
-}OptionListItem;
+} OptionListItem;
 
 typedef struct Option {
 	OptionType type;
@@ -50,7 +50,7 @@ typedef struct Option {
 	
 	size_t nbListItems;
 	OptionListItem *listItems;
-}Option;
+} Option;
 
 #define START_RECT_MAX 200
 
@@ -59,14 +59,12 @@ typedef enum StartPosType {
 	STARTPOS_RANDOM = 1,
 	STARTPOS_CHOOSE_INGAME = 2,
 	STARTPOS_CHOOSE_BEFORE = 3,
-}StartPosType;
+} StartPosType;
 
-#define HOST_SPADS 0x02
 #define HOST_RELAY 0x01 
 #define HOST_LOCAL 0x03
 // #define HOST_SP    0x05
 #define HOST_FLAG  0x01
-#define HOST_SPRINGIE 0x10
 
 #define INVALID_STARTPOS (StartPos){-1, -1}
 #define GET_STARTPOS(_team) (gBattleOptions.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&gBattleOptions.positions[_team] != -1\
@@ -75,15 +73,28 @@ typedef enum StartPosType {
 	
 typedef struct StartRect {
 	uint16_t left, top, right, bottom;
-}StartRect;
+} StartRect;
+
+typedef struct HostType {
+	void (*forceAlly)(const char *name, int allyId);
+	void (*forceTeam)(const char *name, int teamId);
+	void (*kick)(const char *name);
+	void (*saidBattle)(const char *userName, char *text);
+	void (*saidBattleEx)(const char *userName, char *text);
+	void (*setMap)(const char *mapName);
+	void (*setOption)(const char *key, const char *val);
+	void (*setSplit)(int size, SplitType type);
+	void (*vote)(int voteYes);
+} HostType;
+
+extern const HostType gNullHost;
 
 typedef struct BattleOptions {
-	uint8_t hostType;
 	StartPosType startPosType;
 	StartRect startRects[NUM_ALLIANCES];
 	StartPos positions[NUM_ALLIANCES];
 	uint32_t modHash;
-}BattleOption;
+} BattleOption;
 
 
 struct _LargeMapInfo {
@@ -94,7 +105,6 @@ struct _LargeMapInfo {
 
 union UserOrBot;
 struct Battle;
-
 
 extern struct _LargeMapInfo _gLargeMapInfo;
 #define gMapInfo (_gLargeMapInfo.mapInfo)
@@ -111,6 +121,7 @@ extern char **gMaps, **gMods;
 extern ssize_t gNbMaps, gNbMods;
 
 extern BattleOption gBattleOptions;
+extern const HostType *gHostType;
 
 extern uint8_t gNbSides;
 extern char gSideNames[16][32];

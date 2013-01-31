@@ -35,7 +35,6 @@
 #include "settings.h"
 #include "sync.h"
 
-static uint32_t balance;
 uint32_t gUdpHelpPort;
 
 uint32_t battleToJoin;
@@ -47,6 +46,8 @@ uint32_t gMapHash, gModHash;
 ssize_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
+const HostType *gHostType = &gNullHost;
+const HostType gNullHost;
 
 uint8_t gNbSides;
 char gSideNames[16][32];
@@ -63,15 +64,11 @@ struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo
 static void addStartBox(int i, int left, int top, int right, int bottom)
 {
 	SendToServer("!ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
-	if (gBattleOptions.hostType == HOST_LOCAL)
-		gBattleOptions.startRects[i] = (StartRect){left, top, right, bottom};
 }
 
 static void delStartBox(int i)
 {
 	SendToServer("!REMOVESTARTRECT %d", i);
-	if (gBattleOptions.hostType == HOST_LOCAL)
-		gBattleOptions.startRects[i] = (StartRect){0};
 }
 
 
@@ -80,16 +77,10 @@ void SetSplit(SplitType type, int size)
 	if (!gMyBattle)
 		return;
 	// int startPosType = type < SPLIT_FIRST ? type : 2;
-	int startPosType = 2;
-	
-	if (gBattleOptions.hostType == HOST_SPADS) {
-		size /= 2; //Script uses 200pts for each dimension, spads uses 100pts:
-		if (startPosType != gBattleOptions.startPosType)
-			SpadsMessageF("!bSet startpostype %d", startPosType);
-		SpadsMessageF("!split %s %d", (char [][3]){"h", "v", "c1", "c2"}[type], size);
+	if (gHostType->setSplit) {
+		gHostType->setSplit(size, type);
 		return;
 	}
-	
 
 	switch (type) {
 	case SPLIT_HORZ:
@@ -119,114 +110,12 @@ void SetSplit(SplitType type, int size)
 	default:
 		return;
 	}
-	if (gBattleOptions.hostType == HOST_LOCAL) {
-		;
-	}
-		/* RedrawMinimapBoxes();		 */
 }
 
 void SetMap(const char *name)
 {
-	if (gBattleOptions.hostType == HOST_SPADS)
-		SpadsMessageF("!map %s", name);
-	else if (gBattleOptions.hostType == HOST_RELAY)
-		SendToServer("!UPDATEBATTLEINFO %d %d %u %s", gMyBattle->nbSpectators, gMyBattle->locked, gMyBattle->mapHash, gMyBattle->mapName);
-}
-
-void Rebalance(void)
-//NB: this function is cpu expensive
-{
-	if (!LoadSettingInt("host_autobalance"))
-		return;
-	
-	int playerCount = gMyBattle->nbParticipants - gMyBattle->nbSpectators;
-	const union UserOrBot *players[playerCount];
-	
-	int i=0;
-	FOR_EACH_PLAYER(p, gMyBattle)
-		players[i++] = (void *)p;
-
-	uint32_t closestN = 0;
-	int closest = 0x1000 * playerCount;
-	for (int j=0; j<playerCount; ++j)
-		closest += FROM_RANK_MASK(players[j]->battleStatus);
-	
-	const int initialDiff = closest / -2;
-	uint32_t seed = rand() % (1 << playerCount), n=seed;
-	do {
-		int rankDiff = initialDiff;
-		for (int j=0; j<playerCount; ++j)
-			if (n & 1<<j)
-				rankDiff += 0x1000 + ((gSettings.flags & SETTING_HOST_BALANCE_RANK) != 0) * FROM_RANK_MASK(players[j]->battleStatus);
-		rankDiff = abs(rankDiff);
-		if (rankDiff > closest)
-			goto failure;
-		if (!((gSettings.flags & SETTING_HOST_BALANCE_CLAN) != 0))
-			goto success;
-		for (int i=0; i<playerCount-1; ++i) {
-			if (players[i]->name[0] != '[')
-				continue;
-			const char *tagEnd = strchr(players[i]->name, ']');
-			if (!tagEnd)
-				continue;
-			size_t tagLength = tagEnd - players[i]->name + 1; //include '[' and ']'
-			for (int j=i+1; j<playerCount; ++j)
-				if (!(1<<i & n) != !(1<<j & n) && !strncmp(players[i]->name, players[j]->name, tagLength))
-					goto failure;
-		}
-		success:
-		closestN = n;
-		if (!(closest = rankDiff)) //Can't beat perfect
-			break;
-		failure:
-		n = (n + 1) % (1 << playerCount);
-	} while (n != seed);
-	// puts("team 1");
-	// int ranks[2] = {};
-	// for (int i=0; i<playerCount; ++i) {
-		// if (closestN & 1 << i) {
-			// puts(players[i]->name);
-			// ranks[0] += balanceRank * FROM_RANK_MASK(players[i]->battleStatus);
-		// }
-	// }
-	// printf("total ranks = %d\n\n", ranks[0]);
-	// puts("team 2");
-	// for (int i=0; i<playerCount; ++i) {
-		// if (!(closestN & 1 << i)) {
-			// puts(players[i]->name);
-			// ranks[1] += FROM_RANK_MASK(players[i]->battleStatus);
-		// }
-	// }
-	// printf("total ranks = %d\n\n", ranks[1]);	
-			
-	balance = closestN;
-	FixPlayerStatus(NULL);
-}
-
-void FixPlayerStatus(const union UserOrBot *u)
-{
-	if (!(gBattleOptions.hostType & HOST_FLAG))
-		return;
-
-	int i=-1;
-	
-	FOR_EACH_PLAYER(p, gMyBattle) {
-		++i;
-		if (u && u != (void *)p)
-			continue;
-
-		uint32_t color = -1;
-		if (((gSettings.flags & SETTING_HOST_FIX_COLOR) != 0)) {
-			color = ((i&0x01)*0xFF) | ((i&0x02)*0x7F80) | ((i&0x04)*0x3FC000);
-			if (i & 0x08)
-				color = i & 0x07 ? color & 0x010101 : 0x0c0c0c;
-		}
-		
-		SetBattleStatusAndColor(p,
-				TO_ALLY_MASK(!!(balance & 1<<i)) | TO_TEAM_MASK(i%16),
-				((gSettings.flags & SETTING_HOST_BALANCE) != 0) * ALLY_MASK | ((gSettings.flags & SETTING_HOST_FIX_ID) != 0) * TEAM_MASK,
-				color);
-	}
+	if (gHostType->setMap)
+		gHostType->setMap(name);
 }
 
 uint32_t GetNewBattleStatus(void)
@@ -250,12 +139,6 @@ void JoinedBattle(Battle *b, uint32_t modHash)
 {
 	gMyBattle = b;
 	gBattleOptions.modHash = modHash;
-
-	if (!strcmp(b->founder->name, relayHoster)) {
-		gBattleOptions.hostType = HOST_RELAY;
-		SendToServer("!SUPPORTSCRIPTPASSWORD");
-	} else if (b->founder ==  &gMyUser)
-		gBattleOptions.hostType = HOST_LOCAL;
 
 	gMyUser.battleStatus = 0;
 	gLastBattleStatus = 0;
@@ -320,11 +203,11 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 		for (int i=0; i < gMyBattle->nbParticipants; ++i)
 			gMyBattle->nbSpectators += !(gMyBattle->users[i]->battleStatus & MODE_MASK);
 		BattleList_UpdateBattle(gMyBattle);
-		Rebalance();
+		/* Rebalance(); */
 	} else if (bs & MODE_MASK
 			&& ((lastBS ^ bs) & (TEAM_MASK | ALLY_MASK)
 			   ||  lastColor != color)) {
-		FixPlayerStatus((void *)s);
+		/* FixPlayerStatus((void *)s); */
 	} else
 		return;
 	if ((lastBS ^ bs) & MODE_MASK
@@ -334,13 +217,13 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 
 void ChangeOption(Option *opt)
 {
-	const char *path;
-	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
-		path = "modoptions/";
-	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
-		path = "mapoptions/";
-	else
-		assert(0);
+	/* const char *path; */
+	/* if (opt >= gModOptions && opt < gModOptions + gNbModOptions) */
+		/* path = "modoptions/"; */
+	/* else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions) */
+		/* path = "mapoptions/"; */
+	/* else */
+		/* assert(0); */
 
 	switch (opt->type) {
 		char *tmp;
@@ -376,11 +259,8 @@ void ChangeOption(Option *opt)
 		return;
 	}
 
-	if (gBattleOptions.hostType == HOST_SPADS) {
-		SpadsMessageF("!bSet %s %s", opt->key, opt->val);
-	} else if (gBattleOptions.hostType & HOST_FLAG) {
-		SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
-	}
+	if (gHostType->setOption)
+		gHostType->setOption(opt->key, opt->val);
 }
 
 static void setScriptTag(const char *key, const char *val)
