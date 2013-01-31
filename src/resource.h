@@ -1,3 +1,24 @@
+/*
+ * Copyright (c) 2013, Thomas Barker
+ * All rights reserved.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * It under the terms of the GNU General Public License as published by
+ * The Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * But WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
 #ifndef IDC_STATIC
 #define IDC_STATIC (-1)
 #endif
@@ -86,3 +107,5 @@
 #define IDC_HOST_PORT_L                         40021
 #define IDC_HOST_PORT                           40022
 #define IDC_HOST_USERELAY                       40024
+
+#endif /* end of include guard: RESOURCE_H */
