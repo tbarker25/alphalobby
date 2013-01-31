@@ -332,8 +332,8 @@ static void createModFile(const char *modName)
 	gzwrite(fd, sideNames, sizeof(sideNames));
 	
 	uint32_t sidePics[sideCount][16*16];
-	char isBMP = 0;
 	for (uint8_t i=0; i<sideCount; ++i) {
+		char isBMP = 0;
 		char vfsPath[128];
 		int n = sprintf(vfsPath, "SidePics/%s.png", sideNames[i]);
 		int fd = OpenFileVFS(vfsPath);
@@ -373,6 +373,10 @@ static void createModFile(const char *modName)
 
 void ChangedMod(const char *modName)
 {
+	char filePath[MAX_PATH];
+	gzFile fd;
+	OptionList modOptionList;
+
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(gMainWindow, NULL));
 	if (!stricmp(currentMod, modName))
 		return;
@@ -383,10 +387,8 @@ void ChangedMod(const char *modName)
 	gModOptions = NULL;
 	gNbModOptions = 0;
 
-	char filePath[MAX_PATH];
 	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
-	
-	gzFile fd = gzopen(filePath, "rb");
+	fd = gzopen(filePath, "rb");
 	
 	if (fd && gzgetc(fd) != SYNCFILE_VERSION) {
 		gzclose(fd);
@@ -404,26 +406,24 @@ void ChangedMod(const char *modName)
 		return;
 	}
 	strcpy(currentMod, modName);
-
 	gzread(fd, &gModHash, sizeof(gModHash));
-	OptionList modOptionList = loadOptions(fd);
+	modOptionList = loadOptions(fd);
 	gModOptions = modOptionList.xs;
 	gNbModOptions = modOptionList.len;
-	
 	gNbSides = gzgetc(fd);
-	gzread(fd, gSideNames, gNbSides * 32);
-	{
+	if (gNbSides > 0) {
 		uint32_t sidePics[gNbSides][16*16];
+
+		gzread(fd, gSideNames, gNbSides * 32);
 		gzread(fd, sidePics, sizeof(sidePics));
+
 		for (int i=0; i<gNbSides; ++i) {
 			HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, sidePics[i]);
 			ImageList_Replace(gIconList, ICONS_FIRST_SIDE + i, bitmap, NULL);
 			DeleteObject(bitmap);
 		}
 	}
-	
 	gzclose(fd);
-	
 	BattleRoom_OnChangeMod();
 	UpdateModOptions();
 	taskSetBattleStatus = 1;
