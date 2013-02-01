@@ -596,11 +596,10 @@ static void saidBattle(void)
 	const char *userName = getNextWord();
 	char *text = command;
 
-	if (gHostType->saidBattle) {
+	if (gHostType->saidBattle)
 		gHostType->saidBattle(userName, text);
-		return;
-	}
-	Chat_Said(GetBattleChat(), userName, 0, text);
+	else
+		assert(0);
 }
 
 static void saidBattleEx(void)
@@ -638,12 +637,10 @@ static void saidBattleEx(void)
 		}
 	}
 
-	if (gHostType->saidBattleEx) {
+	if (gHostType->saidBattleEx)
 		gHostType->saidBattleEx(userName, text); 
-		return;
-	}
-
-	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
+	else
+		assert(0);
 }
 
 static void saidEx(void)

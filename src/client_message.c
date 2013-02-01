@@ -34,6 +34,7 @@
 #include "client_message.h"
 #include "data.h"
 #include "dialogboxes.h"
+#include "host_default.h"
 #include "md5.h"
 #include "settings.h"
 #include "sync.h"
@@ -83,7 +84,7 @@ void JoinBattle(uint32_t id, const char *password)
 				return;
 			password = buff;
 		}
-		gHostType = &gNullHost;
+		gHostType = &gHostDefault;
 		BattleRoom_Show();
 		SendToServer("JOINBATTLE %u %s %x",
 				id, password ?: "",
