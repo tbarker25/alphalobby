@@ -32,6 +32,7 @@
 #include "client_message.h"
 #include "data.h"
 #include "dialogboxes.h"
+#include "host_default.h"
 #include "settings.h"
 #include "sync.h"
 
@@ -46,8 +47,7 @@ uint32_t gMapHash, gModHash;
 ssize_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
-const HostType *gHostType = &gNullHost;
-const HostType gNullHost;
+const HostType *gHostType = &gHostDefault;
 
 uint8_t gNbSides;
 char gSideNames[16][32];
@@ -61,55 +61,11 @@ static char *currentScript;
 
 struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 
-static void addStartBox(int i, int left, int top, int right, int bottom)
-{
-	SendToServer("!ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
-}
-
-static void delStartBox(int i)
-{
-	SendToServer("!REMOVESTARTRECT %d", i);
-}
-
 
 void SetSplit(SplitType type, int size)
 {
-	if (!gMyBattle)
-		return;
-	// int startPosType = type < SPLIT_FIRST ? type : 2;
-	if (gHostType->setSplit) {
+	if (gMyBattle && gHostType->setSplit)
 		gHostType->setSplit(size, type);
-		return;
-	}
-
-	switch (type) {
-	case SPLIT_HORZ:
-		addStartBox(0, 0, 0, size, 200);
-		addStartBox(1, 200 - size, 0, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
-		break;
-	case SPLIT_VERT:
-		addStartBox(0, 0, 0, 200, size);
-		addStartBox(1, 0, 200 - size, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
-		break;
-	case SPLIT_CORNERS1:
-		addStartBox(0, 0, 0, size, size);
-		addStartBox(1, 200-size, 200-size, 200, 200);
-		addStartBox(2, 0, 200-size, size, 200);
-		addStartBox(3, 200-size, 0, 200, size);
-		break;
-	case SPLIT_CORNERS2:
-		addStartBox(0, 0, 200-size, size, 200);
-		addStartBox(1, 200-size, 0, 200, size);
-		addStartBox(2, 0, 0, size, size);
-		addStartBox(3, 200-size, 200-size, 200, 200);
-		break;
-	default:
-		return;
-	}
 }
 
 void SetMap(const char *name)
@@ -217,26 +173,17 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 
 void ChangeOption(Option *opt)
 {
-	/* const char *path; */
-	/* if (opt >= gModOptions && opt < gModOptions + gNbModOptions) */
-		/* path = "modoptions/"; */
-	/* else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions) */
-		/* path = "mapoptions/"; */
-	/* else */
-		/* assert(0); */
-
+	char val[128];
 	switch (opt->type) {
-		char *tmp;
 		HMENU menu;
 	case opt_bool:
-		opt->val = (char [2]){opt->val[0] ^ ('0' ^ '1')};
+		val[0] = opt->val[0] == '0' ? '1' : '0';
+		val[1] = '\0';
 		break;
 	case opt_number:
-		tmp = alloca(128);
-		tmp[0] = '\0';
-		if (GetTextDlg(opt->name, tmp, 128))
+		val[0] = '\0';
+		if (GetTextDlg(opt->name, val, 128))
 			return;
-		opt->val = tmp;
 		break;
 	case opt_list:
 		menu = CreatePopupMenu();
@@ -252,7 +199,7 @@ void ChangeOption(Option *opt)
 		SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
 		if (!clicked)
 			return;
-		opt->val = strcpy(alloca(128), opt->listItems[clicked - 1].key);
+		strcpy(val, opt->listItems[clicked - 1].key);
 		DestroyMenu(menu);
 		break;
 	default:
@@ -260,7 +207,7 @@ void ChangeOption(Option *opt)
 	}
 
 	if (gHostType->setOption)
-		gHostType->setOption(opt->key, opt->val);
+		gHostType->setOption(opt, opt->val);
 }
 
 static void setScriptTag(const char *key, const char *val)

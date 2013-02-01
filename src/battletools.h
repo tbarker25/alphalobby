@@ -82,12 +82,10 @@ typedef struct HostType {
 	void (*saidBattle)(const char *userName, char *text);
 	void (*saidBattleEx)(const char *userName, char *text);
 	void (*setMap)(const char *mapName);
-	void (*setOption)(const char *key, const char *val);
+	void (*setOption)(Option *opt, const char *val);
 	void (*setSplit)(int size, SplitType type);
 	void (*vote)(int voteYes);
 } HostType;
-
-extern const HostType gNullHost;
 
 typedef struct BattleOptions {
 	StartPosType startPosType;
