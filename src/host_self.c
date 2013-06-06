@@ -35,7 +35,6 @@ static void forceAlly(const char *name, int allyId);
 static void forceTeam(const char *name, int teamId);
 static void kick(const char *name);
 static void saidBattle(const char *userName, char *text);
-static void saidBattleEx(const char *userName, char *text);
 static void setMap(const char *mapName);
 static void setOption(Option *opt, const char *val);
 static void setSplit(int size, SplitType type);
@@ -45,7 +44,6 @@ const HostType gHostSelf = {
 	.forceTeam = forceTeam,
 	.kick = kick,
 	.saidBattle = saidBattle,
-	.saidBattleEx = saidBattleEx,
 	.setMap = setMap,
 	.setOption = setOption,
 	.setSplit = setSplit,
@@ -53,27 +51,22 @@ const HostType gHostSelf = {
 
 static void forceAlly(const char *name, int allyId)
 {
-	SendToServer("!FORCEALLYNO %s %d" , name, allyId);
+	SendToServer("FORCEALLYNO %s %d" , name, allyId);
 }
 
 static void forceTeam(const char *name, int teamId)
 {
-	SendToServer("!FORCETEAMNO %s %d" , name, teamId);
+	SendToServer("FORCETEAMNO %s %d" , name, teamId);
 }
 
 /* static void forceColor(const char *name, uint32_t color)    */
 /* {                                                           */
-/*         SendToServer("!FORCETEAMCOLOR %s %d", name, color); */
+/*         SendToServer("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
 
 static void kick(const char *name)
 {
 	SendToServer("KICKFROMBATTLE %s", name);
-}
-
-static void saidBattleEx(const char *userName, char *text)
-{
-	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
 }
 
 static void saidBattle(const char *userName, char *text)
@@ -83,7 +76,7 @@ static void saidBattle(const char *userName, char *text)
 
 static void setMap(const char *mapName)
 {
-	SendToServer("!UPDATEBATTLEINFO 0 0 %d %s",
+	SendToServer("UPDATEBATTLEINFO 0 0 %d %s",
 			GetMapHash(mapName), mapName);
 }
 
@@ -97,17 +90,17 @@ static void setOption(Option *opt, const char *val)
 	else
 		assert(0);
 
-	SendToServer("!SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
+	SendToServer("SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
 }
 
 static void addStartBox(int i, int left, int top, int right, int bottom)
 {
-	SendToServer("!ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
+	SendToServer("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
 static void delStartBox(int i)
 {
-	SendToServer("!REMOVESTARTRECT %d", i);
+	SendToServer("REMOVESTARTRECT %d", i);
 }
 
 static void setSplit(int size, SplitType type)

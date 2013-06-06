@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -30,6 +31,7 @@
 #include "client_message.h"
 #include "data.h"
 #include "messages.h"
+#include "host_relay.h"
 
 #define RECV_SIZE 8192
 #define MAX_MESSAGE_LENGTH 1024 //Hardcoded into server
@@ -81,14 +83,8 @@ void SendToServer(const char *format, ...)
 	
 	va_list args;
 	va_start (args, format);
-	int commandStart=0;
-	if (format[0] == '!') {
-		if (*relayHoster)
-			commandStart = sprintf(buff, "SAYPRIVATE %s ",
-					relayHoster);
-		else
-			++format;
-	}
+	int commandStart = 0;
+
 	size_t len = vsprintf(buff + commandStart, format, args) + commandStart;
 	va_end(args);
 	

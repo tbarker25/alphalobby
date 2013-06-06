@@ -44,8 +44,6 @@ static char myPassword[BASE16_MD5_LENGTH];
 static char myUserName[MAX_NAME_LENGTH+1];
 uint32_t gLastBattleStatus;
 uint8_t gLastClientStatus;
-char relayCmd[1024], relayHoster[1024], relayManager[1024], relayPassword[1024];
-
 
 void JoinBattle(uint32_t id, const char *password)
 {
@@ -116,7 +114,7 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		return;
 	
 	if (s->battleStatus & AI_MASK) {
-		SendToServer("!UPDATEBOT %s %d %d" + (s->bot.owner == &gMyUser), s->name, bs, color);
+		SendToServer("UPDATEBOT %s %d %d" + (s->bot.owner == &gMyUser), s->name, bs, color);
 		return;
 	}
 
@@ -173,7 +171,7 @@ void ChangeMap(const char *mapName)
 	if (gHostType->setMap) {
 		gHostType->setMap(mapName);
 	} else {
-		SendToServer("!UPDATEBATTLEINFO 0 0 %d %s",
+		SendToServer("UPDATEBATTLEINFO 0 0 %d %s",
 				GetMapHash(mapName), mapName);
 	}
 }
@@ -264,13 +262,3 @@ void OpenBattle(const char *title, const char *password, const char *modName, co
 {
 	SendToServer("OPENBATTLE 0 0 %s %hu 16 %d 0 %d %s\t%s\t%s", password ?: "*", port, GetModHash(modName), GetMapHash(mapName), mapName, title, modName);
 }
-
-void OpenRelayBattle(const char *title, const char *password, const char *modName, const char *mapName, const char *manager)
-//OPENBATTLE type natType password port maxplayers hashcode rank maphash {map} {title} {modname}
-{
-	sprintf(relayCmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", GetModHash(modName), GetMapHash(mapName), mapName, title, modName);
-	strcpy(relayPassword, password ?: "*");
-	strcpy(relayManager, manager);
-	SendToServer("SAYPRIVATE %s !spawn", relayManager);
-}
-

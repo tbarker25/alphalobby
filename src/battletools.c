@@ -131,7 +131,8 @@ void LeftBattle(void)
 	if (battleToJoin)
 		JoinBattle(battleToJoin, NULL);
 
-	*relayHoster = '\0';
+	/* TODO: */
+	/* *relayHoster = '\0'; */
 }
 
 

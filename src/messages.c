@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -36,6 +37,7 @@
 #include "countrycodes.h"
 #include "data.h"
 #include "dialogboxes.h"
+#include "host_relay.h"
 #include "host_spads.h"
 #include "host_springie.h"
 #include "settings.h"
@@ -96,8 +98,6 @@ static FILE *agreementFile;
 static DWORD timeJoinedBattle;
 extern uint32_t gLastBattleStatus;
 extern uint8_t gLastClientStatus;
-const char **gRelayManagers;
-int gRelayManagersCount;
 static char *command;
 
 static const struct {
@@ -231,13 +231,7 @@ static void addUser(void)
 	if (gSettings.flags & (1<<DEST_SERVER))
 		Chat_Said(GetServerChat(), u->name, CHAT_SYSTEM, "has logged in");
 
-	if (!strcmp(u->name, relayHoster)){
-		if (*relayCmd){
-			SendToServer(relayCmd);
-			*relayCmd = '\0';
-		}
-		return;
-	}
+	RelayHost_onAddUser(u->name);
 }
 
 static void addStartRect(void)
@@ -288,8 +282,7 @@ static void battleOpened(void)
 	copyNextSentence(b->title);
 	copyNextSentence(b->modName);
 
-	if (!strcmp(founderName, relayHoster))
-		JoinBattle(b->id, relayPassword);
+	RelayHost_onBattleOpened(b);
 
 	ChatWindow_UpdateUser(b->founder);
 }
@@ -637,10 +630,7 @@ static void saidBattleEx(void)
 		}
 	}
 
-	if (gHostType->saidBattleEx)
-		gHostType->saidBattleEx(userName, text); 
-	else
-		assert(0);
+	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
 }
 
 static void saidEx(void)
@@ -655,34 +645,12 @@ static void saidPrivate(void)
 {
 	const char *username = getNextWord();
 
-	// Get list of relayhost managers
-	if (!strcmp(username, "RelayHostManagerList") && !memcmp(command, "managerlist ", sizeof("managerlist ") - 1)){
-		strsep(&command, " ");
-		for (const char *c; (c = strsep(&command, " \t\n"));){
-			User *u = FindUser(c);
-			if (u){
-				gRelayManagers = realloc(gRelayManagers, (gRelayManagersCount+1) * sizeof(*gRelayManagers));
-				gRelayManagers[gRelayManagersCount++] = u->name;
-			}
-		}
+	if (RelayHost_handlePrivateMessage(username, command))
+		return;
 
-		// If we are starting a relayhost game, then manager sends the name of the host to join:
-	} else if (!strcmp(username, relayManager)){
-		strcpy(relayHoster, command);
-		*relayManager = '\0';
-
-		// Relayhoster sending a users script password:
-	} else if (!strcmp(username, relayHoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)){
-		command += sizeof("JOINEDBATTLE ") - 1;
-		getNextWord();
-		User *u = FindUser(getNextWord());
-		if (u) {
-			free(u->scriptPassword);
-			u->scriptPassword = strdup(getNextWord());
-		}
 
 		// Zero-K juggler sends matchmaking command "!join <host>"
-	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)){
+	if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)){
 		User *u = FindUser(command + sizeof("!join ") - 1);
 		if (u && u->battle)
 			JoinBattle(u->battle->id, NULL);
