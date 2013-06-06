@@ -48,8 +48,6 @@
 
 #ifndef NDEBUG
 #define TBSTATE_DISABLED TBSTATE_ENABLED
-#else
-#define TBSTATE_DISABLED 0
 #endif
 
 HWND gMainWindow;
@@ -222,7 +220,7 @@ static void onCreate(HWND window)
 
 	MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
 }
-#include "userlist.h"
+
 static LRESULT onCommand(int dialogID)
 {
 	switch (dialogID) {

@@ -41,8 +41,6 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *mapPixels,
 		uint16_t metalMapWidth, uint16_t metalMapHeight, const uint8_t *metalMapPixels,
 		uint16_t heightMapWidth, uint16_t heightMapHeight, const uint8_t *heightMapPixels);
 void BattleRoom_StartPositionsChanged(void);
-void BattleRoom_VoteStarted(const char *topic);
-#define BattleRoom_VoteEnded() (BattleRoom_VoteStarted(NULL))
 void BattleRoom_RedrawMinimap(void);
 void BattleRoom_OnChangeMod(void);
 void BattleRoom_OnSetModDetails(void);
