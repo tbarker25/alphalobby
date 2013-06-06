@@ -260,7 +260,7 @@ static void onEscapeCommand(char *s, UINT_PTR type, const wchar_t *destName,
 		JoinChannel(s, 1);
 	else if (!strcmp(code, "away"))
 		SetClientStatus(~gMyUser.clientStatus, CS_AWAY_MASK);
-	else if (!strcmp(code, "ingame"))
+	else if (!strcmp(code, "ingametime"))
 		SendToServer("GETINGAMETIME");
 	else if (!strcmp(code, "split")) {
 		char *splitType = strsep(&s, " ");
@@ -271,6 +271,8 @@ static void onEscapeCommand(char *s, UINT_PTR type, const wchar_t *destName,
 			: SPLIT_LAST+1;
 		if (type <= SPLIT_LAST)
 			SetSplit(type, atoi(s));
+	} else if (!strcmp(code, "ingame")) {
+		SetClientStatus(~gMyUser.clientStatus, CS_INGAME_MASK);
 	}
 }
 

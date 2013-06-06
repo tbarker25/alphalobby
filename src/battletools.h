@@ -80,11 +80,9 @@ typedef struct HostType {
 	void (*forceTeam)(const char *name, int teamId);
 	void (*kick)(const char *name);
 	void (*saidBattle)(const char *userName, char *text);
-	void (*saidBattleEx)(const char *userName, char *text);
 	void (*setMap)(const char *mapName);
 	void (*setOption)(Option *opt, const char *val);
 	void (*setSplit)(int size, SplitType type);
-	void (*vote)(int voteYes);
 } HostType;
 
 typedef struct BattleOptions {

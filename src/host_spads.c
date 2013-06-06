@@ -13,22 +13,18 @@ static void forceAlly(const char *name, int allyId);
 static void forceTeam(const char *name, int teamId);
 static void kick(const char *name);
 static void saidBattle(const char *userName, char *text);
-static void saidBattleEx(const char *userName, char *text);
 static void setMap(const char *mapName);
 static void setOption(Option *opt, const char *val);
 static void setSplit(int size, SplitType type);
-static void vote(int voteYes);
 
 const HostType gHostSpads = {
 	.forceAlly = forceAlly,
 	.forceTeam = forceTeam,
 	.kick = kick,
 	.saidBattle = saidBattle,
-	.saidBattleEx = saidBattleEx,
 	.setMap = setMap,
 	.setOption = setOption,
 	.setSplit = setSplit,
-	.vote = vote,
 };
 
 static void forceAlly(const char *name, int allyId)
@@ -60,36 +56,6 @@ static void saidBattle(const char *userName, char *text)
 	Chat_Said(GetBattleChat(), userName, 0, text);
 }
 
-static void saidBattleEx(const char *userName, char *text)
-{
-	if (text[0] == '*' && text[1] == ' '){
-
-		// Check for callvote:
-		// "$user called a vote for command \"".join(" ",@{$p_params}."\" [!vote y, !vote n, !vote b]"
-		if (!memcmp(" called a vote for command ", strchr(text + 2, ' ') ?: "", sizeof(" called a vote for command ") - 1)){
-			char *commandStart = strchr(text, '"');
-			if (commandStart){
-				++commandStart;
-				char *commandEnd = strchr(commandStart, '"');
-				if (commandEnd){
-					commandStart[0] = toupper(commandStart[0]);
-					commandEnd[0] = '\0';
-					BattleRoom_VoteStarted(commandStart);
-					commandStart[0] = tolower(commandStart[0]);
-					commandEnd[0] = '"';
-				}
-			}
-		}
-
-		// Check for endvote:
-		if (!memcmp("* Vote for command \"", text, sizeof("* Vote for command \"") - 1)
-				|| !memcmp("* Vote cancelled by ", text, sizeof("* Vote cancelled by ") - 1))
-			BattleRoom_VoteEnded();
-	}
-
-	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
-}
-
 static void setMap(const char *mapName)
 {
 	SpadsMessageF("!map %s", mapName);
@@ -108,8 +74,3 @@ static void setSplit(int size, SplitType type)
 	SpadsMessageF("!split %s %d", (char [][3]){"h", "v", "c1", "c2"}[type], size);
 }
 
-static void vote(int voteYes)
-{
-	SendToServer("SAYPRIVATE %s !vote %c",
-			gMyBattle->founder, voteYes ? 'y' : 'n');
-}

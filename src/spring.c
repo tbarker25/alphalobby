@@ -36,11 +36,10 @@ static DWORD WINAPI _launchSpring2(LPVOID path)
 {
 	PROCESS_INFORMATION processInfo = {};
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL, &(STARTUPINFO){.cb=sizeof(STARTUPINFO)}, &processInfo)) {
-		#ifdef NDEBUG
 		SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
-		#endif
-		SetBattleStatus(&gMyUser, 0, READY_MASK);
+		#ifdef NDEBUG
 		WaitForSingleObject(processInfo.hProcess, INFINITE);
+		#endif
 		SetClientStatus(0, CS_INGAME_MASK);
 	} else
 		MyMessageBox("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");

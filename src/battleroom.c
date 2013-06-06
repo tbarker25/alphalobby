@@ -99,12 +99,7 @@ enum DLG_ID {
 	DLG_MAPMODE_ELEVATION,
 	DLG_CHANGE_MAP,
 	
-	DLG_VOTEBOX,
-	DLG_VOTETEXT,
-	DLG_VOTEYES,
-	DLG_VOTENO,
-	
-	DLG_LAST = DLG_VOTENO,
+	DLG_LAST = DLG_CHANGE_MAP,
 };
 
 static const DialogItem dialogItems[] = {
@@ -153,22 +148,6 @@ static const DialogItem dialogItems[] = {
 		.exStyle = WS_EX_CLIENTEDGE,
 		.style = WS_VISIBLE | LVS_SINGLESEL | LVS_REPORT | LVS_NOCOLUMNHEADER,
 
-	}, [DLG_VOTEBOX] = {
-		.class = WC_BUTTON,
-		.name = L"Poll",
-		.style = WS_VISIBLE | BS_GROUPBOX,
-	}, [DLG_VOTETEXT] = {
-		.class = WC_STATIC,
-		.style = WS_VISIBLE | WS_DISABLED,
-	}, [DLG_VOTEYES] = {
-		.class = WC_BUTTON,
-		.name = L"Yes",
-		.style = WS_VISIBLE | BS_PUSHBUTTON | WS_DISABLED,
-	}, [DLG_VOTENO] = {
-		.class = WC_BUTTON,
-		.name = L"No",
-		.style = WS_VISIBLE | BS_PUSHBUTTON | WS_DISABLED,
-	
 	}, [DLG_MAPMODE_LABEL] = {
 		.class = WC_STATIC,
 		.name = L"Map:",
@@ -501,26 +480,16 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_START, CHAT_WIDTH, h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
 	MOVE_ID(DLG_LEAVE, CHAT_WIDTH + MAP_X(54), h - MAP_Y(14 + S), MAP_X(50), MAP_Y(14));
 
-#define VOTEBOX_TOP (CHAT_TOP)
-#define VOTETEXT_HEIGHT (2 * COMMANDBUTTON_Y)
-#define VOTETEXT_WIDTH (MAP_X(2 * 50 + 4))
-#define VOTEBUTTON_WIDTH ((VOTETEXT_WIDTH - MAP_X(14)) / 2)
-	MOVE_ID(DLG_VOTEBOX,	CHAT_WIDTH, VOTEBOX_TOP, VOTETEXT_WIDTH, VOTETEXT_HEIGHT + MAP_Y(3*7 + 11));
-	MOVE_ID(DLG_VOTETEXT,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + MAP_Y(11), MAP_X(2 * 50), VOTETEXT_HEIGHT);
-	MOVE_ID(DLG_VOTEYES,	CHAT_WIDTH + MAP_X(6), VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
-	MOVE_ID(DLG_VOTENO,		CHAT_WIDTH + MAP_X(10) + VOTEBUTTON_WIDTH, VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(13), VOTEBUTTON_WIDTH, COMMANDBUTTON_Y);
+	MOVE_ID(DLG_ALLY_LABEL,  CHAT_WIDTH, CHAT_TOP, MAP_X(70), TEXTLABEL_Y);
+	MOVE_ID(DLG_ALLY,        CHAT_WIDTH, CHAT_TOP + MAP_Y(10), MAP_X(70), COMMANDBUTTON_Y);
 
-#define VOTEBOX_BOTTOM (VOTEBOX_TOP + VOTETEXT_HEIGHT + MAP_Y(41))
-	MOVE_ID(DLG_ALLY_LABEL,  CHAT_WIDTH, VOTEBOX_BOTTOM, MAP_X(70), TEXTLABEL_Y);
-	MOVE_ID(DLG_ALLY,        CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(10), MAP_X(70), COMMANDBUTTON_Y);
-
-	MOVE_ID(DLG_SIDE_LABEL,  CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(31), MAP_X(70), TEXTLABEL_Y);
+	MOVE_ID(DLG_SIDE_LABEL,  CHAT_WIDTH, CHAT_TOP + MAP_Y(31), MAP_X(70), TEXTLABEL_Y);
 
 	for (int i=0; i <= DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i)
-		MOVE_ID(DLG_SIDE_FIRST + i, CHAT_WIDTH + i * (COMMANDBUTTON_Y + MAP_X(4)), VOTEBOX_BOTTOM + MAP_Y(41), COMMANDBUTTON_Y, COMMANDBUTTON_Y);
+		MOVE_ID(DLG_SIDE_FIRST + i, CHAT_WIDTH + i * (COMMANDBUTTON_Y + MAP_X(4)), CHAT_TOP + MAP_Y(41), COMMANDBUTTON_Y, COMMANDBUTTON_Y);
 
-	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, VOTEBOX_BOTTOM + MAP_Y(62), MAP_X(70), TEXTBOX_Y);
-	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH + MAP_X(10), VOTEBOX_BOTTOM + MAP_Y(77), MAP_X(80), TEXTBOX_Y);
+	MOVE_ID(DLG_SPECTATE,    CHAT_WIDTH, CHAT_TOP + MAP_Y(62), MAP_X(70), TEXTBOX_Y);
+	MOVE_ID(DLG_AUTO_UNSPEC, CHAT_WIDTH + MAP_X(10), CHAT_TOP + MAP_Y(77), MAP_X(80), TEXTBOX_Y);
 
 	for (int i=0; i<=SPLIT_LAST; ++i)
 		MOVE_ID(DLG_SPLIT_FIRST + i, minimapX + (1 + i) * XS + i * YH, YS, MAP_Y(14), MAP_Y(14));
@@ -632,8 +601,6 @@ static void onCreate(HWND window)
 
 static void onDraw(DRAWITEMSTRUCT *info)
 {
-	static int nbRedraw;
-	printf("REDRAWING %d\n", ++nbRedraw);
 	FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
 
 	if (!minimapPixels) {
@@ -837,7 +804,6 @@ static LRESULT onNotify(WPARAM wParam, NMHDR *note)
 static LRESULT onCommand(WPARAM wParam, HWND window)
 {
 	HMENU menu;
-	char voteYes = 0;
 
 	switch (wParam) {
 	case MAKEWPARAM(DLG_START, BN_CLICKED):
@@ -880,18 +846,6 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 
 	case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
 		InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
-		return 0;
-
-	case MAKEWPARAM(DLG_VOTEYES, BN_CLICKED): 
-		voteYes = 1;
-		/* Fallthrough: */
-
-	case MAKEWPARAM(DLG_VOTENO, BN_CLICKED):
-		if (gHostType->vote)
-			gHostType->vote(voteYes);
-		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTEYES), 0);
-		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTENO), 0);
-		EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTETEXT), 0);
 		return 0;
 	}
 	return 1;
@@ -1049,15 +1003,6 @@ static LRESULT CALLBACK battleRoomProc(HWND window, UINT msg, WPARAM wParam, LPA
 	}
 	return DefWindowProc(window, msg, wParam, lParam);
 }
-
-void BattleRoom_VoteStarted(const char *topic)
-{
-	SetDlgItemTextA(gBattleRoom, DLG_VOTETEXT, topic);
-	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTETEXT), (BOOL)topic);
-	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTEYES), (BOOL)topic);
-	EnableWindow(GetDlgItem(gBattleRoom, DLG_VOTENO), (BOOL)topic);
-}
-
 
 static void __attribute__((constructor)) _init_ (void)
 {
