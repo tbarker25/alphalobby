@@ -19,6 +19,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <zlib.h>
 
@@ -33,6 +34,7 @@
 #include "data.h"
 #include "dialogboxes.h"
 #include "downloader.h"
+#include "host_relay.h"
 #include "md5.h"
 #include "resource.h"
 #include "settings.h"
@@ -41,9 +43,6 @@
 #include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
-
-extern const char **gRelayManagers;
-extern int gRelayManagersCount;
 
 void ToMD5(char *password)
 {

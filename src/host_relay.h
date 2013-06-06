@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2013, Thomas Barker
  * All rights reserved.
@@ -17,24 +16,15 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <inttypes.h>
-#include <stdio.h>
-#include <windows.h>
+#ifndef HOST_RELAY_H
+#define HOST_RELAY_H
 
-#include "battleroom.h"
-#include "battletools.h"
-#include "chat.h"
-#include "client_message.h"
-#include "data.h"
-#include "host_default.h"
+extern const char **gRelayManagers;
+extern int gRelayManagersCount;
 
-static void saidBattle(const char *userName, char *text);
+bool RelayHost_handlePrivateMessage(const char *username, char *command);
+void OpenRelayBattle(const char *title, const char *password, const char *modName, const char *mapName, const char *manager);
+void RelayHost_onAddUser(const char *username);
+void RelayHost_onBattleOpened(const Battle *);
 
-const HostType gHostDefault = {
-	.saidBattle = saidBattle,
-};
-
-static void saidBattle(const char *userName, char *text)
-{
-	Chat_Said(GetBattleChat(), userName, 0, text);
-}
+#endif /* end of include guard: HOST_RELAY_H */

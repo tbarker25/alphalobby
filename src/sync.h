@@ -35,7 +35,9 @@ const char * _GetSpringVersion(void);
 uint32_t GetSyncStatus(void);
 void ForEachAiName(void (*func)(const char *, void *), void *arg);
 int UnitSync_GetSkirmishAIOptionCount(const char *name);
+#ifdef _WINDOWS_
 void CALLBACK UnitSync_AddReplaysToListView(HWND listViewWindow);
+#endif
 void UnitSync_Cleanup(void);
 void Sync_Init(void);
 
