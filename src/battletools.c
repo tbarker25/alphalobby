@@ -211,7 +211,7 @@ void ChangeOption(Option *opt)
 		gHostType->setOption(opt, opt->val);
 }
 
-static void setScriptTag(const char *key, const char *val)
+static void setOptionFromTag(const char *key, const char *val)
 {
 	if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
 		StartPosType startPosType = atoi(val);
@@ -254,31 +254,34 @@ static void setScriptTag(const char *key, const char *val)
 	}
 }
 
-static void setScriptTags(char *script)
+static void setOptionsFromScript(char *script)
 {
+	char *script = strdup(currentScript);
+	char *toFree = script;
+
 	char *key, *val;
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
-		setScriptTag(key, val);
+		setOptionFromTag(key, val);
+
+	free(toFree);
 }
 
-void SetScriptTags(char *script)
+void AppendScriptTags(char *s)
 {
 	if (!currentScript) {
-		currentScript = strdup(script);
+		currentScript = strdup(s);
 
 	} else {
 		size_t currentLen = strlen(currentScript) + 1;
-		size_t extraLen = strlen(script) + 1;
+		size_t extraLen = strlen(s) + 1;
 		currentScript = realloc(currentScript,
 				currentLen + extraLen);
 		currentScript[currentLen - 1] = '\t';
-		memcpy(currentScript + currentLen, script, extraLen);
+		memcpy(currentScript + currentLen, s, extraLen);
 	}
 
-	if (!gModHash)
-		return;
-
-	setScriptTags(script);
+	if (gModHash)
+		setOptionsFromScript();
 }
 
 void UpdateModOptions(void)
@@ -288,9 +291,7 @@ void UpdateModOptions(void)
 	if (!currentScript)
 		return;
 
-	char *script = strdup(currentScript);
-	setScriptTags(script);
-	free(script);
+	setOptionsFromScript(script);
 
 	/* Set default values */
 	for (int i=0; i<gNbModOptions; ++i)
@@ -301,4 +302,3 @@ void UpdateModOptions(void)
 		if (!gMapOptions[i].val)
 			BattleRoom_OnSetOption(&gMapOptions[i]);
 }
-

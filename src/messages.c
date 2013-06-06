@@ -648,41 +648,50 @@ static void saidPrivate(void)
 	if (RelayHost_handlePrivateMessage(username, command))
 		return;
 
+	User *u = FindUser(username);
+	if (!u || u->ignore)
+		return;
 
-		// Zero-K juggler sends matchmaking command "!join <host>"
-	if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(command, "!join ", sizeof("!join ") - 1)){
+	// Zero-K juggler sends matchmaking command "!join <host>"
+	if (gMyBattle
+			&& user == gMyBattle->founder
+			&& !memcmp(command, "!join ", sizeof("!join ") - 1)) {
 		User *u = FindUser(command + sizeof("!join ") - 1);
 		if (u && u->battle)
 			JoinBattle(u->battle->id, NULL);
+		return;
+	}
 
-		// Check for pms that identify an autohost
-	} else if (gMyBattle && !strcmp(username, gMyBattle->founder->name) && !memcmp(username, command, strlen(username))){
+	// Check for pms that identify an autohost
+	if (gMyBattle
+			&& user == gMyBattle->founder
+			&& !memcmp(username, command, strlen(username))) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
 		if (!memcmp(command + strlen(username), " (Springie ", sizeof(" (Springie ") - 1)
-				&& strstr(command, " running for "))
+				&& strstr(command, " running for ")) {
 			gHostType = &gHostSpringie;
+			return;
+		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
-		else if (!memcmp(command + strlen(username), " is running SPADS v", sizeof(" is running SPADS v") - 1)
-				&& strstr(command, ", with following components:"))
+		if (!memcmp(command + strlen(username),
+					" is running SPADS v",
+					sizeof(" is running SPADS v") - 1)) {
 			gHostType = &gHostSpads;
-		else
-			goto normal;
-
-		// Normal chat message:
-	} else normal:{
-		User *u = FindUser(username);
-		if (!u || u->ignore)
 			return;
-		HWND window = GetPrivateChat(u);
-		Chat_Said(window, username, 0, command);
-		if (!gMyBattle || strcmp(username, gMyBattle->founder->name) || GetTickCount() - gLastAutoMessage > 2000)
-			ChatWindow_SetActiveTab(window);
+		}
 	}
 
+	// Normal chat message:
+	HWND window = GetPrivateChat(u);
+	Chat_Said(window, username, 0, command);
+	if (!gMyBattle
+			|| strcmp(username, gMyBattle->founder->name) 
+			|| GetTickCount() - gLastAutoMessage > 2000)
+		ChatWindow_SetActiveTab(window);
 }
 
 static void sayPrivate(void)
@@ -706,7 +715,7 @@ static void serverMsgBox(void)
 
 static void setScriptTags(void)
 {
-	SetScriptTags(command);
+	AppendScriptTags(command);
 }
 
 static void TASServer(void)
@@ -750,7 +759,7 @@ static void updateBot(void)
 {
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
 	__attribute__((unused))
-	char *battleID = getNextWord();
+		char *battleID = getNextWord();
 	assert(atoi(battleID) == gMyBattle->id);
 	char *name = getNextWord();
 	for (int i=gMyBattle->nbParticipants - gMyBattle->nbBots; i<gMyBattle->nbParticipants; ++i){

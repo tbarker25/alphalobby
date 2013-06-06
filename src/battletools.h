@@ -138,7 +138,7 @@ void ChangeOption(struct Option *opt);
 void ResetBattleOptions(void);
 void LeftBattle(void);
 void UpdateModOptions(void);
-void SetScriptTags(char *script);
+void AppendScriptTags(char *script);
 
 
 #endif /* end of include guard: BATTLETOOLS_H */
