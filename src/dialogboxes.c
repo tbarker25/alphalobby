@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -382,11 +382,11 @@ static BOOL CALLBACK preferencesProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			gSettings.spring_path = strdup(buff);
 			gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);
 		}	//FALLTHROUGH:
-		case MAKEWPARAM(IDCANCEL, BN_CLICKED): 
+		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
 			return 1;
 
-		case MAKEWPARAM(IDC_PREFERENCES_RESET, BN_CLICKED): 
+		case MAKEWPARAM(IDC_PREFERENCES_RESET, BN_CLICKED):
 			if (IDYES == MessageBox(window, L"This action cannot be reversed.", L"Reset Preferences", MB_YESNO)) {
 				ResetSettings();
 				SendMessage(window, WM_INITDIALOG, 0, 0);

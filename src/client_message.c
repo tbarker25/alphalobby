@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -62,7 +62,7 @@ void JoinBattle(uint32_t id, const char *password)
 	ChangedMod(b->modName);
 	if (gMapHash != b->mapHash || !gMapHash)
 		ChangedMap(b->mapName);
-	
+
 	if (gMyBattle) {
 		battleToJoin = id;
 		free((void *)passwordToJoin);
@@ -98,7 +98,7 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 	if (color == -1)
 		color = s->color;
 	uint32_t bs = ((orMask & nandMask) | (s->battleStatus & ~nandMask)) & ~INTERNAL_MASK;
-	
+
 	if (&s->user == &gMyUser) {
 		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask & ~SYNC_MASK) | GetSyncStatus() | READY_MASK;
 		if (bs != gLastBattleStatus || color != gMyUser.color) {
@@ -108,10 +108,10 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 		}
 		return;
 	}
-	
+
 	if ((s->battleStatus & ~INTERNAL_MASK) == bs && color == s->color)
 		return;
-	
+
 	if (s->battleStatus & AI_MASK) {
 		SendToServer("UPDATEBOT %s %d %d" + (s->bot.owner == &gMyUser), s->name, bs, color);
 		return;
@@ -178,14 +178,14 @@ void RequestChannels(void)
 void JoinChannel(const char *chanName, int focus)
 {
 	chanName += *chanName == '#';
-	
+
 	for (const char *c=chanName; *c; ++c) {
 		if (!isalnum(*c) && *c != '[' && *c != ']') {
 			MyMessageBox("Couldn't join channel", "Unicode channels are not allowed.");
 			return;
 		}
 	}
-		
+
 	SendToServer("JOIN %s", chanName);
 	if (focus)
 		ChatWindow_SetActiveTab(GetChannelChat(chanName));

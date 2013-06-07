@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -33,13 +33,13 @@ enum {
 #define DLG_PROGRESS_BUTTON 0x200
 
 #define ExecuteInMainThreadAsync(_func)\
-	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)	
+	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)
 
 #define ExecuteInMainThread(_func)\
-	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)	
+	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)
 
 #define ExecuteInMainThreadParam(_func, _param)\
-	SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)	
+	SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)
 
 extern HWND gMainWindow;
 void MainWindow_SetActiveTab(HWND newTab);

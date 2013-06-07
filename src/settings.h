@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -29,13 +29,13 @@ enum {
 	SETTING_NOTIFY_CHANNEL = 1 << 2,
 	SETTING_NOTIFY_SERVER  = 1 << 3,
 	SETTING_TIMESTAMP      = 1 << SETTING_TIMESTAMP_OFFSET,
-	
+
 	SETTING_HOST_BALANCE       = 1 << SETTING_HOST_BALANCE_OFFSET,
 	SETTING_HOST_BALANCE_RANK  = 1 << (SETTING_HOST_BALANCE_OFFSET + 1),
 	SETTING_HOST_BALANCE_CLAN = 1 << (SETTING_HOST_BALANCE_OFFSET + 2),
 	SETTING_HOST_FIX_ID        = 1 << (SETTING_HOST_BALANCE_OFFSET + 3),
 	SETTING_HOST_FIX_COLOR     = 1 << (SETTING_HOST_BALANCE_OFFSET + 4),
-	
+
 	SETTING_AUTOCONNECT = 1 << (SETTING_HOST_BALANCE_OFFSET + 5),
 };
 
