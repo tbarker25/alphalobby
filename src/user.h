@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -43,7 +43,7 @@ enum {
 	HANDICAP_MASK = 0x8F << HANDICAP_OFFSET,
 	SYNC_MASK     = 0x03 << SYNC_OFFSET,
 	SIDE_MASK     = 0x0F << SIDE_OFFSET,
-	
+
 	AI_MASK       = 0x01 << AI_OFFSET,
 };
 
@@ -110,7 +110,7 @@ typedef struct User {
 
 	HWND chatWindow;
 	uint32_t cpu, id;
-	
+
 	char alias[MAX_NAME_LENGTH_NUL];
 	char *scriptPassword;
 	uint8_t clientStatus, country, ignore;
@@ -118,7 +118,7 @@ typedef struct User {
 
 typedef struct Bot {
 	UserBot;
-	
+
 	char *dll;
 	int nbOptions;
 	struct Option2 *options;

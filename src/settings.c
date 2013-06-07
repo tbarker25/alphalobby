@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -96,7 +96,7 @@ void OpenDefaultChannels(void)
 	char buff[strlen(gSettings.autojoin) + 1];
 	strcpy(buff, gSettings.autojoin);
 	char *s, *s2 = buff;
-	
+
 	while ((s=strsep(&s2, ";"))) {
 		if (*s == '*')
 			ChatWindow_SetActiveTab(GetServerChat());
@@ -122,12 +122,12 @@ void InitSettings(void)
 			NewUser(atoi(s.key), s.val);
 		fclose(fd);
 	}
-	
+
 	for(int i=0; i<LENGTH(defaultSettings); ++i)
 		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
 		                         : defaultSettings[i].val ? strdup(defaultSettings[i].val)
 								 : NULL;
-	
+
 	fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
 		return;
@@ -166,9 +166,9 @@ void SaveSetting(const char *key, const char *val)
 	assert(tmpConfig);
 	if (!tmpConfig)
 		return;
-	
+
 	const wchar_t *configPath = GetDataDir(L"alphalobby.conf");
-	
+
 	FILE *oldConfig = _wfopen(configPath, L"r");
 	if (oldConfig) {
 		for (KeyPair s; (s = getLine(oldConfig)).key;) {
@@ -179,10 +179,10 @@ void SaveSetting(const char *key, const char *val)
 					goto skipKey;
 			fprintf(tmpConfig, "%s=%s\n", s.key, s.val);
 			skipKey:;
-		}					
+		}
 		fclose(oldConfig);
 	}
-	
+
 	if (key && *val)
 		fprintf(tmpConfig, "%s=%s\n", key, val);
 
@@ -192,7 +192,7 @@ void SaveSetting(const char *key, const char *val)
 		else if (((void **)&gSettings)[i])
 			fprintf(tmpConfig, "%s=%s\n", defaultSettings[i].key, ((char **)&gSettings)[i]);
 	}
-	
+
 	fclose(tmpConfig);
 
 	#ifdef NDEBUG

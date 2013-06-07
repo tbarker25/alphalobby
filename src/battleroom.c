@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -90,15 +90,15 @@ enum DLG_ID {
 
 	DLG_SPLIT_FIRST,
 	DLG_SPLIT_LAST = DLG_SPLIT_FIRST + SPLIT_LAST,
-	
+
 	DLG_SPLIT_SIZE,
-	
+
 	DLG_MAPMODE_LABEL,
 	DLG_MAPMODE_MINIMAP,
 	DLG_MAPMODE_METAL,
 	DLG_MAPMODE_ELEVATION,
 	DLG_CHANGE_MAP,
-	
+
 	DLG_LAST = DLG_CHANGE_MAP,
 };
 
@@ -188,11 +188,11 @@ void BattleRoom_ChangeMinimapBitmap(const uint16_t *_minimapPixels,
 	metalMapWidth = _metalMapWidth;
 	metalMapHeight = _metalMapHeight;
 	metalMapPixels = _metalMapPixels;
-	
+
 	heightMapWidth = _heightMapWidth;
 	heightMapHeight = _heightMapHeight;
 	heightMapPixels = _heightMapPixels;
-	
+
 	InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 }
 
@@ -209,8 +209,8 @@ void BattleRoom_StartPositionsChanged(void)
 	printf("start positions changed %d\n", ++nbCalls);
 	int size;
 	SplitType splitType = -1;
-	
-	
+
+
 	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
 		if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
 			splitType = SPLIT_VERT;
@@ -229,7 +229,7 @@ void BattleRoom_StartPositionsChanged(void)
 
 	for (int i=0; i<=SPLIT_LAST; ++i)
 		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + i, BM_SETCHECK, i == splitType ? BST_CHECKED : BST_UNCHECKED, 0);
-	
+
 	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
 	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
 	//TODO: what the hell was this for????
@@ -289,7 +289,7 @@ static void updatePlayerListGroup(int groupId)
 	FOR_EACH_PLAYER(p, gMyBattle)
 		playersOnTeam += FROM_ALLY_MASK(p->battleStatus) == groupId;
 	_swprintf(buff, L"Team %d :: %d Player%c", groupId + 1, playersOnTeam, playersOnTeam > 1 ? 's' : '\0');
-	
+
 	LVGROUP groupInfo;
 	groupInfo.cbSize = sizeof(groupInfo);
 	groupInfo.mask = LVGF_HEADER;
@@ -352,7 +352,7 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 	}
 	ListView_SetItem(playerList, &item);
 
-	
+
 #define setIcon(subItem, icon) \
 	item.iSubItem = subItem; \
 	item.iImage = icon; \
@@ -810,7 +810,7 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 		LaunchSpring();
 		return 0;
 
-	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED): 
+	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED):
 		menu = CreatePopupMenu();
 		for (int i=0; i<gNbMaps; ++i)
 			AppendMenuA(menu, MF_CHECKED * !strcmp(gMyBattle->mapName,  gMaps[i]), i + 1, gMaps[i]);

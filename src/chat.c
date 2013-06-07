@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -281,7 +281,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam,
 {
 	if (msg != WM_KEYDOWN)
 		goto done;
-	
+
 	if (wParam != VK_TAB)
 		data->end = -1;
 
@@ -328,7 +328,7 @@ static LRESULT CALLBACK inputBoxProc(HWND window, UINT msg, WPARAM wParam,
 			onEscapeCommand(textA + 1, type, destName, window);
 		} else if (type == DEST_SERVER)
 			SendToServer("%s", textA);
-		else 
+		else
 			SendToServer("%s%s %s", chatStrings[type], utf16to8(destName), textA);
 
 		SetWindowLongPtr(GetDlgItem(GetParent(window), DLG_LOG), GWLP_USERDATA, 0);
@@ -386,9 +386,9 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 		HWND inputBox = CreateDlgItem(window, &dialogItems[DLG_INPUT], DLG_INPUT);
 		inputBoxData_t *inputBoxData = calloc(1, sizeof(*inputBoxData));
 		inputBoxData->buffTail = inputBoxData->textBuff;
-		
+
 		SetWindowSubclass(inputBox, (void *)inputBoxProc, (UINT_PTR)data->type, (DWORD_PTR)inputBoxData);
-		
+
 		if (data->type >= DEST_CHANNEL) {
 			HWND list = CreateDlgItem(window, &dialogItems[DLG_LIST], DLG_LIST);
 			for (int i=0; i<=COLUMN_LAST; ++i)
@@ -422,10 +422,10 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 				item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0, (LPARAM)&(LVHITTESTINFO){.pt = ((LPNMITEMACTIVATE)lParam)->ptAction});
 			else if (note->code == LVN_ITEMACTIVATE)
 				item.iItem = ((LPNMITEMACTIVATE)lParam)->iItem;
-			
+
 			if (item.iItem < 0)
 				break;
-			
+
 			SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
 			User *u = (void *)item.lParam;
 			if (u == &gMyUser)
@@ -454,14 +454,14 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 				}
 			}
 			return 0;
-			
+
 		} else if (note->idFrom == DLG_LOG && note->code == EN_MSGFILTER) {
 			MSGFILTER *s = (void *)lParam;
 			if (s->msg != WM_RBUTTONUP)
 				break;
 
 			chatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
-			
+
 			HMENU menu = CreatePopupMenu();
 			AppendMenu(menu, 0, 1, L"Copy");
 			AppendMenu(menu, 0, 2, L"Clear window");
@@ -473,10 +473,10 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 			AppendMenu(menu, gSettings.flags & (1<<data->type) ? MF_CHECKED : 0, 4, L"Show login/logout");
 
 			AppendMenu(menu, 0, 5, (const wchar_t *[]){L"Leave Battle", L"Close private chat", L"Leave channel", L"Hide server log"}[data->type]);
-			
+
 			POINT pt = {.x = LOWORD(s->lParam), .y = HIWORD(s->lParam)};
 			ClientToScreen(s->nmhdr.hwndFrom, &pt);
-			
+
 			int index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
 			switch (index) {
 			case 1: {
@@ -511,7 +511,7 @@ static LRESULT CALLBACK chatBoxProc(HWND window, UINT msg, WPARAM wParam,
 				SendMessage(data->type == DEST_BATTLE ? GetParent(window) : window, WM_CLOSE, 0, 0);
 				break;
 			}
-			
+
 		} else if (note->idFrom == DLG_LOG && note->code == EN_LINK) {
 			ENLINK *s = (void *)lParam;
 			if (s->msg != WM_LBUTTONUP)
@@ -560,7 +560,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 {
 	window = GetDlgItem(window, DLG_LOG);
 	SendMessage(window, EM_EXSETSEL, 0, (LPARAM)&(CHARRANGE){INFINITE, INFINITE});
-	
+
 	char buff[128];
 	if ((type != CHAT_TOPIC) && gSettings.flags & SETTING_TIMESTAMP) {
 		char *s = buff;
@@ -571,7 +571,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 		*s = '\0';
 		putText(window, buff, COLOR_TIMESTAMP, 0);
 	}
-	
+
 	COLORREF color = chatColors[type];
 	if (type == CHAT_SERVERIN || type == CHAT_SERVEROUT)
 		putText(window, type == CHAT_SERVERIN ? "> " : "< ", color, 0);
@@ -586,7 +586,7 @@ void Chat_Said(HWND window, const char *username, ChatType type, const char *tex
 		}
 		putText(window, type & (CHAT_EX | CHAT_SYSTEM) ? " " : ": ", color, !(type & CHAT_SYSTEM) * CFE_BOLD);
 	}
-	
+
 	putText(window, text, color, 0);
 	putText(window, "\n", color, 0);
 
