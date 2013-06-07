@@ -510,8 +510,8 @@ static void downloadFile(SessionContext *ses)
 			L"ContentService.asmx", NULL, WINHTTP_NO_REFERER, NULL,
 			0);
 
-	RequestContext *req = calloc(1, sizeof(RequestContext)
-			sizeof(messageTemplateStart)
+	RequestContext *req = calloc(1, sizeof(RequestContext) +
+			sizeof(messageTemplateStart) +
 			sizeof(messageTemplateEnd) + MAX_TITLE);
 
 	req->onFinish = handleMapSources;
