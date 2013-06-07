@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,7 +30,7 @@ typedef enum SplitType {
 	SPLIT_CORNERS1,
 	SPLIT_CORNERS2,
 	SPLIT_RAND,
-	
+
 	SPLIT_LAST = SPLIT_RAND,
 } SplitType;
 
@@ -47,7 +47,7 @@ typedef struct Option {
 	OptionType type;
 	char *key, *name, *val, *def, *desc;
 	struct Option *section;
-	
+
 	size_t nbListItems;
 	OptionListItem *listItems;
 } Option;
@@ -61,7 +61,7 @@ typedef enum StartPosType {
 	STARTPOS_CHOOSE_BEFORE = 3,
 } StartPosType;
 
-#define HOST_RELAY 0x01 
+#define HOST_RELAY 0x01
 #define HOST_LOCAL 0x03
 // #define HOST_SP    0x05
 #define HOST_FLAG  0x01
@@ -70,7 +70,7 @@ typedef enum StartPosType {
 #define GET_STARTPOS(_team) (gBattleOptions.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&gBattleOptions.positions[_team] != -1\
 		? gBattleOptions.positions[_team]\
 		: gMapInfo.positions[_team])
-	
+
 typedef struct StartRect {
 	uint16_t left, top, right, bottom;
 } StartRect;

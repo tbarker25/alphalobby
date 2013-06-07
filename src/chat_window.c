@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -78,7 +78,7 @@ int ChatWindow_AddTab(HWND tab)
 	int itemIndex = getTabIndex(tab);
 	if  (itemIndex >= 0)
 		return itemIndex;
-	
+
 	wchar_t windowTitle[MAX_NAME_LENGTH_NUL];
 	GetWindowText(tab, windowTitle, MAX_NAME_LENGTH_NUL);
 
@@ -93,7 +93,7 @@ int ChatWindow_AddTab(HWND tab)
 		ShowWindow(tab, 1);
 		resizeActiveTab();
 	}
-	
+
 	return itemIndex;
 }
 
@@ -113,7 +113,7 @@ void ChatWindow_RemoveTab(HWND tabItem)
 	TCITEM info;
 	info.mask = TCIF_PARAM;
 	TabCtrl_GetItem(tabControl, index, &info);
-	
+
 	activeTab = (HWND)info.lParam;
 	ShowWindow(activeTab, 1);
 	TabCtrl_SetCurSel(tabControl, index);
@@ -135,7 +135,7 @@ static LRESULT CALLBACK chatWindowProc(HWND window, UINT msg, WPARAM wParam, LPA
 	switch (msg) {
 	case WM_CREATE:
 		gChatWindow = window;
-		
+
 		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
 		tabControl = GetDlgItem(window, DLG_TAB);
 		return 0;

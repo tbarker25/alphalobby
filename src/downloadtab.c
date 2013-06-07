@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,7 +31,7 @@
 
 enum DLG_ID {
 	DLG_LIST,
-	DLG_RAPID, 
+	DLG_RAPID,
 	DLG_LAST = DLG_RAPID,
 };
 
@@ -97,9 +97,9 @@ static LRESULT CALLBACK downloadTabProc(HWND window, UINT msg, WPARAM wParam, LP
 	case WM_CREATE:
 		gDownloadTabWindow = window;
 		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
-		
+
 		HWND listDlg = GetDlgItem(gDownloadTabWindow, DLG_LIST);
-		
+
 		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
 			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
 				.mask = LVCF_TEXT | LVCF_SUBITEM,

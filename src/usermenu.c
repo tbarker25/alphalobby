@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,25 +31,25 @@
 
 void CreateUserMenu(union UserOrBot *s, HWND window)
 {
-	
+
 	enum menuID {
 		CHAT = 1, IGNORED, ALIAS, ID, ALLY, SIDE, COLOR, KICK,
 			RING, SPEC,
 		LAST=SPEC,
 		FLAG_TEAM = 0x0100, FLAG_ALLY = 0x0200, FLAG_SIDE = 0x0400,
 		AI_FLAG = 0x0800, AI_OPTIONS_FLAG = 0x10000,
-		
+
 		TEAM_MENU = 1, ALLY_MENU, SIDE_MENU, AI_MENU,
 	};
 
 	HMENU menus[100];
-	
+
 	int lastMenu = AI_MENU;
 	for (int i=0; i<=lastMenu; ++i)
 		menus[i] = CreatePopupMenu();
 
 	uint32_t battleStatus = s->battleStatus;
-	
+
 	for (int i=0; i<16; ++i) {
 		wchar_t buff[3];
 		_swprintf(buff, L"%d", i+1);
@@ -60,7 +60,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	for (int i=0; *gSideNames[i]; ++i)
 		AppendMenuA(menus[SIDE_MENU], MF_CHECKED * (i == FROM_SIDE_MASK(battleStatus)), FLAG_SIDE | i, gSideNames[i]);
 
-	
+
 	if (battleStatus & AI_MASK) {
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
@@ -90,7 +90,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 			AppendMenu(menus[0], 0, SPEC, L"Unspectate");
 	}
 	SetMenuDefaultItem(menus[0], 1, 0);
-	
+
 	POINT pt;
 	GetCursorPos(&pt);
 	int clicked = TrackPopupMenuEx(menus[0], TPM_RETURNCMD, pt.x, pt.y, window, NULL);

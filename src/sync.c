@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -81,10 +81,10 @@ static void printLastError(wchar_t *title)
 
 
 __attribute__((noreturn))
-static DWORD WINAPI syncThread (LPVOID lpParameter) 
+static DWORD WINAPI syncThread (LPVOID lpParameter)
 {
 	ilInit();
-	
+
 	HMODULE libUnitSync = LoadLibrary(L"unitsync.dll");
 	if (!libUnitSync)
 		printLastError(L"Could not load unitsync.dll");
@@ -93,8 +93,8 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 		*x[i].proc = GetProcAddress(libUnitSync, x[i].name);
 		assert(*x[i].proc);
 	}
-	
-	
+
+
 	void *s;
 	event = CreateEvent(NULL, FALSE, 0, NULL);
 	taskReload=1;
@@ -102,9 +102,9 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 		if (taskReload) {
 			taskReload = 0;
 			Init(0, 0);
-			
+
 			taskSetBattleStatus = 1;
-			
+
 			for (int i=0; i<gNbMods; ++i)
 				free(gMods[i]);
 			free(gMods);
@@ -112,7 +112,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			gMods = malloc(gNbMods * sizeof(gMods[0]));
 			for (int i=0; i<gNbMods; ++i)
 				gMods[i] = strdup(GetPrimaryModName(i));
-			
+
 			for (int i=0; i<gNbMaps; ++i)
 				free(gMaps[i]);
 			free(gMaps);
@@ -120,7 +120,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			gMaps = malloc(gNbMaps * sizeof(gMaps[0]));
 			for (int i=0; i<gNbMaps; ++i)
 				gMaps[i] = strdup(GetMapName(i));
-			
+
 			void resetMapAndMod(void) {
 				if (gMyBattle) {
 					ChangedMod(gMyBattle->modName);
@@ -146,7 +146,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 
 uint32_t GetSyncStatus(void)
 {
-	return (gMyBattle 
+	return (gMyBattle
 			&& gMapHash && (!gMyBattle->mapHash || gMapHash == gMyBattle->mapHash)
 			&& gModHash && (!gBattleOptions.modHash || gModHash == gBattleOptions.modHash))
 		? SYNCED : UNSYNCED;
@@ -162,20 +162,20 @@ static void initOptions(size_t nbOptions, gzFile fd)
 	assert(nbOptions < 256);
 	Option *options = calloc(10000, 1);
 	char *s = (void *)&options[nbOptions];
-	
+
 	for (int i=0; i<nbOptions; ++i) {
 		options[i].type = GetOptionType(i);
 		assert(options[i].type != opt_error);
 
 		options[i].key = s - (size_t)options;
 		s += sprintf(s, "%s", GetOptionKey(i)) + 1;
-		
+
 		options[i].name = s - (size_t)options;
 		s += sprintf(s, "%s", GetOptionName(i)) + 1;
-		
+
 		options[i].desc = s - (size_t)options;
 		s += sprintf(s, "%s", GetOptionDesc(i)) + 1;
-		
+
 		options[i].def = s - (size_t)options;
 		switch (GetOptionType(i)) {
 		case opt_bool:
@@ -214,7 +214,7 @@ static void initOptions(size_t nbOptions, gzFile fd)
 	}
 	size_t optionsSize = s - (char *)options;
 	assert(optionsSize < 10000);
-	
+
 	gzwrite(fd, &optionsSize, 4);
 	gzwrite(fd, &nbOptions, 4);
 
@@ -231,15 +231,15 @@ static OptionList loadOptions(gzFile fd)
 {
 	size_t optionsSize;
 	size_t nbOptions;
-	
+
 	gzread(fd, &optionsSize, 4);
 	gzread(fd, &nbOptions, 4);
 	if (nbOptions == 0)
 		return (OptionList){NULL, 0};
-	
+
 	assert(optionsSize < 10000);
 	assert(nbOptions < 100);
-	
+
 	Option *options = calloc(optionsSize, 1);
 	gzread(fd, options, optionsSize);
 
@@ -250,7 +250,7 @@ static OptionList loadOptions(gzFile fd)
 		options[i].def += (size_t)options;
 		if (options[i].section)
 			options[i].section = &options[*(size_t *)&options[i].section - 1];
-		
+
 		if (options[i].nbListItems) {
 			options[i].listItems = ((void *)options[i].listItems + (size_t)options);
 			for (int j=0; j<options[i].nbListItems; ++j) {
@@ -259,7 +259,7 @@ static OptionList loadOptions(gzFile fd)
 			}
 		}
 	}
-	
+
 	return (OptionList){options, nbOptions};
 }
 
@@ -271,24 +271,24 @@ static void createMapFile(const char *mapName)
 			DownloadMap(mapName);
 		return;
 	}
-	
+
 	char tmpFilePath[MAX_PATH];
 	GetTempPathA(MAX_PATH, tmpFilePath);
 	GetTempFileNameA(tmpFilePath, NULL, 0, tmpFilePath);
-	
+
 	gzFile fd = gzopen(tmpFilePath, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
 	gzwrite(fd, &mapHash, sizeof(mapHash));
 	struct _LargeMapInfo mapInfo = {.mapInfo = {.description = mapInfo.description, .author = mapInfo.author}};
-	
+
 	GetMapInfoEx(mapName, &mapInfo.mapInfo, 1);
 	gzwrite(fd, &mapInfo, sizeof(mapInfo));
 	initOptions(GetMapOptionCount(mapName), fd);
-	
+
 	uint16_t *minimapPixels = GetMinimap(mapName, MAP_DETAIL);
 	assert(minimapPixels);
 	gzwrite(fd, minimapPixels, MAP_SIZE*sizeof(*minimapPixels));
-	
+
 	for (int i=0; i<2; ++i) {
 		const char *mapType = i ? "metal" : "height";
 		int w=0, h=0;
@@ -302,7 +302,7 @@ static void createMapFile(const char *mapName)
 		gzwrite(fd, mapData, w * h);
 		free(mapData);
 	}
-	
+
 	gzclose(fd);
 
 	char filePath[MAX_PATH];
@@ -323,22 +323,22 @@ static void createModFile(const char *modName)
 			DownloadMod(modName);
 		return;
 	}
-	
+
 	GetPrimaryModArchiveCount(modIndex);
 	AddAllArchives(GetPrimaryModArchive(modIndex));
-	
+
 	char tmpFilePath[MAX_PATH];
 	GetTempPathA(MAX_PATH, tmpFilePath);
 	GetTempFileNameA(tmpFilePath, NULL, 0, tmpFilePath);
-	
+
 	gzFile fd = gzopen(tmpFilePath, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
-	
+
 	uint32_t modHash = GetPrimaryModChecksum(modIndex);
 	gzwrite(fd, &modHash, sizeof(modHash));
-	
+
 	initOptions(GetModOptionCount(), fd);
-	
+
 	uint8_t sideCount = GetSideCount();
 	gzputc(fd, sideCount);
 	char sideNames[sideCount][32];
@@ -348,7 +348,7 @@ static void createModFile(const char *modName)
 		strcpy(sideNames[i], GetSideName(i));
 	}
 	gzwrite(fd, sideNames, sizeof(sideNames));
-	
+
 	uint32_t sidePics[sideCount][16*16];
 	for (uint8_t i=0; i<sideCount; ++i) {
 		char isBMP = 0;
@@ -363,13 +363,13 @@ static void createModFile(const char *modName)
 		if (!fd) {
 			continue;
 		}
-		
+
 		uint8_t buff[FileSizeVFS(fd)];
 		ReadFileVFS(fd, buff, sizeof(buff));
 		CloseFileVFS(fd);
 		ilLoadL(IL_TYPE_UNKNOWN, buff, sizeof(buff));
 		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, sidePics[i]);
-		
+
 		//Set white as transpareny for BMP:
 		if (isBMP) {
 			for (int j=0; j<16 * 16; ++j)
@@ -378,14 +378,14 @@ static void createModFile(const char *modName)
 		}
 	}
 	gzwrite(fd, sidePics, sizeof(sidePics));
-	
+
 	gzclose(fd);
-	
+
 	char filePath[MAX_PATH];
 	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
 	SHCreateDirectoryExW(NULL, GetDataDir(L"cache\\alphalobby"), NULL);
 	MoveFileExA(tmpFilePath, filePath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
-	
+
 	ExecuteInMainThreadParam(ChangedMod, modName);
 }
 
@@ -407,7 +407,7 @@ void ChangedMod(const char *modName)
 
 	sprintf(filePath, "%lscache\\alphalobby\\%s.ModData", gDataDir, modName);
 	fd = gzopen(filePath, "rb");
-	
+
 	if (fd && gzgetc(fd) != SYNCFILE_VERSION) {
 		gzclose(fd);
 		remove(filePath);
@@ -463,7 +463,7 @@ void ChangedMap(const char *mapName)
 
 	char filePath[MAX_PATH];
 	sprintf(filePath, "%lscache\\alphalobby\\%s.MapData", gDataDir, mapName);
-	
+
 	gzFile fd = NULL;
 
 	for (int i=0; i<gNbMaps; ++i) {
@@ -516,7 +516,7 @@ void ChangedMap(const char *mapName)
 	heightMapPixels = malloc(h[0] * h[1]);
 	gzread(fd, heightMapPixels, h[0] *  h[1]);
 
-	//Metalmap pixels:	
+	//Metalmap pixels:
 	static uint8_t *metalMapPixels;
 	free(metalMapPixels);
 	uint16_t d[2];

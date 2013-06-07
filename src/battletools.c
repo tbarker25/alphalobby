@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -118,14 +118,14 @@ void LeftBattle(void)
 	currentScript = NULL;
 
 	BattleRoom_OnSetModDetails();
-	
+
 	while (gMyBattle->nbBots)
 		DelBot(gMyBattle->users[gMyBattle->nbParticipants - 1]->bot.name);
-	
+
 	gMyUser.battleStatus = 0;
 	gLastBattleStatus = 0;
 	battleInfoFinished = 0;
-	
+
 	gMyBattle = NULL;
 	if (battleToJoin)
 		JoinBattle(battleToJoin, NULL);
@@ -141,17 +141,17 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 	s->battleStatus = bs;
 	uint32_t lastColor = s->color;
 	s->color = color;
-	
+
 	#ifdef NDEBUG
 	if (!s || !gMyBattle || gMyBattle != s->battle)
 		return;
 	#endif
-	
+
 	BattleRoom_UpdateUser(s);
-	
+
 	if (&s->user == &gMyUser)
 		gLastBattleStatus = bs;
-	
+
 	if ((lastBS ^ bs) & MODE_MASK) {
 		if (!(bs & MODE_MASK) && BattleRoom_IsAutoUnspec())
 			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
@@ -221,7 +221,7 @@ static void setOptionFromTag(const char *key, const char *val)
 		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
-	
+
 	if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
 		int team = atoi(key + sizeof("game/team") - 1);
 		char type = key[sizeof("game/team/startpos") + (team > 10)];
@@ -229,7 +229,7 @@ static void setOptionFromTag(const char *key, const char *val)
 		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
-	
+
 	size_t nbOptions;
 	Option *options;
 	if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
