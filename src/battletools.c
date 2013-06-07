@@ -32,7 +32,6 @@
 #include "client_message.h"
 #include "data.h"
 #include "dialogboxes.h"
-#include "host_default.h"
 #include "settings.h"
 #include "sync.h"
 
@@ -47,7 +46,7 @@ uint32_t gMapHash, gModHash;
 ssize_t gNbModOptions, gNbMapOptions;
 Option *gModOptions, *gMapOptions;
 BattleOption gBattleOptions;
-const HostType *gHostType = &gHostDefault;
+const HostType *gHostType;
 
 uint8_t gNbSides;
 char gSideNames[16][32];
@@ -64,13 +63,13 @@ struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo
 
 void SetSplit(SplitType type, int size)
 {
-	if (gMyBattle && gHostType->setSplit)
+	if (gHostType && gHostType->setSplit)
 		gHostType->setSplit(size, type);
 }
 
 void SetMap(const char *name)
 {
-	if (gHostType->setMap)
+	if (gHostType && gHostType->setMap)
 		gHostType->setMap(name);
 }
 
@@ -207,7 +206,7 @@ void ChangeOption(Option *opt)
 		return;
 	}
 
-	if (gHostType->setOption)
+	if (gHostType && gHostType->setOption)
 		gHostType->setOption(opt, opt->val);
 }
 
@@ -254,7 +253,7 @@ static void setOptionFromTag(const char *key, const char *val)
 	}
 }
 
-static void setOptionsFromScript(char *script)
+static void setOptionsFromScript(void)
 {
 	char *script = strdup(currentScript);
 	char *toFree = script;
@@ -291,7 +290,7 @@ void UpdateModOptions(void)
 	if (!currentScript)
 		return;
 
-	setOptionsFromScript(script);
+	setOptionsFromScript();
 
 	/* Set default values */
 	for (int i=0; i<gNbModOptions; ++i)

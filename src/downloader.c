@@ -6,12 +6,12 @@
  * It under the terms of the GNU General Public License as published by
  * The Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * But WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -39,12 +39,12 @@
 
 //determines minimum resolution of progressbar
 // values below ~16KB will degrade throughput.
-#define CHUNK_SIZE (64 * 1024) 
+#define CHUNK_SIZE (64 * 1024)
 
 //Used with with rapid streamer.
 //More concurrent requests improves throughput to a point, has some overhead.
 #define MAX_REQUESTS 10
-#define MIN_REQUEST_SIZE (512 * 1024) 
+#define MIN_REQUEST_SIZE (512 * 1024)
 
 typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
@@ -278,7 +278,7 @@ static ConnectContext * makeConnect(SessionContext *ses, const wchar_t *domain)
 {
 	ConnectContext *con = malloc(sizeof(ConnectContext));
 	*con = (ConnectContext) {
-			WinHttpConnect(ses->handle, domain, INTERNET_DEFAULT_HTTP_PORT, 0),
+		WinHttpConnect(ses->handle, domain, INTERNET_DEFAULT_HTTP_PORT, 0),
 			ses};
 	assert(con->handle);
 	return con;
@@ -295,7 +295,7 @@ static void sendRequest(RequestContext *req, const wchar_t *objectName)
 }
 
 static void saveFile(RequestContext *req)
-{	
+{
 	writeFile(req->wcharParam, req->buffer, req->contentLength);
 	req->ses->error = NULL;
 }
@@ -323,9 +323,9 @@ static void handleMapSources(RequestContext *req)
 		*end = 0;
 		wchar_t path[256], host[256];
 		if (FALSE == WinHttpCrackUrl(utf8to16(s), 0, ICU_DECODE, &(URL_COMPONENTS){
-				.dwStructSize = sizeof(URL_COMPONENTS),
-				.lpszHostName = host, .dwHostNameLength = LENGTH(host),
-				.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)}))
+					.dwStructSize = sizeof(URL_COMPONENTS),
+					.lpszHostName = host, .dwHostNameLength = LENGTH(host),
+					.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)}))
 			continue;
 		wchar_t *name = wcsrchr(path, '/');
 		size_t size = sizeof(wchar_t) * (wcslen(name) + wcslen(gDataDir) + LENGTH(L"maps"));
@@ -367,8 +367,8 @@ void Downloader_Init(void)
 
 	*ses = (SessionContext){
 		.status = DL_ACTIVE,
-		.handle = handle,
-		.onFinish = GetSelectedPackages,
+			.handle = handle,
+			.onFinish = GetSelectedPackages,
 	};
 	WinHttpSetOption(handle, WINHTTP_OPTION_CONTEXT_VALUE, &ses, sizeof(ses));
 	WinHttpSetStatusCallback(handle, (void *)callback,
@@ -380,8 +380,8 @@ void Downloader_Init(void)
 
 	*req = (RequestContext){
 		.ses = ses,
-		.con = makeConnect(ses, L"repos.caspring.org"),
-		.onFinish = handleRepoList,
+			.con = makeConnect(ses, L"repos.caspring.org"),
+			.onFinish = handleRepoList,
 	};
 	sendRequest(req, L"repos.gz");
 }
@@ -474,7 +474,7 @@ static void handleRepo2(const wchar_t *path)
 				while (longName[-1] != ',')
 					--longName;
 				for (int i=0; i<gNbMods; ++i)
-					if (!strcmp(gMods[i], longName)) 
+					if (!strcmp(gMods[i], longName))
 						return;
 				DownloadMod(longName);
 			}
@@ -530,25 +530,25 @@ static void downloadFile(SessionContext *ses)
 
 /* void GetDownloadMessage(char *text) */
 /* { */
-	/* if (gMyBattle == NULL) */
-		/* return; */
-	/* text[0] = '\0'; */
-	/* FOR_EACH(s, sessions) { */
-		/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) { */
-			/* text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n", */
-					/* (float)s->fetchedBytes / 1000000, */
-					/* (float)s->totalBytes / 1000000, */
-					/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
-		/* } */
-	/* } */
-	/* FOR_EACH(s, sessions) { */
-		/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) { */
-			/* sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n", */
-					/* (float)s->fetchedBytes / 1000000, */
-					/* (float)s->totalBytes / 1000000, */
-					/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
-		/* } */
-	/* } */
+/* if (gMyBattle == NULL) */
+/* return; */
+/* text[0] = '\0'; */
+/* FOR_EACH(s, sessions) { */
+/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->mapName))) { */
+/* text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n", */
+/* (float)s->fetchedBytes / 1000000, */
+/* (float)s->totalBytes / 1000000, */
+/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
+/* } */
+/* } */
+/* FOR_EACH(s, sessions) { */
+/* if (s->status && !wcscmp(s->name, utf8to16(gMyBattle->modName))) { */
+/* sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n", */
+/* (float)s->fetchedBytes / 1000000, */
+/* (float)s->totalBytes / 1000000, */
+/* (float)100 * s->fetchedBytes / (s->totalBytes?:1)); */
+/* } */
+/* } */
 /* } */
 
 void DownloadFile(const char *name, enum DLTYPE type)
@@ -663,7 +663,7 @@ static void _handlePackage(RequestContext *req)
 #endif
 
 	void dispatchRequest(int i)
-	{	
+	{
 		++req->ses->totalFiles;
 		++req->ses->requests;
 		++req->con->requests;
@@ -672,8 +672,8 @@ static void _handlePackage(RequestContext *req)
 
 		*newReq = (RequestContext) {
 			.ses = req->ses,
-			.con = req->con,
-			.onFinish = handleStream,
+				.con = req->con,
+				.onFinish = handleStream,
 		};
 
 		size_t len = (nbFilesInPackage + 7) / 8;

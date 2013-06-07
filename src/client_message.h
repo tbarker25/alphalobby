@@ -20,8 +20,6 @@
 #define CLIENT_MESSAGE_H
 
 void SendToServer(const char *format, ...);
-#define SpadsMessageF(format, ...)\
-	(gLastAutoMessage = GetTickCount(), SendToServer("SAYPRIVATE %s " format, gMyBattle->founder->name, ## __VA_ARGS__))
 
 void JoinBattle(uint32_t id, const char *password);
 

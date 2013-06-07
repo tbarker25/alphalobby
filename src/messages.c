@@ -589,10 +589,10 @@ static void saidBattle(void)
 	const char *userName = getNextWord();
 	char *text = command;
 
-	if (gHostType->saidBattle)
+	if (gHostType && gHostType->saidBattle)
 		gHostType->saidBattle(userName, text);
 	else
-		assert(0);
+		Chat_Said(GetBattleChat(), userName, 0, text);
 }
 
 static void saidBattleEx(void)
@@ -648,17 +648,17 @@ static void saidPrivate(void)
 	if (RelayHost_handlePrivateMessage(username, command))
 		return;
 
-	User *u = FindUser(username);
-	if (!u || u->ignore)
+	User *user = FindUser(username);
+	if (!user || user->ignore)
 		return;
 
 	// Zero-K juggler sends matchmaking command "!join <host>"
 	if (gMyBattle
 			&& user == gMyBattle->founder
 			&& !memcmp(command, "!join ", sizeof("!join ") - 1)) {
-		User *u = FindUser(command + sizeof("!join ") - 1);
-		if (u && u->battle)
-			JoinBattle(u->battle->id, NULL);
+		User *user = FindUser(command + sizeof("!join ") - 1);
+		if (user && user->battle)
+			JoinBattle(user->battle->id, NULL);
 		return;
 	}
 
@@ -686,7 +686,7 @@ static void saidPrivate(void)
 	}
 
 	// Normal chat message:
-	HWND window = GetPrivateChat(u);
+	HWND window = GetPrivateChat(user);
 	Chat_Said(window, username, 0, command);
 	if (!gMyBattle
 			|| strcmp(username, gMyBattle->founder->name) 

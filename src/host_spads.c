@@ -17,6 +17,9 @@ static void setMap(const char *mapName);
 static void setOption(Option *opt, const char *val);
 static void setSplit(int size, SplitType type);
 
+#define SpadsMessageF(format, ...)\
+	(gLastAutoMessage = GetTickCount(), SendToServer("SAYPRIVATE %s " format, gMyBattle->founder->name, ## __VA_ARGS__))
+
 const HostType gHostSpads = {
 	.forceAlly = forceAlly,
 	.forceTeam = forceTeam,

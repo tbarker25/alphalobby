@@ -5,7 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <windows.h>
+
+#include "battleroom.h"
 #include "data.h"
+#include "chat.h"
 #include "client.h"
 #include "client_message.h"
 #include "common.h"
@@ -13,15 +17,36 @@
 #include "sync.h"
 #include "user.h"
 
+static void forceAlly(const char *name, int allyId);
+static void forceTeam(const char *name, int teamId);
+static void kick(const char *name);
+static void saidBattle(const char *userName, char *text);
+static void setMap(const char *mapName);
+static void setOption(Option *opt, const char *val);
+static void setSplit(int size, SplitType type);
+
+static void handleManagerList(char *command);
+
+const HostType gHostRelay = {
+	.forceAlly = forceAlly,
+	.forceTeam = forceTeam,
+	.kick = kick,
+	.saidBattle = saidBattle,
+	.setMap = setMap,
+	.setOption = setOption,
+	.setSplit = setSplit,
+};
+
 const char **gRelayManagers;
 int gRelayManagersCount;
 
 static char relayCmd[1024];
-char relayHoster[1024];
+static char relayHoster[1024];
 static char relayManager[1024];
 static char relayPassword[1024];
 
-static void handleManagerList(char *command);
+#define RelayMessage(format, ...) \
+	(SendToServer("SAYPRIVATE %s " format, relayHoster, ## __VA_ARGS__))
 
 bool RelayHost_handlePrivateMessage(const char *username, char *command)
 {
@@ -105,3 +130,91 @@ void RelayHost_onBattleOpened(const Battle *b)
 		/* else */
 			/* ++format; */
 	/* } */
+
+
+static void forceAlly(const char *name, int allyId)
+{
+	RelayMessage("FORCEALLYNO %s %d" , name, allyId);
+}
+
+static void forceTeam(const char *name, int teamId)
+{
+	RelayMessage("FORCETEAMNO %s %d" , name, teamId);
+}
+
+/* static void forceColor(const char *name, uint32_t color)    */
+/* {                                                           */
+/*         RelayMessage("FORCETEAMCOLOR %s %d", name, color); */
+/* }                                                           */
+
+static void kick(const char *name)
+{
+	RelayMessage("KICKFROMBATTLE %s", name);
+}
+
+static void saidBattle(const char *userName, char *text)
+{
+	Chat_Said(GetBattleChat(), userName, 0, text);
+}
+
+static void setMap(const char *mapName)
+{
+	RelayMessage("UPDATEBATTLEINFO 0 0 %d %s",
+			GetMapHash(mapName), mapName);
+}
+
+static void setOption(Option *opt, const char *val)
+{
+	const char *path;
+	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
+		path = "modoptions/";
+	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
+		path = "mapoptions/";
+	else
+		assert(0);
+
+	RelayMessage("SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
+}
+
+static void addStartBox(int i, int left, int top, int right, int bottom)
+{
+	RelayMessage("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
+}
+
+static void delStartBox(int i)
+{
+	RelayMessage("REMOVESTARTRECT %d", i);
+}
+
+static void setSplit(int size, SplitType type)
+{
+	switch (type) {
+	case SPLIT_HORZ:
+		addStartBox(0, 0, 0, size, 200);
+		addStartBox(1, 200 - size, 0, 200, 200);
+		delStartBox(2);
+		delStartBox(3);
+		break;
+	case SPLIT_VERT:
+		addStartBox(0, 0, 0, 200, size);
+		addStartBox(1, 0, 200 - size, 200, 200);
+		delStartBox(2);
+		delStartBox(3);
+		break;
+	case SPLIT_CORNERS1:
+		addStartBox(0, 0, 0, size, size);
+		addStartBox(1, 200 - size, 200 - size, 200, 200);
+		addStartBox(2, 0, 200 - size, size, 200);
+		addStartBox(3, 200 - size, 0, 200, size);
+		break;
+	case SPLIT_CORNERS2:
+		addStartBox(0, 0, 200 - size, size, 200);
+		addStartBox(1, 200 - size, 0, 200, size);
+		addStartBox(2, 0, 0, size, size);
+		addStartBox(3, 200 - size, 200 - size, 200, 200);
+		break;
+	default:
+		assert(0);
+		break;
+	}
+}
