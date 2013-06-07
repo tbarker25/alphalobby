@@ -28,7 +28,6 @@
 #include "client_message.h"
 #include "data.h"
 #include "host_self.h"
-#include "host_default.h"
 #include "sync.h"
 
 static void forceAlly(const char *name, int allyId);

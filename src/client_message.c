@@ -34,7 +34,6 @@
 #include "client_message.h"
 #include "data.h"
 #include "dialogboxes.h"
-#include "host_default.h"
 #include "md5.h"
 #include "settings.h"
 #include "sync.h"
@@ -82,7 +81,7 @@ void JoinBattle(uint32_t id, const char *password)
 				return;
 			password = buff;
 		}
-		gHostType = &gHostDefault;
+		gHostType = NULL;
 		BattleRoom_Show();
 		SendToServer("JOINBATTLE %u %s %x",
 				id, password ?: "",
@@ -119,26 +118,24 @@ void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandM
 	}
 
 	if (nandMask & TEAM_MASK)
-		if (gHostType->forceTeam)
+		if (gHostType && gHostType->forceTeam)
 			gHostType->forceTeam(s->name, FROM_TEAM_MASK(orMask));
+
 	if (nandMask & ALLY_MASK)
-		if (gHostType->forceAlly)
+		if (gHostType && gHostType->forceAlly)
 			gHostType->forceAlly(s->name, FROM_ALLY_MASK(orMask));
-
-	if (gHostType->forceTeam)
-		return;
-
-	assert(0);
 }
 
 void Kick(union UserOrBot *s)
 {
 	if (s->battleStatus & AI_MASK) {
 		SendToServer("REMOVEBOT %s", s->name);
-	} else if (gHostType->kick) {
+		return;
+	}
+
+	if (gHostType && gHostType->kick) {
 		gHostType->kick(s->name);
-	} else {
-		assert(0);
+		return;
 	}
 }
 
@@ -168,11 +165,8 @@ void LeaveBattle(void)
 
 void ChangeMap(const char *mapName)
 {
-	if (gHostType->setMap) {
+	if (gHostType && gHostType->setMap) {
 		gHostType->setMap(mapName);
-	} else {
-		SendToServer("UPDATEBATTLEINFO 0 0 %d %s",
-				GetMapHash(mapName), mapName);
 	}
 }
 
