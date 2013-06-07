@@ -382,7 +382,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 
 	case WM_NOTIFY:
 		if (((NMHDR *)lParam)->idFrom == DLG_TOOLBAR
-				&& ((NMHDR *)lParam)->code != TBN_DROPDOWN)
+				&& ((NMHDR *)lParam)->code == TBN_DROPDOWN)
 			return createDropdown((NMTOOLBAR *)lParam);
 		break;
 
