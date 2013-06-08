@@ -81,15 +81,13 @@ static void setMap(const char *mapName)
 
 static void setOption(Option *opt, const char *val)
 {
-	const char *path;
 	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
-		path = "modoptions/";
+		SendToServer("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
+
 	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
-		path = "mapoptions/";
+		SendToServer("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
 	else
 		assert(0);
-
-	SendToServer("SETSCRIPTTAGS game/%s%s=%s", path ?: "", opt->key, opt->val);
 }
 
 static void addStartBox(int i, int left, int top, int right, int bottom)

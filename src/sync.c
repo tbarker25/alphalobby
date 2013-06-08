@@ -249,7 +249,7 @@ static OptionList loadOptions(gzFile fd)
 		options[i].desc += (size_t)options;
 		options[i].def += (size_t)options;
 		if (options[i].section)
-			options[i].section = &options[*(size_t *)&options[i].section - 1];
+			options[i].section = &options[(uintptr_t)options[i].section - 1];
 
 		if (options[i].nbListItems) {
 			options[i].listItems = ((void *)options[i].listItems + (size_t)options);

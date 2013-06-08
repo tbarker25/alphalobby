@@ -83,6 +83,7 @@ typedef struct HostType {
 	void (*setMap)(const char *mapName);
 	void (*setOption)(Option *opt, const char *val);
 	void (*setSplit)(int size, SplitType type);
+	void (*startGame)(void);
 } HostType;
 
 typedef struct BattleOptions {
@@ -124,21 +125,18 @@ extern char gSideNames[16][32];
 
 extern uint32_t gUdpHelpPort;
 
-void SetSplit(SplitType, int size);
-void SetMap(const char *name);
-void FixPlayerStatus(const union UserOrBot *u);
-//use NULL to fix all players in battle
-
-void Rebalance(void);
-//Calls FixPlayerStatus(NULL)
-
-uint32_t GetNewBattleStatus(void);
-void JoinedBattle(struct Battle *b, uint32_t modHash);
-void ChangeOption(struct Option *opt);
-void ResetBattleOptions(void);
+void AppendScriptTags(char *restrict script);
+void ChangeOption(struct Option *restrict opt);
+void FixPlayerStatus(const union UserOrBot *u); // u=NULL means all players
+uint32_t GetNewBattleStatus(void)
+	__attribute__((pure));
+void JoinedBattle(struct Battle *restrict b, uint32_t modHash);
 void LeftBattle(void);
+void Rebalance(void);
+void ResetBattleOptions(void);
+void SetMap(const char *name);
+void SetSplit(SplitType, int size);
 void UpdateModOptions(void);
-void AppendScriptTags(char *script);
 
 
 #endif /* end of include guard: BATTLETOOLS_H */

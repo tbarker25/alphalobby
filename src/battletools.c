@@ -33,6 +33,7 @@
 #include "data.h"
 #include "dialogboxes.h"
 #include "settings.h"
+#include "host_spads.h"
 #include "sync.h"
 
 uint32_t gUdpHelpPort;
@@ -67,7 +68,7 @@ void SetSplit(SplitType type, int size)
 		gHostType->setSplit(size, type);
 }
 
-void SetMap(const char *name)
+void SetMap(const char *restrict name)
 {
 	if (gHostType && gHostType->setMap)
 		gHostType->setMap(name);
@@ -90,7 +91,7 @@ uint32_t GetNewBattleStatus(void)
 	return MODE_MASK | READY_MASK | teamMask | TO_ALLY_MASK(ally > 0);
 }
 
-void JoinedBattle(Battle *b, uint32_t modHash)
+void JoinedBattle(Battle *restrict b, uint32_t modHash)
 {
 	gMyBattle = b;
 	gBattleOptions.modHash = modHash;
@@ -135,7 +136,7 @@ void LeftBattle(void)
 }
 
 
-void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
+void UpdateBattleStatus(UserOrBot *restrict s, uint32_t bs, uint32_t color)
 {
 	uint32_t lastBS = s->battleStatus;
 	s->battleStatus = bs;
@@ -171,7 +172,7 @@ void UpdateBattleStatus(UserOrBot *s, uint32_t bs, uint32_t color)
 		BattleRoom_StartPositionsChanged();
 }
 
-void ChangeOption(Option *opt)
+void ChangeOption(Option *restrict opt)
 {
 	char val[128];
 	switch (opt->type) {
@@ -210,9 +211,16 @@ void ChangeOption(Option *opt)
 		gHostType->setOption(opt, opt->val);
 }
 
-static void setOptionFromTag(const char *key, const char *val)
+static void setOptionFromTag(char *restrict key, const char *restrict val)
 {
-	if (!_strnicmp(key, "game/startpostype", sizeof("game/startpostype") - 1)) {
+	if (stricmp(strsep(&key, "/"), "game")) {
+		printf("unrecognized script key ?/%s=%s\n", key, val);
+		return;
+	}
+
+	const char *section = strsep(&key, "/");
+
+	if (!stricmp(section, "startpostype")) {
 		StartPosType startPosType = atoi(val);
 		if (startPosType != gBattleOptions.startPosType) {
 			;// taskSetMinimap = 1;
@@ -222,35 +230,68 @@ static void setOptionFromTag(const char *key, const char *val)
 		return;
 	}
 
-	if (!_strnicmp(key, "game/team", sizeof("game/team") - 1)) {
-		int team = atoi(key + sizeof("game/team") - 1);
-		char type = key[sizeof("game/team/startpos") + (team > 10)];
+#if 0
+	if (!stricmp(s, "team")) {
+		int team = atoi(s + sizeof("team") - 1);
+		char type = s[sizeof("team/startpos") + (team > 10)];
 		((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
 		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
+#endif
 
-	size_t nbOptions;
-	Option *options;
-	if (!_strnicmp(key, "game/modoptions/", sizeof("game/modoptions/") - 1)) {
-		options = gModOptions;
-		nbOptions = gNbModOptions;
-	} else if (!_strnicmp(key, "game/mapoptions/", sizeof("game/mapoptions/") - 1)) {
-		options = gMapOptions;
-		nbOptions = gNbMapOptions;
-	} else {
-		printf("unrecognized script key %s=%s\n", key, val);
+	if (!stricmp(section, "hosttype")) {
+		if (!stricmp(val, "spads")) {
+			gHostType = &gHostSpads;
+			return;
+		}
+		printf("unknown hosttype %s\n", val);
 		return;
 	}
 
-	key += sizeof("game/modoptions/") - 1;
-	for (int i=0; i<nbOptions; ++i) {
-		if (strcmp(options[i].key, key))
-			continue;
-		free(options[i].val);
-		options[i].val = strdup(val);
-		BattleRoom_OnSetOption(&options[i]);
+
+	if (!stricmp(section, "players")) {
+		char *username = strsep(&key, "/");
+		if (stricmp(key, "skill")) {
+			printf("unrecognized player option %s=%s\n", key, val);
+			return;
+		}
+		FOR_EACH_HUMAN_PLAYER(p, gMyBattle) {
+			if (!stricmp(username, p->name)) {
+				free(p->skill);
+				p->skill = strdup(val);
+			}
+		}
+		return;
 	}
+
+	if (!stricmp(section, "modoptions")) {
+		for (int i=0; i<gNbModOptions; ++i) {
+			if (strcmp(gModOptions[i].key, key))
+				continue;
+			free(gModOptions[i].val);
+			gModOptions[i].val = strdup(val);
+			BattleRoom_OnSetOption(&gModOptions[i]);
+			return;
+		}
+		printf("unrecognized mod option %s=%s\n", key, val);
+		return;
+	}
+
+	if (!stricmp(section, "mapoptions")) {
+		for (int i=0; i<gNbMapOptions; ++i) {
+			if (strcmp(gMapOptions[i].key, key))
+				continue;
+			free(gMapOptions[i].val);
+			gMapOptions[i].val = strdup(val);
+			BattleRoom_OnSetOption(&gMapOptions[i]);
+			return;
+		}
+		printf("unrecognized map option %s=%s\n", key, val);
+		return;
+	}
+
+	printf("unrecognized script game/%s/%s=%s\n", section, key, val);
 }
 
 static void setOptionsFromScript(void)
@@ -265,7 +306,7 @@ static void setOptionsFromScript(void)
 	free(toFree);
 }
 
-void AppendScriptTags(char *s)
+void AppendScriptTags(char *restrict s)
 {
 	if (!currentScript) {
 		currentScript = strdup(s);
