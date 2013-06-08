@@ -216,9 +216,14 @@ static void addUser(void)
 {
 	char *name = getNextWord();
 	uint8_t country = 0;
-	for (int i=0; i < LENGTH(countryCodes); ++i)
-		if (*((uint16_t *)command) == *((uint16_t *)countryCodes[i]))
+	for (int i=0; i < LENGTH(countryCodes); ++i) {
+		if (command[0] == countryCodes[i][0]
+				&& command[1] == countryCodes[i][1]) {
 			country = i;
+			break;
+		}
+	}
+
 	command += 3;
 	uint32_t cpu = getNextInt();
 
@@ -663,23 +668,20 @@ static void saidPrivate(void)
 	}
 
 	// Check for pms that identify an autohost
-	if (gMyBattle
-			&& user == gMyBattle->founder
-			&& !memcmp(username, command, strlen(username))) {
+	if (gMyBattle && user == gMyBattle->founder
+			&& strstr(command, username)
+			&& strstr(command, "running")) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
-		if (!memcmp(command + strlen(username), " (Springie ", sizeof(" (Springie ") - 1)
-				&& strstr(command, " running for ")) {
+		if (strstr(command, "Springie")) {
 			gHostType = &gHostSpringie;
 			return;
 		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
-		if (!memcmp(command + strlen(username),
-					" is running SPADS v",
-					sizeof(" is running SPADS v") - 1)) {
+		if (strstr(command, "SPADS")) {
 			gHostType = &gHostSpads;
 			return;
 		}

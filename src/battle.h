@@ -42,7 +42,8 @@ typedef struct Battle {
 	};
 }Battle;
 
-Battle * FindBattle(uint32_t id);
+Battle * FindBattle(uint32_t id)
+	__attribute__((pure));
 Battle *NewBattle(void);
 void DelBattle(Battle *);
 void ResetBattles(void);

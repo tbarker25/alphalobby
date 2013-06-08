@@ -22,7 +22,7 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-char *strsep(char **restrict s, const char *restrict delimiters)
+char *strsep(char *restrict *restrict s, const char *restrict delimiters)
 {
 	*s += strspn(*s, delimiters);
 	if (!**s)
@@ -34,21 +34,21 @@ char *strsep(char **restrict s, const char *restrict delimiters)
 	return ret;
 }
 
-char *strpcpy(char *dst, const char *src)
+char *strpcpy(char *restrict dst, const char *restrict src)
 {
 	size_t len = strlen(src) + 1;
 	memcpy(dst, src, len);
 	return dst + len;
 }
 
-wchar_t *utf8to16(const char *str)
+wchar_t *utf8to16(const char *restrict str)
 {
 	static wchar_t wStr[MAX_SERVER_MESSAGE];
 	MultiByteToWideChar(CP_UTF8, 0, str, -1, wStr, LENGTH(wStr));
 	return wStr;
 }
 
-char *utf16to8(const wchar_t *wStr)
+char *utf16to8(const wchar_t *restrict wStr)
 {
 	static char str[MAX_SERVER_MESSAGE];
 	WideCharToMultiByte(CP_UTF8, 0, wStr, -1, str, LENGTH(str), NULL, NULL);

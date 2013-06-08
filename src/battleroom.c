@@ -93,7 +93,6 @@ enum DLG_ID {
 
 	DLG_SPLIT_SIZE,
 
-	DLG_MAPMODE_LABEL,
 	DLG_MAPMODE_MINIMAP,
 	DLG_MAPMODE_METAL,
 	DLG_MAPMODE_ELEVATION,
@@ -148,10 +147,6 @@ static const DialogItem dialogItems[] = {
 		.exStyle = WS_EX_CLIENTEDGE,
 		.style = WS_VISIBLE | LVS_SINGLESEL | LVS_REPORT | LVS_NOCOLUMNHEADER,
 
-	}, [DLG_MAPMODE_LABEL] = {
-		.class = WC_STATIC,
-		.name = L"Map:",
-		.style = WS_VISIBLE,
 	}, [DLG_MAPMODE_MINIMAP] = {
 		.class = WC_BUTTON,
 		.name = L"Minimap",
@@ -210,7 +205,6 @@ void BattleRoom_StartPositionsChanged(void)
 	int size;
 	SplitType splitType = -1;
 
-
 	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
 		if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
 			splitType = SPLIT_VERT;
@@ -232,8 +226,8 @@ void BattleRoom_StartPositionsChanged(void)
 
 	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
 	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
-	//TODO: what the hell was this for????
-	/* if (splitType >= 0) */
+
+	if (splitType != (SplitType)-1)
 		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
 
 	BattleRoom_RedrawMinimap();
@@ -496,10 +490,9 @@ static void resizeAll(LPARAM lParam)
 	MOVE_ID(DLG_SPLIT_SIZE, minimapX + 6*XS + 5*YH, YS, width - minimapX - 7*XS - 5*YH, YH);
 
 #define TOP (INFO_HEIGHT - MAP_Y(14 + S))
-	MOVE_ID(DLG_MAPMODE_LABEL,     minimapX + XS, TOP + MAP_Y(3),   MAP_X(20), TEXTBOX_Y);
-	MOVE_ID(DLG_MAPMODE_MINIMAP,   minimapX + XS + MAP_X(20),  TOP, MAP_X(50), COMMANDBUTTON_Y);
-	MOVE_ID(DLG_MAPMODE_METAL,     minimapX + XS + MAP_X(70),  TOP, MAP_X(50), COMMANDBUTTON_Y);
-	MOVE_ID(DLG_MAPMODE_ELEVATION, minimapX + XS + MAP_X(120), TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_MINIMAP,   minimapX + XS, TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_METAL,     minimapX + XS + MAP_X(50),  TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_ELEVATION, minimapX + XS + MAP_X(100), TOP, MAP_X(50), COMMANDBUTTON_Y);
 	MOVE_ID(DLG_CHANGE_MAP,        width - 2*XS - MAP_X(60),   TOP, MAP_X(60), COMMANDBUTTON_Y);
 #undef TOP
 
@@ -734,6 +727,9 @@ static void getUserTooltip(User *u, wchar_t *buff)
 	if (*sideName)
 		s += _swprintf(s, L" - %hs", sideName);
 
+	if (u->skill)
+		s += _swprintf(s, L"\nSkill: %hs", u->skill);
+
 	if (u->battleStatus & HANDICAP_MASK)
 		s += _swprintf(s, L"\nHandicap: %d",
 				FROM_HANDICAP_MASK(u->battleStatus));
@@ -807,7 +803,10 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 
 	switch (wParam) {
 	case MAKEWPARAM(DLG_START, BN_CLICKED):
-		LaunchSpring();
+		if (gHostType && gHostType->startGame)
+			gHostType->startGame();
+		else
+			LaunchSpring();
 		return 0;
 
 	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED):

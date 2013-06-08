@@ -148,9 +148,9 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 				// break;
 			// }
 		} else
-			SetBattleStatus(s,
-					(clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET),
-					clicked & FLAG_TEAM ? TEAM_MASK : clicked & FLAG_ALLY ? ALLY_MASK : SIDE_MASK);
+			/* SetBattleStatus(s, */
+					/* (clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET), */
+					/* clicked & FLAG_TEAM ? TEAM_MASK : clicked & FLAG_ALLY ? ALLY_MASK : SIDE_MASK); */
 
 		break;
 	}

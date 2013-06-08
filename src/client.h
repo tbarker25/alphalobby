@@ -22,7 +22,8 @@
 void PollServer(void);
 void Connect(void (*onFinish)(void));
 void Disconnect(void);
-void SendToServer(const char *format, ...);
+void SendToServer(const char *format, ...)
+	__attribute__ ((format (ms_printf, 1, 2)));
 // char * GetLocalIP(void);
 
 enum ConnectionState {
@@ -30,6 +31,8 @@ enum ConnectionState {
 	CONNECTION_CONNECTING,
 	CONNECTION_ONLINE,
 };
-enum ConnectionState GetConnectionState(void);
+
+enum ConnectionState GetConnectionState(void)
+	__attribute__((pure));
 
 #endif /* end of include guard: CLIENT_H */

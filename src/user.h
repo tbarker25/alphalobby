@@ -27,63 +27,49 @@ enum modeType {
 	MODE_PLAYER = 1,
 };
 
-#define READY_OFFSET 1
-#define TEAM_OFFSET 2
-#define ALLY_OFFSET 6
-#define MODE_OFFSET 10
-#define HANDICAP_OFFSET 11
-#define SYNC_OFFSET 22
-#define SIDE_OFFSET 24
-#define AI_OFFSET 31
 enum {
-	READY_MASK    = 0x01 << READY_OFFSET,
-	TEAM_MASK     = 0x0F << TEAM_OFFSET,
-	ALLY_MASK     = 0x0F << ALLY_OFFSET,
-	MODE_MASK     = 0x01 << MODE_OFFSET,
-	HANDICAP_MASK = 0x8F << HANDICAP_OFFSET,
-	SYNC_MASK     = 0x03 << SYNC_OFFSET,
-	SIDE_MASK     = 0x0F << SIDE_OFFSET,
+	READY_MASK    = 0x01 << 1,
+	TEAM_MASK     = 0x0F << 2,
+	ALLY_MASK     = 0x0F << 6,
+	MODE_MASK     = 0x01 << 10,
+	HANDICAP_MASK = 0x8F << 11,
+	SYNC_MASK     = 0x03 << 22,
+	SIDE_MASK     = 0x0F << 24,
 
-	AI_MASK       = 0x01 << AI_OFFSET,
+	AI_MASK       = 0x01 << 31,
 };
 
 #define INTERNAL_MASK (AI_MASK)
 
-#define TO_TEAM_MASK(x) ((x) << TEAM_OFFSET)
-#define TO_ALLY_MASK(x) ((x) << ALLY_OFFSET)
-#define TO_HANDICAP_MASK(x) ((x) << HANDICAP_OFFSET)
-#define TO_SIDE_MASK(x) ((x) << SIDE_OFFSET)
+#define TO_TEAM_MASK(x)     ((x) << 2)
+#define TO_ALLY_MASK(x)     ((x) << 6)
+#define TO_HANDICAP_MASK(x) ((x) << 11)
+#define TO_SIDE_MASK(x)     ((x) << 24)
 
-#define SYNCED (1 << SYNC_OFFSET)
-#define UNSYNCED (2 << SYNC_OFFSET)
-#define TO_SIDE_MASK(x) ((x) << SIDE_OFFSET)
+#define SYNCED          (1 << 22)
+#define UNSYNCED        (2 << 22)
+#define TO_SIDE_MASK(x) ((x) << 24)
 
-#define FROM_TEAM_MASK(x) (((x) & TEAM_MASK) >> TEAM_OFFSET)
-#define FROM_ALLY_MASK(x) (((x) & ALLY_MASK) >> ALLY_OFFSET)
-#define FROM_HANDICAP_MASK(x) (((x) & HANDICAP_MASK) >> HANDICAP_OFFSET)
-#define FROM_SIDE_MASK(x) (((x) & SIDE_MASK) >> SIDE_OFFSET)
-
-#define INGAME_OFFSET 0
-#define AWAY_OFFSET 1
-#define RANK_OFFSET 2
-#define ACCESS_OFFSET 5
-#define BOT_OFFSET 6
+#define FROM_TEAM_MASK(x)     (((x) & TEAM_MASK)     >> 2)
+#define FROM_ALLY_MASK(x)     (((x) & ALLY_MASK)     >> 6)
+#define FROM_HANDICAP_MASK(x) (((x) & HANDICAP_MASK) >> 11)
+#define FROM_SIDE_MASK(x)     (((x) & SIDE_MASK)     >> 24)
 
 enum {
-	CS_INGAME_MASK = 0x01 << INGAME_OFFSET,
-	CS_AWAY_MASK  = 0x01 << AWAY_OFFSET,
-	CS_RANK_MASK  = 0x07 << RANK_OFFSET,
-	CS_ACCESS_MASK  = 0x01 << ACCESS_OFFSET,
-	CS_BOT_MASK  = 0x01 << BOT_OFFSET,
+	CS_INGAME_MASK = 0x01 << 0,
+	CS_AWAY_MASK   = 0x01 << 1,
+	CS_RANK_MASK   = 0x07 << 2,
+	CS_ACCESS_MASK = 0x01 << 5,
+	CS_BOT_MASK    = 0x01 << 6,
 };
 
-#define TO_INGAME_MASK(x) ((x) << INGAME_OFFSET)
-#define TO_AWAY_MASK(x) ((x) << AWAY_OFFSET)
-#define TO_RANK_MASK(x) ((x) << RANK_OFFSET)
-#define TO_ACCESS_MASK(x) ((x) << ACCESS_OFFSET)
-#define TO_BOT_MASK(x) ((x) << BOT_OFFSET)
+#define TO_INGAME_MASK(x) ((x) << 0)
+#define TO_AWAY_MASK(x)   ((x) << 1)
+#define TO_RANK_MASK(x)   ((x) << 2)
+#define TO_ACCESS_MASK(x) ((x) << 5)
+#define TO_BOT_MASK(x)    ((x) << 6)
 
-#define FROM_RANK_MASK(x) (((x) & CS_RANK_MASK) >> RANK_OFFSET)
+#define FROM_RANK_MASK(x) (((x) & CS_RANK_MASK) >> 2)
 
 enum USER_SYNC_STATUS {
 	USER_SYNC_UNKNOWN = 0,
@@ -114,6 +100,7 @@ typedef struct User {
 	char alias[MAX_NAME_LENGTH_NUL];
 	char *scriptPassword;
 	uint8_t clientStatus, country, ignore;
+	char *skill;
 }User;
 
 typedef struct Bot {
@@ -135,9 +122,10 @@ typedef union UserOrBot {
 
 extern User gMyUser;
 
-User * FindUser(const char username[]);
+User * FindUser(const char username[])
+	__attribute__((pure));
 User * NewUser(uint32_t id, const char *name);
-User *GetNextUser(void);
+User * GetNextUser(void);
 void DelUser(User *u);
 void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll);
 void DelBot(const char *name);

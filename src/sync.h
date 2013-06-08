@@ -32,7 +32,8 @@ void ReloadMapsAndMod(void);
 void ChangedMod(const char *modName);
 void ChangedMap(const char *mapName);
 const char * _GetSpringVersion(void);
-uint32_t GetSyncStatus(void);
+uint32_t GetSyncStatus(void)
+	__attribute__((pure));
 void ForEachAiName(void (*func)(const char *, void *), void *arg);
 int UnitSync_GetSkirmishAIOptionCount(const char *name);
 #ifdef _WINDOWS_

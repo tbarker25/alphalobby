@@ -56,6 +56,7 @@ void ToMD5(char *password)
 	strcpy(password, GetBase64MD5sum(password, strlen(password)));
 }
 
+__attribute__((pure))
 static int isMD5(const char *hash)
 {
 	if (strlen(hash) != 24)
@@ -65,7 +66,6 @@ static int isMD5(const char *hash)
 			return 0;
 	return 1;
 }
-
 
 static void ToMD52(char *md5, const char *password)
 {
