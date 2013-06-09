@@ -111,7 +111,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			gNbMods = GetPrimaryModCount();
 			gMods = malloc(gNbMods * sizeof(gMods[0]));
 			for (int i=0; i<gNbMods; ++i)
-				gMods[i] = strdup(GetPrimaryModName(i));
+				gMods[i] = _strdup(GetPrimaryModName(i));
 
 			for (int i=0; i<gNbMaps; ++i)
 				free(gMaps[i]);
@@ -119,7 +119,7 @@ static DWORD WINAPI syncThread (LPVOID lpParameter)
 			gNbMaps = GetMapCount();
 			gMaps = malloc(gNbMaps * sizeof(gMaps[0]));
 			for (int i=0; i<gNbMaps; ++i)
-				gMaps[i] = strdup(GetMapName(i));
+				gMaps[i] = _strdup(GetMapName(i));
 
 			void resetMapAndMod(void) {
 				if (gMyBattle) {
@@ -207,7 +207,7 @@ static void initOptions(size_t nbOptions, gzFile fd)
 		for (int j=0; j<nbOptions; ++j) {
 			const char *section = GetOptionSection(i);
 			if (options[j].type == opt_section
-					&& !stricmp(section, options[j].key + (size_t)options)) {
+					&& !_stricmp(section, options[j].key + (size_t)options)) {
 				options[i].section = (void *)j + 1;
 			}
 		}
@@ -396,7 +396,7 @@ void ChangedMod(const char *modName)
 	OptionList modOptionList;
 
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(gMainWindow, NULL));
-	if (!stricmp(currentMod, modName))
+	if (!_stricmp(currentMod, modName))
 		return;
 
 	for (int i=0; i<gNbModOptions; ++i)
@@ -418,7 +418,7 @@ void ChangedMod(const char *modName)
 		gNbSides = 0;
 		gModHash = 0;
 		currentMod[0] = 0;
-		free(InterlockedExchangePointer(&modToSave, strdup(modName)));
+		free(InterlockedExchangePointer(&modToSave, _strdup(modName)));
 		SetEvent(event);
 		UpdateModOptions();
 		return;
@@ -452,7 +452,7 @@ void ChangedMap(const char *mapName)
 {
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(gMainWindow, NULL));
 
-	if (!stricmp(currentMap, mapName))
+	if (!_stricmp(currentMap, mapName))
 		return;
 
 	for (int i=0; i<gNbMapOptions; ++i)
@@ -484,7 +484,7 @@ void ChangedMap(const char *mapName)
 		gMapHash = 0;
 		currentMap[0] = 0;
 		BattleRoom_ChangeMinimapBitmap(NULL, 0, 0, NULL, 0, 0, NULL);
-		free(InterlockedExchangePointer(&mapToSave, strdup(mapName)));
+		free(InterlockedExchangePointer(&mapToSave, _strdup(mapName)));
 		SetEvent(event);
 		UpdateModOptions();
 		return;

@@ -125,7 +125,7 @@ void InitSettings(void)
 
 	for(int i=0; i<LENGTH(defaultSettings); ++i)
 		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
-		                         : defaultSettings[i].val ? strdup(defaultSettings[i].val)
+		                         : defaultSettings[i].val ? _strdup(defaultSettings[i].val)
 								 : NULL;
 
 	fd = _wfopen(CONFIG_PATH, L"r");
@@ -138,7 +138,7 @@ void InitSettings(void)
 					((intptr_t *)&gSettings)[i] = atoi(s.val);
 				else {
 					free(((char **)&gSettings)[i]);
-					((char **)&gSettings)[i] = strdup(s.val);
+					((char **)&gSettings)[i] = _strdup(s.val);
 				}
 			}
 	fclose(fd);

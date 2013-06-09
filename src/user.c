@@ -85,12 +85,12 @@ void AddBot(const char *name, User *owner, uint32_t battleStatus,
 	bot->owner = owner;
 	bot->battleStatus = battleStatus | AI_MASK | MODE_MASK;
 	bot->color = color;
-	bot->dll = strdup(aiDll);
+	bot->dll = _strdup(aiDll);
 
 	Battle *b = gMyBattle;
 	int i=b->nbParticipants - b->nbBots;
 	while (i<b->nbParticipants
-			&& strcmpi(b->users[i]->name, bot->name) < 0)
+			&& _stricmp(b->users[i]->name, bot->name) < 0)
 		++i;
 	for (int j=b->nbParticipants; j>i; --j)
 		b->users[j] = b->users[j-1];
@@ -107,7 +107,7 @@ void DelBot(const char *name)
 {
 	int i = gMyBattle->nbParticipants - gMyBattle->nbBots;
 	while (i < gMyBattle->nbParticipants
-			&& strcmpi(gMyBattle->users[i]->name, name) < 0)
+			&& _stricmp(gMyBattle->users[i]->name, name) < 0)
 		++i;
 	BattleRoom_RemoveUser(gMyBattle->users[i]);
 	free(gMyBattle->users[i]->bot.dll);

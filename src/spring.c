@@ -30,12 +30,15 @@
 #include "settings.h"
 
 #define LAUNCH_SPRING(path)\
-	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(wcsdup(path)), 0, NULL);
+	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(_wcsdup(path)), 0, NULL);
 
 static DWORD WINAPI _launchSpring2(LPVOID path)
 {
 	PROCESS_INFORMATION processInfo = {};
-	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL, &(STARTUPINFO){.cb=sizeof(STARTUPINFO)}, &processInfo)) {
+	STARTUPINFO startupInfo = {.cb = sizeof(startupInfo)};
+
+	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
+				&startupInfo, &processInfo)) {
 		SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
 		#ifdef NDEBUG
 		WaitForSingleObject(processInfo.hProcess, INFINITE);
@@ -43,6 +46,7 @@ static DWORD WINAPI _launchSpring2(LPVOID path)
 		SetClientStatus(0, CS_INGAME_MASK);
 	} else
 		MyMessageBox("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
+
 	free(path);
 	return 0;
 }
@@ -51,9 +55,6 @@ void LaunchSpring(void)
 //Script is unreadably compact because it might need to be sent to relayhost.
 //This lets us send it in 1-2 packets, so it doesnt take 5 seconds like in springlobby.
 {
-	if (!*gMyUser.name)
-		strcpy(gMyUser.name, "Player");
-
 	Battle *b = gMyBattle;
 	assert(b);
 
@@ -74,7 +75,7 @@ void LaunchSpring(void)
 	}
 	fwrite(buff, 1, buffEnd - buff, fp);
 	fclose(fp);
-	wchar_t path[128];
+	wchar_t path[256];
 	_swprintf(path, L"\"%hs\" \"%s\"", gSettings.spring_path, scriptPath);
 	LAUNCH_SPRING(path);
 	return;
@@ -82,8 +83,7 @@ void LaunchSpring(void)
 
 void LaunchReplay(const wchar_t *replayName)
 {
-	wchar_t path[MAX_PATH];
+	wchar_t path[256];
 	_swprintf(path, L"%hs demos/%s", gSettings.spring_path, replayName);
-	printf("path = \"%ls\"\n", path);
 	LAUNCH_SPRING(path);
 }

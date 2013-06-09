@@ -213,14 +213,15 @@ void ChangeOption(Option *restrict opt)
 
 static void setOptionFromTag(char *restrict key, const char *restrict val)
 {
-	if (stricmp(strsep(&key, "/"), "game")) {
+	_strlwr(key);
+	if (strcmp(strsep(&key, "/"), "game")) {
 		printf("unrecognized script key ?/%s=%s\n", key, val);
 		return;
 	}
 
 	const char *section = strsep(&key, "/");
 
-	if (!stricmp(section, "startpostype")) {
+	if (!strcmp(section, "startpostype")) {
 		StartPosType startPosType = atoi(val);
 		if (startPosType != gBattleOptions.startPosType) {
 			;// taskSetMinimap = 1;
@@ -231,7 +232,7 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	}
 
 #if 0
-	if (!stricmp(s, "team")) {
+	if (!strcmp(s, "team")) {
 		int team = atoi(s + sizeof("team") - 1);
 		char type = s[sizeof("team/startpos") + (team > 10)];
 		((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
@@ -240,8 +241,8 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	}
 #endif
 
-	if (!stricmp(section, "hosttype")) {
-		if (!stricmp(val, "spads")) {
+	if (!strcmp(section, "hosttype")) {
+		if (!strcmp(val, "spads")) {
 			gHostType = &gHostSpads;
 			return;
 		}
@@ -250,27 +251,27 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	}
 
 
-	if (!stricmp(section, "players")) {
+	if (!strcmp(section, "players")) {
 		char *username = strsep(&key, "/");
-		if (stricmp(key, "skill")) {
+		if (strcmp(key, "skill")) {
 			printf("unrecognized player option %s=%s\n", key, val);
 			return;
 		}
 		FOR_EACH_HUMAN_PLAYER(p, gMyBattle) {
-			if (!stricmp(username, p->name)) {
+			if (!_stricmp(username, p->name)) {
 				free(p->skill);
-				p->skill = strdup(val);
+				p->skill = _strdup(val);
 			}
 		}
 		return;
 	}
 
-	if (!stricmp(section, "modoptions")) {
+	if (!strcmp(section, "modoptions")) {
 		for (int i=0; i<gNbModOptions; ++i) {
 			if (strcmp(gModOptions[i].key, key))
 				continue;
 			free(gModOptions[i].val);
-			gModOptions[i].val = strdup(val);
+			gModOptions[i].val = _strdup(val);
 			BattleRoom_OnSetOption(&gModOptions[i]);
 			return;
 		}
@@ -278,12 +279,12 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 		return;
 	}
 
-	if (!stricmp(section, "mapoptions")) {
+	if (!strcmp(section, "mapoptions")) {
 		for (int i=0; i<gNbMapOptions; ++i) {
 			if (strcmp(gMapOptions[i].key, key))
 				continue;
 			free(gMapOptions[i].val);
-			gMapOptions[i].val = strdup(val);
+			gMapOptions[i].val = _strdup(val);
 			BattleRoom_OnSetOption(&gMapOptions[i]);
 			return;
 		}
@@ -296,7 +297,7 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 
 static void setOptionsFromScript(void)
 {
-	char *script = strdup(currentScript);
+	char *script = _strdup(currentScript);
 	char *toFree = script;
 
 	char *key, *val;
@@ -309,7 +310,7 @@ static void setOptionsFromScript(void)
 void AppendScriptTags(char *restrict s)
 {
 	if (!currentScript) {
-		currentScript = strdup(s);
+		currentScript = _strdup(s);
 
 	} else {
 		size_t currentLen = strlen(currentScript) + 1;

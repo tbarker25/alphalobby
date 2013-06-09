@@ -436,10 +436,10 @@ static void joinedBattle(void)
 		return;
 	u->battle = b;
 	free(u->scriptPassword);
-	u->scriptPassword = strdup(getNextWord());
+	u->scriptPassword = _strdup(getNextWord());
 
 	int i=1; //Start at 1 so founder is first
-	while (i<b->nbParticipants - b->nbBots && strcmpi(b->users[i]->name, u->name) < 0)
+	while (i<b->nbParticipants - b->nbBots && _stricmp(b->users[i]->name, u->name) < 0)
 		++i;
 	for (int j=b->nbParticipants; j>i; --j)
 		b->users[j] = b->users[j-1];
