@@ -22,13 +22,15 @@
 
 #include <windows.h>
 
+#include "battle.h"
 #include "battleroom.h"
-#include "battletools.h"
 #include "chat.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "host_self.h"
+#include "mybattle.h"
 #include "sync.h"
+#include "user.h"
 
 static void forceAlly(const char *name, int allyId);
 static void forceTeam(const char *name, int teamId);

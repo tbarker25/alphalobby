@@ -23,11 +23,14 @@
 #include <windows.h>
 #include <Shlobj.h>
 
+#include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
+#include "mybattle.h"
 #include "settings.h"
+#include "user.h"
 
 #define CONFIG_PATH (GetDataDir(L"alphalobby.conf"))
 #define LENGTH(x) (sizeof(x) / sizeof(*x))

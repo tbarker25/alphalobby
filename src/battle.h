@@ -19,6 +19,8 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
+#define MAX_TITLE 128 //Also used for mapnames, modnames. Overflow is truncated to fit
+
 enum battleType {
 	BATTLE_NORMAL = 0,
 	BATTLE_REPLAY = 1,
@@ -38,7 +40,7 @@ typedef struct Battle {
 	uint8_t passworded, locked, type, natType, maxPlayers, rank, nbParticipants, nbSpectators, nbBots;
 	union {
 		union UserOrBot *users[128];
-		User *founder;
+		struct User *founder;
 	};
 }Battle;
 

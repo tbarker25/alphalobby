@@ -23,15 +23,17 @@
 #include <windows.h>
 #include <Commctrl.h>
 
+#include "battle.h"
 #include "battlelist.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
 #include "common.h"
-#include "data.h"
 #include "downloader.h"
 #include "imagelist.h"
+#include "mybattle.h"
 #include "sync.h"
+#include "user.h"
 #include "wincommon.h"
 
 HWND gBattleList;

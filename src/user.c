@@ -22,9 +22,11 @@
 
 #include <windows.h>
 
-#include "data.h"
-#include "battletools.h"
+#include "battle.h"
 #include "battleroom.h"
+#include "common.h"
+#include "mybattle.h"
+#include "user.h"
 
 #define ALLOC_STEP 10
 

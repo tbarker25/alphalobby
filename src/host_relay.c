@@ -7,13 +7,14 @@
 
 #include <windows.h>
 
+#include "battle.h"
 #include "battleroom.h"
-#include "data.h"
 #include "chat.h"
 #include "client.h"
 #include "client_message.h"
 #include "common.h"
 #include "host_relay.h"
+#include "mybattle.h"
 #include "sync.h"
 #include "user.h"
 

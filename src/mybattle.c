@@ -25,16 +25,18 @@
 
 #include <windows.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
-#include "battletools.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
-#include "settings.h"
 #include "host_spads.h"
+#include "mainwindow.h"
+#include "mybattle.h"
+#include "settings.h"
 #include "sync.h"
+#include "user.h"
 
 uint32_t gUdpHelpPort;
 

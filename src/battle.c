@@ -23,7 +23,10 @@
 
 #include <windows.h>
 
-#include "data.h"
+#include "common.h"
+#include "user.h"
+#include "battle.h"
+#include "mybattle.h"
 
 #define ALLOC_STEP 10
 #define LENGTH(x) (sizeof(x) / sizeof(*x))

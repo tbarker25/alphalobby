@@ -26,17 +26,20 @@
 #include <windows.h>
 #include <Commctrl.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
+#include "mainwindow.h"
 #include "md5.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
+#include "user.h"
 
 int lastStatusUpdate, gLastAutoMessage;
 static char myPassword[BASE16_MD5_LENGTH];

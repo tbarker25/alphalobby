@@ -22,12 +22,15 @@
 
 #include <windows.h>
 
+#include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
+#include "mybattle.h"
 #include "sync.h"
+#include "user.h"
 
 void CreateUserMenu(union UserOrBot *s, HWND window)
 {

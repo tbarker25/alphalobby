@@ -2,12 +2,14 @@
 #include <stdio.h>
 #include <windows.h>
 
+#include "battle.h"
 #include "battleroom.h"
-#include "battletools.h"
 #include "chat.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "host_spads.h"
+#include "mybattle.h"
+#include "user.h"
 
 static void saidBattle(const char *userName, char *text);
 
