@@ -101,7 +101,7 @@ static void updateUser(HWND window, User *u, int index)
 	if (!strcmp(UNTAGGED_NAME(u->name), u->alias))
 		name = u->name;
 	else {
-		name = alloca(MAX_NAME_LENGTH * 2 + sizeof(" ()"));
+		name = _alloca(MAX_NAME_LENGTH * 2 + sizeof(" ()"));
 		sprintf(name, "%s (%s)", u->name, u->alias);
 	}
 
@@ -601,7 +601,7 @@ HWND GetChannelChat(const char *name)
 	for (int i=0; i<LENGTH(channelWindows); ++i) {
 		if (!channelWindows[i]) {
 			chatWindowData *data = malloc(sizeof(chatWindowData));
-			*data = (chatWindowData){strdup(name), DEST_CHANNEL};
+			*data = (chatWindowData){_strdup(name), DEST_CHANNEL};
 			channelWindows[i] = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 0, 0,
 			tabControl, (HMENU)DEST_CHANNEL, NULL, (void *)data);
@@ -652,7 +652,7 @@ void SaveLastChatWindows(void)
 		}
 	}
 	free(gSettings.autojoin);
-	gSettings.autojoin = strdup(autojoinChannels);
+	gSettings.autojoin = _strdup(autojoinChannels);
 }
 
 static void __attribute__((constructor)) init (void)

@@ -66,7 +66,7 @@ void JoinBattle(uint32_t id, const char *password)
 	if (gMyBattle) {
 		battleToJoin = id;
 		free((void *)passwordToJoin);
-		passwordToJoin = strdup(password);
+		passwordToJoin = _strdup(password);
 		LeaveBattle();
 
 	} else {
@@ -75,7 +75,7 @@ void JoinBattle(uint32_t id, const char *password)
 		password = password ?: passwordToJoin;
 		//NB: This section must _not_ be accessed from PollServer
 		if (b->passworded && !password) {
-			char *buff = alloca(1024);
+			char *buff = _alloca(1024);
 			buff[0] = '\0';
 			if (GetTextDlg("Enter password", buff, 1024))
 				return;

@@ -41,8 +41,8 @@ const char **gRelayManagers;
 int gRelayManagersCount;
 
 static char relayCmd[1024];
-static char relayHoster[1024];
-static char relayManager[1024];
+static char relayHoster[MAX_NAME_LENGTH_NUL];
+static char relayManager[MAX_NAME_LENGTH_NUL];
 static char relayPassword[1024];
 
 #define RelayMessage(format, ...) \
@@ -72,7 +72,7 @@ bool RelayHost_handlePrivateMessage(const char *username, char *command)
 		/* User *u = FindUser(getNextWord()); */
 		/* if (u) { */
 			/* free(u->scriptPassword); */
-			/* u->scriptPassword = strdup(getNextWord()); */
+			/* u->scriptPassword = _strdup(getNextWord()); */
 		/* } */
 		return true;
 	}

@@ -379,7 +379,7 @@ static BOOL CALLBACK preferencesProc(HWND window, UINT msg, WPARAM wParam, LPARA
 			char buff[1024];
 			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buff, sizeof(buff));
 			free(gSettings.spring_path);
-			gSettings.spring_path = strdup(buff);
+			gSettings.spring_path = _strdup(buff);
 			gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);
 		}	//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -639,7 +639,7 @@ static BOOL CALLBACK rapidProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 				*s++ = ';';
 				s += SendMessageA(listBox, LB_GETTEXT, i, (LPARAM)s);
 			}
-			gSettings.selected_packages = strdup(text + 1);
+			gSettings.selected_packages = _strdup(text + 1);
 			GetSelectedPackages();
 		}
 			/* Fallthrough */

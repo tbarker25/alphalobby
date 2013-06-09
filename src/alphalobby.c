@@ -426,7 +426,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 
 void MyMessageBox(const char *caption, const char *text)
 {
-	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)strdup(text), (WPARAM)strdup(caption));
+	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)_strdup(text), (WPARAM)_strdup(caption));
 }
 
 void MainWindow_ChangeConnect(enum ConnectionState state)
@@ -488,9 +488,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 #ifndef NDEBUG
 	if ((s = LoadSetting("last_map")))
-		ChangedMap(strdup(s));
+		ChangedMap(_strdup(s));
 	if ((s = LoadSetting("last_mod")))
-		ChangedMod(strdup(s));
+		ChangedMod(_strdup(s));
 	gBattleOptions.startPosType = STARTPOS_CHOOSE_INGAME;
 	gBattleOptions.startRects[0] = (StartRect){0, 0, 50, 200};
 	gBattleOptions.startRects[1] = (StartRect){150, 0, 200, 200};

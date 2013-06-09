@@ -270,7 +270,7 @@ static const char * getEffectiveUsername(const union UserOrBot *s)
 
 int CALLBACK sortPlayerList(const union UserOrBot *u1, const union UserOrBot *u2, LPARAM unused)
 {
-	return strcmpi(getEffectiveUsername(u1), getEffectiveUsername(u2));
+	return _stricmp(getEffectiveUsername(u1), getEffectiveUsername(u2));
 }
 
 static void updatePlayerListGroup(int groupId)
@@ -385,10 +385,6 @@ void BattleRoom_UpdateUser(union UserOrBot *s)
 
 		EnableWindow(GetDlgItem(gBattleRoom, DLG_AUTO_UNSPEC),
 				!(battleStatus & MODE_MASK));
-
-		if (battleStatus & MODE_MASK)
-			SendDlgItemMessage(gBattleRoom, DLG_AUTO_UNSPEC,
-					BM_SETCHECK, BST_UNCHECKED, 0);
 
 		for (int i=0; i<=NUM_SIDE_BUTTONS; ++i)
 			SendDlgItemMessage(gBattleRoom, DLG_SIDE_FIRST + i, BM_SETCHECK,
@@ -700,41 +696,55 @@ cleanup:;
 	DeleteObject(bitmap);
 }
 
-static void getUserTooltip(User *u, wchar_t *buff)
+static wchar_t * getUserTooltip(User *u)
 {
-	wchar_t *s = buff;
+	static wchar_t buff[128];
+	int buff_used = 0;
 
-	s += _swprintf(s, L"%hs", u->name);
+#define APPEND(...) { \
+	int read = _snwprintf(buff + buff_used, \
+			sizeof(buff) / sizeof(*buff) - buff_used - 1, \
+			__VA_ARGS__); \
+	\
+	if (read < 0) {\
+		buff[sizeof(buff) / sizeof(*buff) - 1] = '\0'; \
+		return buff; \
+	} \
+	buff_used += read; \
+}
+
+	APPEND(L"%hs", u->name);
+
 	if (strcmp(UNTAGGED_NAME(u->name), u->alias))
-		s += _swprintf(s, L" (%hs)", u->alias);
+		APPEND(L" (%hs)", u->alias);
 
 	if (!(u->battleStatus & AI_MASK))
-		s += _swprintf(s, L"\nRank %d - %hs - %.2fGHz\n",
+		APPEND(L"\nRank %d - %hs - %.2fGHz\n",
 				FROM_RANK_MASK(u->clientStatus),
 				countryNames[u->country],
 				(float)u->cpu / 1000);
 
 	if (!(u->battleStatus & MODE_MASK)) {
-		s += _swprintf(s, L"Spectator");
-		return;
+		APPEND(L"Spectator");
+		return buff;
 	}
 
 	const char *sideName = gSideNames[FROM_SIDE_MASK(u->battleStatus)];
 
-	s += _swprintf(s, L"Player %d - Team %d",
+	APPEND(L"Player %d - Team %d",
 			FROM_TEAM_MASK(u->battleStatus),
 			FROM_ALLY_MASK(u->battleStatus));
 	if (*sideName)
-		s += _swprintf(s, L" - %hs", sideName);
+		APPEND(L" - %hs", sideName);
 
 	if (u->skill)
-		s += _swprintf(s, L"\nSkill: %hs", u->skill);
+		APPEND(L"\nSkill: %hs", u->skill);
 
 	if (u->battleStatus & HANDICAP_MASK)
-		s += _swprintf(s, L"\nHandicap: %d",
+		APPEND(L"\nHandicap: %d",
 				FROM_HANDICAP_MASK(u->battleStatus));
-
-	assert(s - buff < INFOTIPSIZE);
+	return buff;
+#undef APPEND
 }
 
 static LRESULT onNotify(WPARAM wParam, NMHDR *note)
@@ -764,7 +774,7 @@ static LRESULT onNotify(WPARAM wParam, NMHDR *note)
 
 		if (GetDlgCtrlID((HWND)note->idFrom) == DLG_PLAYERLIST) {
 
-			getUserTooltip((User *)item.lParam, ((NMTTDISPINFO *)note)->lpszText);
+			((NMTTDISPINFO *)note)->lpszText = getUserTooltip((User *)item.lParam);
 			return 0;
 		}
 		((NMTTDISPINFO *)note)->lpszText = utf8to16(((Option *)item.lParam)->desc);
@@ -831,6 +841,10 @@ static LRESULT onCommand(WPARAM wParam, HWND window)
 		return 0;
 
 	case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
+		if (gMyUser.battleStatus & MODE_MASK)
+			SendDlgItemMessage(gBattleRoom, DLG_AUTO_UNSPEC,
+					BM_SETCHECK, BST_UNCHECKED, 0);
+
 		SetBattleStatus(&gMyUser, ~gMyUser.battleStatus, MODE_MASK);
 		return 0;
 
