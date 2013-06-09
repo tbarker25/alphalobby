@@ -154,8 +154,12 @@ void UpdateBattleStatus(UserOrBot *restrict s, uint32_t bs, uint32_t color)
 		gLastBattleStatus = bs;
 
 	if ((lastBS ^ bs) & MODE_MASK) {
-		if (!(bs & MODE_MASK) && BattleRoom_IsAutoUnspec())
+
+		if (!(bs & MODE_MASK)
+				&& (User *)s != &gMyUser
+				&& BattleRoom_IsAutoUnspec())
 			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
+
 		gMyBattle->nbSpectators = 0;
 		for (int i=0; i < gMyBattle->nbParticipants; ++i)
 			gMyBattle->nbSpectators += !(gMyBattle->users[i]->battleStatus & MODE_MASK);
