@@ -24,14 +24,17 @@
 #include <windows.h>
 #include <winsock2.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battlelist.h"
 #include "chat.h"
 #include "client.h"
 #include "client_message.h"
-#include "data.h"
-#include "messages.h"
+#include "common.h"
 #include "host_relay.h"
+#include "mainwindow.h"
+#include "messages.h"
+#include "mybattle.h"
+#include "user.h"
 
 #define RECV_SIZE 8192
 #define MAX_MESSAGE_LENGTH 1024 //Hardcoded into server

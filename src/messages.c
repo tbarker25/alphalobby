@@ -25,24 +25,26 @@
 #include <windows.h>
 #include <Shlwapi.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
-#include "battletools.h"
 #include "channellist.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client.h"
 #include "client_message.h"
+#include "common.h"
 #include "countrycodes.h"
-#include "data.h"
 #include "dialogboxes.h"
 #include "host_relay.h"
 #include "host_spads.h"
 #include "host_springie.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
+#include "user.h"
 #include "userlist.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))

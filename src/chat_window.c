@@ -26,10 +26,13 @@
 #include <windows.h>
 #include <Commctrl.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "chat_window.h"
-#include "data.h"
+#include "common.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "resource.h"
+#include "user.h"
 #include "wincommon.h"
 
 HWND gChatWindow;

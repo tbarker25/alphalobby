@@ -22,9 +22,12 @@
 #include <windows.h>
 #include <Commctrl.h>
 
-#include "data.h"
+#include "battle.h"
+#include "common.h"
 #include "icons.h"
 #include "imagelist.h"
+#include "mybattle.h"
+#include "user.h"
 
 HIMAGELIST gIconList;
 

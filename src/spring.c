@@ -23,11 +23,14 @@
 
 #include <windows.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "client_message.h"
+#include "common.h"
 #include "countrycodes.h"
-#include "data.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
+#include "user.h"
 
 #define LAUNCH_SPRING(path)\
 	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(_wcsdup(path)), 0, NULL);

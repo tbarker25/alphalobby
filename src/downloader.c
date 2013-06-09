@@ -25,15 +25,18 @@
 #include <winhttp.h>
 #include <winsock2.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battleroom.h"
-#include "data.h"
+#include "common.h"
 #include "downloader.h"
 #include "downloadtab.h"
 #include "gzip.h"
+#include "mainwindow.h"
 #include "md5.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
+#include "user.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 

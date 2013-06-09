@@ -25,7 +25,7 @@
 #include <windows.h>
 #include <Commctrl.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
 #include "channellist.h"
@@ -33,14 +33,17 @@
 #include "chat_window.h"
 #include "client.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "downloadtab.h"
 #include "imagelist.h"
 #include "layoutmetrics.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
+#include "user.h"
 #include "userlist.h"
 #include "wincommon.h"
 

@@ -28,19 +28,21 @@
 #include <richedit.h>
 #include <commdlg.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battleroom.h"
-#include "battletools.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
+#include "common.h"
 #include "countrycodes.h"
-#include "data.h"
 #include "imagelist.h"
 #include "layoutmetrics.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
+#include "user.h"
 #include "usermenu.h"
 #include "wincommon.h"
 

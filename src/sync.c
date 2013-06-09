@@ -24,15 +24,18 @@
 
 #include <Shlobj.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "battleroom.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "imagelist.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
+#include "user.h"
 
 #define PLAIN_API_STRUCTURE
 #define EXPORT2(type, name, args)\

@@ -29,17 +29,20 @@
 #include <basetyps.h>
 #include <shellapi.h>
 
-#include "alphalobby.h"
+#include "battle.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "host_relay.h"
+#include "mainwindow.h"
 #include "md5.h"
+#include "mybattle.h"
 #include "resource.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
+#include "user.h"
 #include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))

@@ -30,19 +30,21 @@
 #include <basetyps.h>
 #include <shellapi.h>
 
-#include "alphalobby.h"
-#include "battletools.h"
+#include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
 #include "client_message.h"
-#include "data.h"
+#include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "imagelist.h"
 #include "layoutmetrics.h"
+#include "mainwindow.h"
+#include "mybattle.h"
 #include "settings.h"
 #include "spring.h"
 #include "sync.h"
+#include "user.h"
 #include "wincommon.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
