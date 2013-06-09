@@ -242,7 +242,7 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 #endif
 
 	if (!strcmp(section, "hosttype")) {
-		if (!strcmp(val, "spads")) {
+		if (!_stricmp(val, "spads")) {
 			gHostType = &gHostSpads;
 			return;
 		}
