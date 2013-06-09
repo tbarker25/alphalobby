@@ -196,41 +196,74 @@ void BattleRoom_RedrawMinimap(void)
 	InvalidateRect(GetDlgItem(gBattleRoom, DLG_MINIMAP), 0, 0);
 }
 
+static void setSplit(SplitType type, int size)
+{
+	for (int i=0; i<=SPLIT_LAST; ++i)
+		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + i,
+				BM_SETCHECK, i == type, 0);
+
+	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE),
+			gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
+
+	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
+}
+
 void BattleRoom_StartPositionsChanged(void)
 {
+	StartRect r1, r2;
+
 	if (!battleInfoFinished)
 		return;
-	static int nbCalls;
-	printf("start positions changed %d\n", ++nbCalls);
-	int size;
-	SplitType splitType = -1;
-
-	if (gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME) {
-		if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
-			splitType = SPLIT_VERT;
-			size = gBattleOptions.startRects[0].right;
-		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT))) {
-			splitType = SPLIT_HORZ;
-			size = gBattleOptions.startRects[0].bottom;
-		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 0, 200 - gBattleOptions.startRects[1].left, 200 - gBattleOptions.startRects[1].top}, sizeof(RECT))) {
-			splitType = SPLIT_CORNERS1;
-			size = gBattleOptions.startRects[0].right;
-		} else if (!memcmp(&gBattleOptions.startRects[0], &(RECT){0, 200 - gBattleOptions.startRects[1].bottom, 200 - gBattleOptions.startRects[1].left, 200}, sizeof(RECT))) {
-			splitType = SPLIT_CORNERS2;
-			size = gBattleOptions.startRects[0].right;
-		}
-	}
-
-	for (int i=0; i<=SPLIT_LAST; ++i)
-		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + i, BM_SETCHECK, i == splitType ? BST_CHECKED : BST_UNCHECKED, 0);
-
-	SendDlgItemMessage(gBattleRoom, DLG_SPLIT_FIRST + SPLIT_RAND, BM_SETCHECK, gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME ? BST_CHECKED : BST_UNCHECKED, 0);
-	EnableWindow(GetDlgItem(gBattleRoom, DLG_SPLIT_SIZE), gBattleOptions.startPosType == STARTPOS_CHOOSE_INGAME);
-
-	if (splitType != (SplitType)-1)
-		SendDlgItemMessage(gBattleRoom, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
 
 	BattleRoom_RedrawMinimap();
+
+	if (gBattleOptions.startPosType == STARTPOS_RANDOM) {
+		setSplit(SPLIT_RAND, 0);
+		return;
+	}
+
+	if (gBattleOptions.startPosType != STARTPOS_CHOOSE_INGAME) {
+		setSplit(SPLIT_LAST + 1, 0);
+		return;
+	}
+
+	if (gBattleOptions.startRects[0].left == 0
+			&& (gBattleOptions.startRects[0].top == 0
+				|| gBattleOptions.startRects[1].left != 0)) {
+		r1 = gBattleOptions.startRects[0];
+		r2 = gBattleOptions.startRects[1];
+	} else {
+		r1 = gBattleOptions.startRects[1];
+		r2 = gBattleOptions.startRects[0];
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r1.bottom == 200
+			&& r2.top == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.right == 200 - r2.left) {
+		setSplit(SPLIT_VERT, r1.right);
+		return;
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r1.right == 200
+			&& r2.left == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.bottom == 200 - r2.top) {
+		setSplit(SPLIT_HORZ, r1.bottom);
+		return;
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.right == 200 - r2.left
+			&& r1.bottom == 200 - r2.top) {
+		setSplit(SPLIT_CORNERS1, (r1.right + r1.bottom) / 2);
+		return;
+	}
+
+	if (r1.left == 0 && r1.bottom == 200 && r2.right == 200 && r2.top == 0
+			&& r1.right == 200 - r2.left
+			&& r1.top == 200 - r2.bottom) {
+		setSplit(SPLIT_CORNERS2, (r1.right + r2.bottom) / 2);
+		return;
+	}
 }
 
 void BattleRoom_Show(void)

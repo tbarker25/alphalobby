@@ -23,7 +23,7 @@
 #define MAX_TEXT_MESSAGE_LENGTH 900
 
 #define MAX_NAME_LENGTH 21 //Hardcoded into Uberserver
-#define MAX_NAME_LENGTH_NUL (MAX_NAME_LENGTH + 1)
+#define MAX_NAME_LENGTH_NUL 22
 #define MAX_PASSWORD_LENGTH 24 //Length of the md5hash
 #define MAX_TITLE 128 //Also used for mapnames, modnames. Overflow is truncated to fit
 

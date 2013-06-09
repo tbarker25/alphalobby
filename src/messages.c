@@ -340,7 +340,9 @@ static void clientBattleStatus(void)
 {
 	User *u = FindUser(getNextWord());
 	uint32_t bs = getNextInt();
-	UpdateBattleStatus((UserOrBot *)u, (bs & ~INTERNAL_MASK) | (u->battleStatus & INTERNAL_MASK), getNextInt());
+	UpdateBattleStatus((UserOrBot *)u,
+			(bs & ~INTERNAL_MASK) | (u->battleStatus & INTERNAL_MASK),
+			getNextInt());
 }
 
 static void clients(void)
