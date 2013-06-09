@@ -16,9 +16,14 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <inttypes.h>
+
 #include "countryCodes.h"
 
-typeof(countryCodes) countryCodes = {
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
+
+__attribute__((aligned(2)))
+static const char countryCodes[242][2] = {
 	{'?', '?'},
 	{'A', 'D'},
 	{'A', 'E'},
@@ -263,7 +268,7 @@ typeof(countryCodes) countryCodes = {
 	{'Z', 'W'},
 };
 
-typeof(countryNames) countryNames = {
+static const char *countryNames[242] = {
 	"Unknown Country",
 	"Andorra",
 	"United Arab Emirates",
@@ -507,3 +512,21 @@ typeof(countryNames) countryNames = {
 	"Zambia",
 	"Zimbabwe",
 };
+
+uint8_t
+Country_get_id(const char *code)
+{
+	for (int i=0; i < LENGTH(countryCodes); ++i) {
+		if (code[0] == countryCodes[i][0]
+				&& code[1] == countryCodes[i][1]) {
+			return i;
+		}
+	}
+	return 0;
+}
+
+const char *
+Country_get_name(uint8_t id)
+{
+	return countryNames[id];
+}

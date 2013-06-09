@@ -20,22 +20,21 @@
 #define DIALOGBOXES_H
 
 struct Option;
-void CreateLoginBox(void);
-void CreateHostBattleDlg(void);
-void CreateChangePasswordDlg(void);
-void CreatePreferencesDlg(void);
 struct User;
-union UserOrBot;
-
-LPARAM GetTextDlg2(HWND window, const char *title, char *buff, size_t buffLen);
-LPARAM GetTextDlg(const char *title, char *buff, size_t buffLen);
-
+union  UserOrBot;
 typedef struct _iobuf FILE;
-void CreateAgreementDlg(FILE *text);
-void CreateColorDlg(union UserOrBot *);
-void CreateSinglePlayerDlg(void);
-void CreateAboutDlg(void);
-void CreateReplayDlg(void);
-void CreateRapidDlg(void);
+
+void   CreateAboutDlg(void);
+void   CreateAgreementDlg(FILE *text);
+void   CreateChange_passwordDlg(void);
+void   CreateColorDlg(union UserOrBot *);
+void   CreateHostBattleDlg(void);
+void   CreateLoginBox(void);
+void   CreatePreferencesDlg(void);
+void   CreateRapidDlg(void);
+void   CreateReplayDlg(void);
+void   CreateSinglePlayerDlg(void);
+LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len);
+LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len);
 
 #endif /* end of include guard: DIALOGBOXES_H */

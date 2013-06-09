@@ -26,24 +26,25 @@ struct Option;
 union UserOrBot;
 typedef struct HWND__* HWND;
 
-extern HWND gBattleRoom;
+extern HWND g_battle_room;
 
 #define GetBattleChat()\
-	GetDlgItem(gBattleRoom, DEST_BATTLE)
+	GetDlgItem(g_battle_room, DEST_BATTLE)
 
-void BattleRoom_UpdateUser(union UserOrBot *);
-void BattleRoom_RemoveUser(const union UserOrBot *u);
+void BattleRoom_update_user(union UserOrBot *);
+void BattleRoom_on_left_battle(const union UserOrBot *u);
 
-void BattleRoom_Show(void);
-void BattleRoom_Hide(void);
-char BattleRoom_IsAutoUnspec(void);
-void BattleRoom_ChangeMinimapBitmap(const uint16_t *mapPixels,
+void BattleRoom_show(void);
+void BattleRoom_hide(void);
+bool BattleRoom_is_auto_unspec(void);
+void BattleRoom_resize_columns(void);
+void BattleRoom_change_minimap_bitmap(const uint16_t *mapPixels,
 		uint16_t metalMapWidth, uint16_t metalMapHeight, const uint8_t *metalMapPixels,
 		uint16_t heightMapWidth, uint16_t heightMapHeight, const uint8_t *heightMapPixels);
-void BattleRoom_StartPositionsChanged(void);
-void BattleRoom_RedrawMinimap(void);
-void BattleRoom_OnChangeMod(void);
-void BattleRoom_OnSetModDetails(void);
-void BattleRoom_OnSetOption(struct Option *opt);
+void BattleRoom_on_start_position_change(void);
+void BattleRoom_redraw_minimap(void);
+void BattleRoom_on_change_mod(void);
+void BattleRoom_on_set_mod_details(void);
+void BattleRoom_on_set_option(struct Option *opt);
 
 #endif /* end of include guard: BATTLEROOM_H */

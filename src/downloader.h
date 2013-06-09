@@ -19,21 +19,20 @@
 #ifndef DOWNLOADER_H
 #define DOWNLOADER_H
 
-void Downloader_Init(void);
-
 enum DLTYPE {
 	DLTYPE_MOD,
 	DLTYPE_MAP,
 	DLTYPE_SHORTMOD,
 };
 
-void GetSelectedPackages(void);
-void DownloadFile(const char *name, enum DLTYPE type);
-#define DownloadMap(mapName)\
-	DownloadFile(mapName, DLTYPE_MAP)
-#define DownloadMod(modName)\
-	DownloadFile(modName, DLTYPE_MOD)
-#define DownloadShortMod(modName)\
-	DownloadFile(modName, DLTYPE_SHORTMOD)
+void Downloader_init(void);
+void Downloader_get_selected_packages(void);
+void Downloader_get_file(const char *name, enum DLTYPE type);
+#define DownloadMap(map_name)\
+	Downloader_get_file(map_name, DLTYPE_MAP)
+#define DownloadMod(mod_name)\
+	Downloader_get_file(mod_name, DLTYPE_MOD)
+#define DownloadShortMod(mod_name)\
+	Downloader_get_file(mod_name, DLTYPE_SHORTMOD)
 
 #endif /* end of include guard: DOWNLOADER_H */

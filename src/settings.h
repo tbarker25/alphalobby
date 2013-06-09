@@ -44,23 +44,18 @@ extern struct Settings {
 	int flags;
 	char *autojoin;
 	char *selected_packages;
-} gSettings;
+} g_settings;
 
-void OpenDefaultChannels(void);
+extern wchar_t g_data_dir[MAX_PATH];
 
-
-wchar_t * GetDataDir(const wchar_t *file);
-extern wchar_t gDataDir[MAX_PATH];
-
-void SaveSetting(const char *key, const char *val);
-char *LoadSetting(const char *key);
-int LoadSettingInt(const char *key);
-void SaveSettingInt(const char *key, int val);
-void ResetSettings(void);
-
-struct User;
-
-void InitSettings(void);
-void SaveAliases(void);
+wchar_t * Settings_get_data_dir(const wchar_t *file);
+void      Settings_init(void);
+int       Settings_load_int(const char *key);
+char *    Settings_load_str(const char *key);
+void      Settings_open_default_channels(void);
+void      Settings_reset(void);
+void      Settings_save_aliases(void);
+void      Settings_save_int(const char *key, int val);
+void      Settings_save_str(const char *key, const char *val);
 
 #endif /* end of include guard: SETTINGS_H */

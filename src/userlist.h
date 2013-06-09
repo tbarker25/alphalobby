@@ -21,6 +21,8 @@
 
 struct User;
 
-void UserList_Show(void);
+void UserList_show(void);
+void UserList_add_user(struct User *);
+void UserList_on_left_battle(struct User *);
 
 #endif /* end of include guard: USERLIST_H */

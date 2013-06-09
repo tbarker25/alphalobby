@@ -21,8 +21,9 @@
 
 #define WC_DOWNLOADTAB L"DownloadTab"
 
-extern HWND gDownloadTabWindow;
-void RemoveDownload(const wchar_t *name);
-void UpdateDownload(const wchar_t *name, const wchar_t *text);
+extern HWND g_download_list;
+
+void DownloadList_remove(const wchar_t *name);
+void DownloadList_update(const wchar_t *name, const wchar_t *text);
 
 #endif /* end of include guard: DOWNLOADTAB_H */

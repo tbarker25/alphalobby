@@ -32,7 +32,8 @@
 #include "sync.h"
 #include "user.h"
 
-void CreateUserMenu(union UserOrBot *s, HWND window)
+void
+UserMenu_spawn(union UserOrBot *s, HWND window)
 {
 
 	enum menuID {
@@ -51,39 +52,39 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	for (int i=0; i<=lastMenu; ++i)
 		menus[i] = CreatePopupMenu();
 
-	uint32_t battleStatus = s->battleStatus;
+	uint32_t battle_status = s->battle_status;
 
 	for (int i=0; i<16; ++i) {
-		wchar_t buff[3];
-		_swprintf(buff, L"%d", i+1);
-		AppendMenu(menus[TEAM_MENU], MF_CHECKED * (i == FROM_TEAM_MASK(battleStatus)), FLAG_TEAM | i, buff);
-		AppendMenu(menus[ALLY_MENU], MF_CHECKED * (i == FROM_ALLY_MASK(battleStatus)), FLAG_ALLY | i, buff);
+		wchar_t buf[3];
+		_swprintf(buf, L"%d", i+1);
+		AppendMenu(menus[TEAM_MENU], MF_CHECKED * (i == FROM_BS_TEAM(battle_status)), FLAG_TEAM | i, buf);
+		AppendMenu(menus[ALLY_MENU], MF_CHECKED * (i == FROM_BS_ALLY(battle_status)), FLAG_ALLY | i, buf);
 	}
 
-	for (int i=0; *gSideNames[i]; ++i)
-		AppendMenuA(menus[SIDE_MENU], MF_CHECKED * (i == FROM_SIDE_MASK(battleStatus)), FLAG_SIDE | i, gSideNames[i]);
+	for (int i=0; *g_side_names[i]; ++i)
+		AppendMenuA(menus[SIDE_MENU], MF_CHECKED * (i == FROM_BS_SIDE(battle_status)), FLAG_SIDE | i, g_side_names[i]);
 
 
-	if (battleStatus & AI_MASK) {
+	if (battle_status & BS_AI) {
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[SIDE_MENU], L"Set faction");
 		AppendMenu(menus[0], 0, COLOR, L"Set color");
 		AppendMenu(menus[0], 0, KICK, L"Remove bot");
-	} else if (&s->user != &gMyUser) {
+	} else if (&s->user != &g_my_user) {
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
 		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		AppendMenu(menus[0], 0, RING, L"Ring");
-		if (battleStatus & MODE_MASK)
+		AppendMenu(menus[0], 0, RING, L"MainWindow_ring");
+		if (battle_status & BS_MODE)
 			AppendMenu(menus[0], 0, SPEC, L"Force spectate");
 		AppendMenu(menus[0], 0, KICK, L"Kick");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
-	} else { //(u == &gMyUser)
-		if (battleStatus & MODE_MASK) {
+	} else { //(u == &g_my_user)
+		if (battle_status & BS_MODE) {
 			AppendMenu(menus[0], 0, SPEC, L"Spectate");
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
 			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
@@ -101,17 +102,17 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 	case 0:
 		break;
 	case CHAT:
-		ChatWindow_SetActiveTab(GetPrivateChat(&s->user));
+		ChatWindow_set_active_tab(Chat_get_private_window(&s->user));
 		break;
 	case IGNORED:
 		s->user.ignore ^= 1;
 		/* UpdateUser(&s->user); */
 		break;
 	case ALIAS: {
-		char title[128], buff[MAX_NAME_LENGTH_NUL];
+		char title[128], buf[MAX_NAME_LENGTH_NUL];
 		sprintf(title, "Set alias for %s", s->name);
-		if (!GetTextDlg(title, strcpy(buff, UNTAGGED_NAME(s->name)), sizeof(buff))) {
-			strcpy(s->user.alias, buff);
+		if (!GetTextDlg(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof(buf))) {
+			strcpy(s->user.alias, buf);
 			/* UpdateUser(&s->user); */
 		}
 		} break;
@@ -132,7 +133,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 			// s->bot.dll = malloc(len+1);
 			// GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
 			// free(s->bot.options);
-			// s->bot.nbOptions = UnitSync_GetSkirmishAIOptionCount(s->bot.dll);
+			// s->bot.nbOptions = Sync_ai_option_count(s->bot.dll);
 			// s->bot.options = calloc(s->bot.nbOptions, sizeof(*s->bot.options));
 			// UnitSync_GetOptions(s->bot.options, s->bot.nbOptions);
 		// } else if (clicked & AI_OPTIONS_FLAG) {
@@ -153,7 +154,7 @@ void CreateUserMenu(union UserOrBot *s, HWND window)
 		} else
 			/* SetBattleStatus(s, */
 					/* (clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET), */
-					/* clicked & FLAG_TEAM ? TEAM_MASK : clicked & FLAG_ALLY ? ALLY_MASK : SIDE_MASK); */
+					/* clicked & FLAG_TEAM ? BS_TEAM : clicked & FLAG_ALLY ? BS_ALLY : BS_SIDE); */
 
 		break;
 	}

@@ -32,7 +32,7 @@
 #include "settings.h"
 #include "user.h"
 
-#define CONFIG_PATH (GetDataDir(L"alphalobby.conf"))
+#define CONFIG_PATH (Settings_get_data_dir(L"alphalobby.conf"))
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 typedef struct KeyPair{
@@ -40,8 +40,8 @@ typedef struct KeyPair{
 	char isInt;
 }KeyPair;
 
-typeof(gSettings) gSettings;
-wchar_t gDataDir[MAX_PATH];
+typeof(g_settings) g_settings;
+wchar_t g_data_dir[MAX_PATH];
 
 static const KeyPair defaultSettings[] = {
 	{"spring_path", "spring.exe"},
@@ -50,25 +50,27 @@ static const KeyPair defaultSettings[] = {
 	{"selected_packages", NULL},
 };
 
-static KeyPair getLine(FILE *fd)
+static KeyPair
+get_line(FILE *fd)
 {
-	static char buff[1024];
+	static char buf[1024];
 	char *delim=NULL, *end;
-	if (!fgets(buff, sizeof(buff), fd)
-			|| !(delim = strchr(buff, '='))
+	if (!fgets(buf, sizeof(buf), fd)
+			|| !(delim = strchr(buf, '='))
 			|| !(end = strchr(delim, '\n')))
-		return delim ? getLine(fd) : (KeyPair){};
-	assert(end - buff < sizeof(buff));
+		return delim ? get_line(fd) : (KeyPair){};
+	assert(end - buf < sizeof(buf));
 	*end = '\0'; *delim = '\0';
-	return (KeyPair){buff, delim+1};
+	return (KeyPair){buf, delim+1};
 }
 
-char *LoadSetting(const char *key)
+char *
+Settings_load_str(const char *key)
 {
 	static __thread char val[1024];
 	FILE *fd = _wfopen(CONFIG_PATH, L"r");
 	if (fd) {
-		for (KeyPair s; (s = getLine(fd)).key;) {
+		for (KeyPair s; (s = get_line(fd)).key;) {
 			if (!strcmp(key, s.key)) {
 				strcpy(val, s.val);
 				fclose(fd);
@@ -80,85 +82,91 @@ char *LoadSetting(const char *key)
 	return NULL;
 }
 
-int LoadSettingInt(const char *key)
+int
+Settings_load_int(const char *key)
 {
-	return atoi(LoadSetting(key) ?: "0");
+	return atoi(Settings_load_str(key) ?: "0");
 }
 
-void SaveSettingInt(const char *key, int val)
+void
+Settings_save_int(const char *key, int val)
 {
-	char buff[128];
-	sprintf(buff, "%d", val);
-	SaveSetting(key, buff);
+	char buf[128];
+	sprintf(buf, "%d", val);
+	Settings_save_str(key, buf);
 }
 
-void OpenDefaultChannels(void)
+void
+Settings_open_default_channels(void)
 {
-	if (!gSettings.autojoin)
+	if (!g_settings.autojoin)
 		return;
-	char buff[strlen(gSettings.autojoin) + 1];
-	strcpy(buff, gSettings.autojoin);
-	char *s, *s2 = buff;
+	char buf[strlen(g_settings.autojoin) + 1];
+	strcpy(buf, g_settings.autojoin);
+	char *s, *s2 = buf;
 
 	while ((s=strsep(&s2, ";"))) {
 		if (*s == '*')
-			ChatWindow_SetActiveTab(GetServerChat());
+			ChatWindow_set_active_tab(Chat_get_server_window());
 		else
 			JoinChannel(s, 0);
 	}
 }
 
-void ResetSettings(void)
+void
+Settings_reset(void)
 {
 	_wremove(CONFIG_PATH);
 }
 
-void InitSettings(void)
+void
+Settings_init(void)
 {
-	SHGetFolderPath(NULL, CSIDL_FLAG_CREATE | CSIDL_PERSONAL, NULL, 0, gDataDir);
-	wcscat(gDataDir, L"\\My Games\\Spring\\");
-	SHCreateDirectoryEx(NULL, gDataDir, NULL);
+	SHGetFolderPath(NULL, CSIDL_FLAG_CREATE | CSIDL_PERSONAL, NULL, 0, g_data_dir);
+	wcscat(g_data_dir, L"\\My Games\\Spring\\");
+	SHCreateDirectoryEx(NULL, g_data_dir, NULL);
 
-	FILE *fd = _wfopen(GetDataDir(L"aliases.conf"), L"r");
+	FILE *fd = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"r");
 	if (fd) {
-		for (KeyPair s; (s = getLine(fd)).key;)
-			NewUser(atoi(s.key), s.val);
+		for (KeyPair s; (s = get_line(fd)).key;)
+			Users_new(atoi(s.key), s.val);
 		fclose(fd);
 	}
 
 	for(int i=0; i<LENGTH(defaultSettings); ++i)
-		((char **)&gSettings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
+		((char **)&g_settings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
 		                         : defaultSettings[i].val ? _strdup(defaultSettings[i].val)
 								 : NULL;
 
 	fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
 		return;
-	for (KeyPair s; (s = getLine(fd)).key;)
+	for (KeyPair s; (s = get_line(fd)).key;)
 		for(int i=0; i<LENGTH(defaultSettings); ++i)
 			if (!strcmp(defaultSettings[i].key, s.key)) {
 				if (defaultSettings[i].isInt)
-					((intptr_t *)&gSettings)[i] = atoi(s.val);
+					((intptr_t *)&g_settings)[i] = atoi(s.val);
 				else {
-					free(((char **)&gSettings)[i]);
-					((char **)&gSettings)[i] = _strdup(s.val);
+					free(((char **)&g_settings)[i]);
+					((char **)&g_settings)[i] = _strdup(s.val);
 				}
 			}
 	fclose(fd);
 }
 
-void SaveAliases(void)
+void
+Settings_save_aliases(void)
 {
-	FILE *aliasFile = _wfopen(GetDataDir(L"aliases.conf"), L"w");
-	if (!aliasFile)
+	FILE *alias_file = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"w");
+	if (!alias_file)
 		return;
-	for (const User *u; (u = GetNextUser());)
-		fprintf(aliasFile, "%u=%s\n", u->id, u->alias);
-	fclose(aliasFile);
+	for (const User *u; (u = Users_get_next());)
+		fprintf(alias_file, "%u=%s\n", u->id, u->alias);
+	fclose(alias_file);
 }
 
-// #pragma GCC diagnostic ignored "-Wformat"
-void SaveSetting(const char *key, const char *val)
+void
+Settings_save_str(const char *key, const char *val)
 {
 	printf("saving %s=%s\n", key, val);
 	wchar_t tmpConfigName[MAX_PATH];
@@ -170,11 +178,11 @@ void SaveSetting(const char *key, const char *val)
 	if (!tmpConfig)
 		return;
 
-	const wchar_t *configPath = GetDataDir(L"alphalobby.conf");
+	const wchar_t *config_path = Settings_get_data_dir(L"alphalobby.conf");
 
-	FILE *oldConfig = _wfopen(configPath, L"r");
+	FILE *oldConfig = _wfopen(config_path, L"r");
 	if (oldConfig) {
-		for (KeyPair s; (s = getLine(oldConfig)).key;) {
+		for (KeyPair s; (s = get_line(oldConfig)).key;) {
 			if (key && !strcmp(key, s.key))
 				goto skipKey;
 			for(int i=0; i<LENGTH(defaultSettings); ++i)
@@ -191,26 +199,27 @@ void SaveSetting(const char *key, const char *val)
 
 	for (int i=0; i<LENGTH(defaultSettings); ++i) {
 		if (defaultSettings[i].isInt)
-			fprintf(tmpConfig, "%s=%d\n", defaultSettings[i].key, ((int *)&gSettings)[i]);
-		else if (((void **)&gSettings)[i])
-			fprintf(tmpConfig, "%s=%s\n", defaultSettings[i].key, ((char **)&gSettings)[i]);
+			fprintf(tmpConfig, "%s=%d\n", defaultSettings[i].key, ((int *)&g_settings)[i]);
+		else if (((void **)&g_settings)[i])
+			fprintf(tmpConfig, "%s=%s\n", defaultSettings[i].key, ((char **)&g_settings)[i]);
 	}
 
 	fclose(tmpConfig);
 
 	#ifdef NDEBUG
-		MoveFileEx(tmpConfigName, configPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+		MoveFileEx(tmpConfigName, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	#else
-	if (!MoveFileEx(tmpConfigName, configPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
+	if (!MoveFileEx(tmpConfigName, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
 		printf("err = %ld\n", GetLastError());
 		assert(0);
 	}
 	#endif
 }
 
-wchar_t * GetDataDir(const wchar_t *file)
+wchar_t *
+Settings_get_data_dir(const wchar_t *file)
 {
-	static __thread wchar_t buff[MAX_PATH];
-	wsprintf(buff, L"%s%s", gDataDir, file);
-	return buff;
+	static __thread wchar_t buf[MAX_PATH];
+	wsprintf(buf, L"%s%s", g_data_dir, file);
+	return buf;
 }

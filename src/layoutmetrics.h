@@ -20,11 +20,11 @@
 #define LAYOUTMETRICS_H
 
 #define MAP_X(x)\
-	((x) * baseUnitX / 4)
+	((x) * base_unit_x / 4)
 #define MAP_Y(y)\
-	((y) * baseUnitY / 8)
+	((y) * base_unit_y / 8)
 #define TEXT_LENGTH(n)\
-	(n * baseUnitX)
+	(n * base_unit_x)
 
 	// DIALOGBOX1_X = 212, DIALOGBOX1_Y = 188,
 	// DIALOGBOX2_X = 227, DIALOGBOX2_Y = 215,
@@ -54,11 +54,9 @@
 #define ICON_SIZE 22
 
 typedef struct HFONT__* HFONT;
-extern HFONT gFont;
-extern uint16_t baseUnitX;
-extern uint16_t baseUnitY;
-extern uint32_t scrollWidth;
-
-void InitializeSystemMetrics(void);
+extern HFONT g_font;
+extern uint16_t base_unit_x;
+extern uint16_t base_unit_y;
+extern uint32_t scroll_width;
 
 #endif /* end of include guard: LAYOUTMETRICS_H */

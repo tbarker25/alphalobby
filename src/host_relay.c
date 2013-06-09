@@ -18,42 +18,43 @@
 #include "sync.h"
 #include "user.h"
 
-static void forceAlly(const char *name, int allyId);
-static void forceTeam(const char *name, int teamId);
+static void force_ally(const char *name, int ally);
+static void force_team(const char *name, int team);
 static void kick(const char *name);
-static void saidBattle(const char *userName, char *text);
-static void setMap(const char *mapName);
-static void setOption(Option *opt, const char *val);
-static void setSplit(int size, SplitType type);
+static void said_battle(const char *username, char *text);
+static void set_map(const char *map_name);
+static void set_option(Option *opt, const char *val);
+static void set_split(int size, SplitType type);
 
-static void handleManagerList(char *command);
+static void handle_manager_list(char *command);
 
-const HostType gHostRelay = {
-	.forceAlly = forceAlly,
-	.forceTeam = forceTeam,
+const HostType g_host_relay = {
+	.force_ally = force_ally,
+	.force_team = force_team,
 	.kick = kick,
-	.saidBattle = saidBattle,
-	.setMap = setMap,
-	.setOption = setOption,
-	.setSplit = setSplit,
+	.said_battle = said_battle,
+	.set_map = set_map,
+	.set_option = set_option,
+	.set_split = set_split,
 };
 
-const char **gRelayManagers;
-int gRelayManagersCount;
+const char **g_relay_managers;
+int g_relay_managersCount;
 
 static char relayCmd[1024];
 static char relayHoster[MAX_NAME_LENGTH_NUL];
 static char relayManager[MAX_NAME_LENGTH_NUL];
-static char relayPassword[1024];
+static char relay_password[1024];
 
 #define RelayMessage(format, ...) \
-	(SendToServer("SAYPRIVATE %s " format, relayHoster, ## __VA_ARGS__))
+	(Server_send("SAYPRIVATE %s " format, relayHoster, ## __VA_ARGS__))
 
-bool RelayHost_handlePrivateMessage(const char *username, char *command)
+bool
+RelayHost_on_private_message(const char *username, char *command)
 {
 	// Get list of relayhost managers
 	if (!strcmp(username, "RelayHostManagerList")) {
-		handleManagerList(command);
+		handle_manager_list(command);
 		return true;
 	}
 
@@ -70,10 +71,10 @@ bool RelayHost_handlePrivateMessage(const char *username, char *command)
 		/* command += sizeof("JOINEDBATTLE ") - 1; */
 		/* size_t len = strcspn(command, " "); */
 		/* getNextWord(); */
-		/* User *u = FindUser(getNextWord()); */
+		/* User *u = Users_find(getNextWord()); */
 		/* if (u) { */
-			/* free(u->scriptPassword); */
-			/* u->scriptPassword = _strdup(getNextWord()); */
+			/* free(u->script_password); */
+			/* u->script_password = _strdup(getNextWord()); */
 		/* } */
 		return true;
 	}
@@ -81,7 +82,8 @@ bool RelayHost_handlePrivateMessage(const char *username, char *command)
 	return false;
 }
 
-static void handleManagerList(char *command)
+static void
+handle_manager_list(char *command)
 {
 	if (memcmp(command, "managerlist ", sizeof("managerlist ") - 1)) {
 		assert(0);
@@ -90,86 +92,97 @@ static void handleManagerList(char *command)
 
 	strsep(&command, " ");
 	for (const char *c; (c = strsep(&command, " \t\n"));){
-		User *u = FindUser(c);
+		User *u = Users_find(c);
 		if (u) {
-			gRelayManagers = realloc(gRelayManagers,
-					(gRelayManagersCount+1) * sizeof(*gRelayManagers));
-			gRelayManagers[gRelayManagersCount++] = u->name;
+			g_relay_managers = realloc(g_relay_managers,
+					(g_relay_managersCount+1) * sizeof(*g_relay_managers));
+			g_relay_managers[g_relay_managersCount++] = u->name;
 		}
 	}
 }
 
-void OpenRelayBattle(const char *title, const char *password, const char *modName, const char *mapName, const char *manager)
-//OPENBATTLE type natType password port maxplayers hashcode rank maphash {map} {title} {modname}
+void
+RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager)
+//OPENBATTLE type nat_type password port maxplayers hashcode rank maphash {map} {title} {modname}
 {
-	sprintf(relayCmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", GetModHash(modName), GetMapHash(mapName), mapName, title, modName);
-	strcpy(relayPassword, password ?: "*");
+	sprintf(relayCmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
+	strcpy(relay_password, password ?: "*");
 	strcpy(relayManager, manager);
-	SendToServer("SAYPRIVATE %s !spawn", relayManager);
+	Server_send("SAYPRIVATE %s !spawn", relayManager);
 }
 
-void RelayHost_onAddUser(const char *username)
+void
+RelayHost_on_add_user(const char *username)
 {
 	if (!strcmp(username, relayHoster) && *relayCmd) {
-		SendToServer(relayCmd);
+		Server_send(relayCmd);
 		*relayCmd = '\0';
 	}
 }
 
-void RelayHost_onBattleOpened(const Battle *b)
+void
+RelayHost_on_battle_opened(const Battle *b)
 {
 	if (!strcmp(b->founder->name, relayHoster))
-		JoinBattle(b->id, relayPassword);
+		JoinBattle(b->id, relay_password);
 }
 
-/* void relayMessage() */
+/* void
+relayMessage() */
 		/* { */
 		/* extern char relayHoster[1024]; */
 		/* if (*relayHoster) */
-			/* commandStart = sprintf(buff, "SAYPRIVATE %s ", */
+			/* command_start = sprintf(buf, "SAYPRIVATE %s ", */
 					/* relayHoster); */
 		/* else */
 			/* ++format; */
 	/* } */
 
 
-static void forceAlly(const char *name, int allyId)
+static void
+force_ally(const char *name, int ally_id)
 {
-	RelayMessage("FORCEALLYNO %s %d" , name, allyId);
+	RelayMessage("FORCEALLYNO %s %d" , name, ally_id);
 }
 
-static void forceTeam(const char *name, int teamId)
+static void
+force_team(const char *name, int team)
 {
-	RelayMessage("FORCETEAMNO %s %d" , name, teamId);
+	RelayMessage("FORCETEAMNO %s %d" , name, team);
 }
 
-/* static void forceColor(const char *name, uint32_t color)    */
+/* static void
+forceColor(const char *name, uint32_t color)    */
 /* {                                                           */
 /*         RelayMessage("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
 
-static void kick(const char *name)
+static void
+kick(const char *name)
 {
 	RelayMessage("KICKFROMBATTLE %s", name);
 }
 
-static void saidBattle(const char *userName, char *text)
+static void
+said_battle(const char *username, char *text)
 {
-	Chat_Said(GetBattleChat(), userName, 0, text);
+	Chat_said(GetBattleChat(), username, 0, text);
 }
 
-static void setMap(const char *mapName)
+static void
+set_map(const char *map_name)
 {
 	RelayMessage("UPDATEBATTLEINFO 0 0 %d %s",
-			GetMapHash(mapName), mapName);
+			Sync_map_hash(map_name), map_name);
 }
 
-static void setOption(Option *opt, const char *val)
+static void
+set_option(Option *opt, const char *val)
 {
-	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
+	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_count)
 		RelayMessage("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
 
-	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
+	else if (opt >= g_map_options && opt < g_map_options + g_map_option_count)
 		RelayMessage("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
 
 	else
@@ -177,17 +190,20 @@ static void setOption(Option *opt, const char *val)
 
 }
 
-static void addStartBox(int i, int left, int top, int right, int bottom)
+static void
+addStartBox(int i, int left, int top, int right, int bottom)
 {
 	RelayMessage("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
-static void delStartBox(int i)
+static void
+delStartBox(int i)
 {
 	RelayMessage("REMOVESTARTRECT %d", i);
 }
 
-static void setSplit(int size, SplitType type)
+static void
+set_split(int size, SplitType type)
 {
 	switch (type) {
 	case SPLIT_HORZ:

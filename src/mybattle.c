@@ -16,12 +16,13 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <assert.h>
-#include <malloc.h>
 #include <inttypes.h>
-#include <unistd.h>
+#include <malloc.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <windows.h>
 
@@ -38,24 +39,24 @@
 #include "sync.h"
 #include "user.h"
 
-uint32_t gUdpHelpPort;
+uint32_t g_udp_help_port;
 
-uint32_t battleToJoin;
+uint32_t g_battle_to_join;
 
-Battle *gMyBattle;
-extern uint32_t gLastBattleStatus;
+Battle *g_my_battle;
+extern uint32_t g_last_battle_status;
 
-uint32_t gMapHash, gModHash;
-ssize_t gNbModOptions, gNbMapOptions;
-Option *gModOptions, *gMapOptions;
-BattleOption gBattleOptions;
-const HostType *gHostType;
+uint32_t g_map_hash, g_mod_hash;
+ssize_t g_mod_option_count, g_map_option_count;
+Option *g_mod_options, *g_map_options;
+BattleOption g_battle_options;
+const HostType *g_host_type;
 
-uint8_t gNbSides;
-char gSideNames[16][32];
+uint8_t g_side_count;
+char g_side_names[16][32];
 
-char **gMaps, **gMods;
-ssize_t gNbMaps = -1, gNbMods = -1;
+char **g_maps, **g_mods;
+ssize_t g_map_count = -1, g_mod_count = -1;
 
 static char *currentScript;
 
@@ -63,122 +64,128 @@ static char *currentScript;
 
 struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
 
-
-void SetSplit(SplitType type, int size)
+void
+MyBattle_set_split(SplitType type, int size)
 {
-	if (gHostType && gHostType->setSplit)
-		gHostType->setSplit(size, type);
+	if (g_host_type && g_host_type->set_split)
+		g_host_type->set_split(size, type);
 }
 
-void SetMap(const char *restrict name)
+void
+MyBattle_set_map(const char *restrict name)
 {
-	if (gHostType && gHostType->setMap)
-		gHostType->setMap(name);
+	if (g_host_type && g_host_type->set_map)
+		g_host_type->set_map(name);
 }
 
-uint32_t GetNewBattleStatus(void)
+uint32_t
+MyBattle_new_battle_status(void)
 {
 	int teamBitField=0, ally=0;
-	FOR_EACH_PLAYER(s, gMyBattle) {
-		ally += ((s->battleStatus & ALLY_MASK) == 0) - ((s->battleStatus & ALLY_MASK) == TO_ALLY_MASK(1));
-		teamBitField |= 1 << FROM_TEAM_MASK(s->battleStatus);
+	FOR_EACH_PLAYER(s, g_my_battle) {
+		ally += ((s->battle_status & BS_ALLY) == 0) - ((s->battle_status & BS_ALLY) == TO_BS_ALLY_MASK(1));
+		teamBitField |= 1 << FROM_BS_TEAM(s->battle_status);
 	}
 	int teamMask = 0;
 	for (int i=0; i<16; ++i) {
 		if (!(teamBitField & 1 << i)) {
-			teamMask = TO_TEAM_MASK(i);
+			teamMask = TO_BS_TEAM_MASK(i);
 			break;
 		}
 	}
-	return MODE_MASK | READY_MASK | teamMask | TO_ALLY_MASK(ally > 0);
+	return BS_MODE | BS_READY | teamMask | TO_BS_ALLY_MASK(ally > 0);
 }
 
-void JoinedBattle(Battle *restrict b, uint32_t modHash)
+void
+MyBattle_joined_battle(Battle *restrict b, uint32_t modHash)
 {
-	gMyBattle = b;
-	gBattleOptions.modHash = modHash;
+	g_my_battle = b;
+	g_battle_options.modHash = modHash;
 
-	gMyUser.battleStatus = 0;
-	gLastBattleStatus = 0;
+	g_my_user.battle_status = 0;
+	g_last_battle_status = 0;
 
-	if (gModHash !=modHash)
-		ChangedMod(b->modName);
-	if (gMapHash != b->mapHash || !gMapHash)
-		ChangedMap(b->mapName);
+	if (g_mod_hash !=modHash)
+		Sync_on_changed_mod(b->mod_name);
+	if (g_map_hash != b->map_hash || !g_map_hash)
+		Sync_on_changed_map(b->map_name);
 
-	BattleRoom_Show();
+	BattleRoom_show();
 }
 
-void LeftBattle(void)
+void
+MyBattle_left_battle(void)
 {
-	BattleRoom_Hide();
+	BattleRoom_hide();
 
-	memset(&gBattleOptions, 0, sizeof(gBattleOptions));
-	for (int i=0; i<LENGTH(gBattleOptions.positions); ++i)
-		gBattleOptions.positions[i] = INVALID_STARTPOS;
+	memset(&g_battle_options, 0, sizeof(g_battle_options));
+	for (int i=0; i<LENGTH(g_battle_options.positions); ++i)
+		g_battle_options.positions[i] = INVALID_STARTPOS;
 
 	free(currentScript);
 	currentScript = NULL;
 
-	BattleRoom_OnSetModDetails();
+	BattleRoom_on_set_mod_details();
 
-	while (gMyBattle->nbBots)
-		DelBot(gMyBattle->users[gMyBattle->nbParticipants - 1]->bot.name);
+	while (g_my_battle->nbBots)
+		Users_del_bot(g_my_battle->users[g_my_battle->nbParticipants - 1]->bot.name);
 
-	gMyUser.battleStatus = 0;
-	gLastBattleStatus = 0;
+	g_my_user.battle_status = 0;
+	g_last_battle_status = 0;
 	battleInfoFinished = 0;
 
-	gMyBattle = NULL;
-	if (battleToJoin)
-		JoinBattle(battleToJoin, NULL);
+	g_my_battle = NULL;
+	if (g_battle_to_join)
+		JoinBattle(g_battle_to_join, NULL);
 
 	/* TODO: */
 	/* *relayHoster = '\0'; */
 }
 
 
-void UpdateBattleStatus(UserOrBot *restrict s, uint32_t bs, uint32_t color)
+void
+MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color)
 {
-	uint32_t lastBS = s->battleStatus;
-	s->battleStatus = bs;
+	uint32_t lastBS = s->battle_status;
+	s->battle_status = bs;
 	uint32_t lastColor = s->color;
 	s->color = color;
 
 	#ifdef NDEBUG
-	if (!s || !gMyBattle || gMyBattle != s->battle)
+	if (!s || !g_my_battle || g_my_battle != s->battle)
 		return;
 	#endif
 
-	BattleRoom_UpdateUser(s);
+	BattleRoom_update_user(s);
 
-	if (&s->user == &gMyUser)
-		gLastBattleStatus = bs;
+	if (&s->user == &g_my_user)
+		g_last_battle_status = bs;
 
-	if ((lastBS ^ bs) & MODE_MASK) {
+	if ((lastBS ^ bs) & BS_MODE) {
 
-		if (!(bs & MODE_MASK)
-				&& (User *)s != &gMyUser
-				&& BattleRoom_IsAutoUnspec())
-			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
+		if (!(bs & BS_MODE)
+				&& (User *)s != &g_my_user
+				&& BattleRoom_is_auto_unspec())
+			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
 
-		gMyBattle->nbSpectators = 0;
-		for (int i=0; i < gMyBattle->nbParticipants; ++i)
-			gMyBattle->nbSpectators += !(gMyBattle->users[i]->battleStatus & MODE_MASK);
-		BattleList_UpdateBattle(gMyBattle);
+		g_my_battle->nbSpectators = 0;
+		for (int i=0; i < g_my_battle->nbParticipants; ++i)
+			g_my_battle->nbSpectators += !(g_my_battle->users[i]->battle_status & BS_MODE);
+		BattleList_UpdateBattle(g_my_battle);
 		/* Rebalance(); */
-	} else if (bs & MODE_MASK
-			&& ((lastBS ^ bs) & (TEAM_MASK | ALLY_MASK)
+	} else if (bs & BS_MODE
+			&& ((lastBS ^ bs) & (BS_TEAM | BS_ALLY)
 			   ||  lastColor != color)) {
 		/* FixPlayerStatus((void *)s); */
 	} else
 		return;
-	if ((lastBS ^ bs) & MODE_MASK
-			|| ((lastBS ^ bs) & ALLY_MASK && &s->user == &gMyUser))
-		BattleRoom_StartPositionsChanged();
+	if ((lastBS ^ bs) & BS_MODE
+			|| ((lastBS ^ bs) & BS_ALLY && &s->user == &g_my_user))
+		BattleRoom_on_start_position_change();
 }
 
-void ChangeOption(Option *restrict opt)
+void
+MyBattle_change_option(Option *restrict opt)
 {
 	char val[128];
 	switch (opt->type) {
@@ -199,11 +206,12 @@ void ChangeOption(Option *restrict opt)
 		SetLastError(0);
 		POINT point;
 		GetCursorPos(&point);
-		void func(int *i) {
-			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, gMainWindow, NULL);
+		void
+func(int *i) {
+			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, g_main_window, NULL);
 		}
 		int clicked;
-		SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
+		SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
 		if (!clicked)
 			return;
 		strcpy(val, opt->listItems[clicked - 1].key);
@@ -213,11 +221,12 @@ void ChangeOption(Option *restrict opt)
 		return;
 	}
 
-	if (gHostType && gHostType->setOption)
-		gHostType->setOption(opt, opt->val);
+	if (g_host_type && g_host_type->set_option)
+		g_host_type->set_option(opt, opt->val);
 }
 
-static void setOptionFromTag(char *restrict key, const char *restrict val)
+static void
+set_option_from_tag(char *restrict key, const char *restrict val)
 {
 	_strlwr(key);
 	if (strcmp(strsep(&key, "/"), "game")) {
@@ -229,11 +238,11 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 
 	if (!strcmp(section, "startpostype")) {
 		StartPosType startPosType = atoi(val);
-		if (startPosType != gBattleOptions.startPosType) {
+		if (startPosType != g_battle_options.startPosType) {
 			;// taskSetMinimap = 1;
 		}
-		gBattleOptions.startPosType = startPosType;
-		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
+		g_battle_options.startPosType = startPosType;
+		// PostMessage(g_battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
 
@@ -241,15 +250,15 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	if (!strcmp(s, "team")) {
 		int team = atoi(s + sizeof("team") - 1);
 		char type = s[sizeof("team/startpos") + (team > 10)];
-		((int *)&gBattleOptions.positions[team])[type != 'x'] = atoi(val);
-		// PostMessage(gBattleRoom, WM_MOVESTARTPOSITIONS, 0, 0);
+		((int *)&g_battle_options.positions[team])[type != 'x'] = atoi(val);
+		// PostMessage(g_battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
 #endif
 
 	if (!strcmp(section, "hosttype")) {
 		if (!_stricmp(val, "spads")) {
-			gHostType = &gHostSpads;
+			g_host_type = &g_host_spads;
 			return;
 		}
 		printf("unknown hosttype %s\n", val);
@@ -263,7 +272,7 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 			printf("unrecognized player option %s=%s\n", key, val);
 			return;
 		}
-		FOR_EACH_HUMAN_PLAYER(p, gMyBattle) {
+		FOR_EACH_HUMAN_PLAYER(p, g_my_battle) {
 			if (!_stricmp(username, p->name)) {
 				free(p->skill);
 				p->skill = _strdup(val);
@@ -273,12 +282,12 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	}
 
 	if (!strcmp(section, "modoptions")) {
-		for (int i=0; i<gNbModOptions; ++i) {
-			if (strcmp(gModOptions[i].key, key))
+		for (int i=0; i<g_mod_option_count; ++i) {
+			if (strcmp(g_mod_options[i].key, key))
 				continue;
-			free(gModOptions[i].val);
-			gModOptions[i].val = _strdup(val);
-			BattleRoom_OnSetOption(&gModOptions[i]);
+			free(g_mod_options[i].val);
+			g_mod_options[i].val = _strdup(val);
+			BattleRoom_on_set_option(&g_mod_options[i]);
 			return;
 		}
 		printf("unrecognized mod option %s=%s\n", key, val);
@@ -286,12 +295,12 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	}
 
 	if (!strcmp(section, "mapoptions")) {
-		for (int i=0; i<gNbMapOptions; ++i) {
-			if (strcmp(gMapOptions[i].key, key))
+		for (int i=0; i<g_map_option_count; ++i) {
+			if (strcmp(g_map_options[i].key, key))
 				continue;
-			free(gMapOptions[i].val);
-			gMapOptions[i].val = _strdup(val);
-			BattleRoom_OnSetOption(&gMapOptions[i]);
+			free(g_map_options[i].val);
+			g_map_options[i].val = _strdup(val);
+			BattleRoom_on_set_option(&g_map_options[i]);
 			return;
 		}
 		printf("unrecognized map option %s=%s\n", key, val);
@@ -301,51 +310,54 @@ static void setOptionFromTag(char *restrict key, const char *restrict val)
 	printf("unrecognized script game/%s/%s=%s\n", section, key, val);
 }
 
-static void setOptionsFromScript(void)
+static void
+set_options_from_script(void)
 {
 	char *script = _strdup(currentScript);
 	char *toFree = script;
 
 	char *key, *val;
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
-		setOptionFromTag(key, val);
+		set_option_from_tag(key, val);
 
 	free(toFree);
 }
 
-void AppendScriptTags(char *restrict s)
+void
+MyBattle_append_script(char *restrict s)
 {
 	if (!currentScript) {
 		currentScript = _strdup(s);
 
 	} else {
-		size_t currentLen = strlen(currentScript) + 1;
-		size_t extraLen = strlen(s) + 1;
+		size_t current_len = strlen(currentScript) + 1;
+		size_t extra_len = strlen(s) + 1;
 		currentScript = realloc(currentScript,
-				currentLen + extraLen);
-		currentScript[currentLen - 1] = '\t';
-		memcpy(currentScript + currentLen, s, extraLen);
+				current_len + extra_len);
+		currentScript[current_len - 1] = '\t';
+		memcpy(currentScript + current_len, s, extra_len);
 	}
 
-	if (gModHash)
-		setOptionsFromScript();
+	if (g_mod_hash)
+		set_options_from_script();
 }
 
-void UpdateModOptions(void)
+void
+MyBattle_update_mod_options(void)
 {
-	BattleRoom_OnSetModDetails();
+	BattleRoom_on_set_mod_details();
 
 	if (!currentScript)
 		return;
 
-	setOptionsFromScript();
+	set_options_from_script();
 
 	/* Set default values */
-	for (int i=0; i<gNbModOptions; ++i)
-		if (!gModOptions[i].val)
-			BattleRoom_OnSetOption(&gModOptions[i]);
+	for (int i=0; i<g_mod_option_count; ++i)
+		if (!g_mod_options[i].val)
+			BattleRoom_on_set_option(&g_mod_options[i]);
 
-	for (int i=0; i<gNbMapOptions; ++i)
-		if (!gMapOptions[i].val)
-			BattleRoom_OnSetOption(&gMapOptions[i]);
+	for (int i=0; i<g_map_option_count; ++i)
+		if (!g_map_options[i].val)
+			BattleRoom_on_set_option(&g_map_options[i]);
 }

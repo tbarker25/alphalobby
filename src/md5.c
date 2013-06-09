@@ -93,20 +93,21 @@ static uint8_t PADDING[64] = {0x80};
    (a) += (b); \
   }
 
-static void update(MD5_CTX *restrict mdContext, const void *restrict inBuf, unsigned int inLen)
+static void
+update(MD5_CTX *restrict mdContext, const void *restrict inBuf, unsigned int in_len)
 {
 	uint32_t in[16];
 	const uint8_t *inBuff = inBuf;
 	int mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
 	/* update number of bits */
-	if ((mdContext->i[0] + ((uint32_t)inLen << 3)) < mdContext->i[0])
+	if ((mdContext->i[0] + ((uint32_t)in_len << 3)) < mdContext->i[0])
 		mdContext->i[1]++;
-	mdContext->i[0] += ((uint32_t)inLen << 3);
-	mdContext->i[1] += ((uint32_t)inLen >> 29);
+	mdContext->i[0] += ((uint32_t)in_len << 3);
+	mdContext->i[1] += ((uint32_t)in_len >> 29);
 
-	while (inLen--) {
-		/* add new character to buffer, increment mdi */
+	while (in_len--) {
+		/* add new character to buf, increment mdi */
 		mdContext->in[mdi++] = *inBuff++;
 
 		/* transform if necessary */
@@ -122,7 +123,8 @@ static void update(MD5_CTX *restrict mdContext, const void *restrict inBuf, unsi
 	}
 }
 
-static void final(MD5_CTX *mdContext)
+static void
+final(MD5_CTX *mdContext)
 {
 	uint32_t in[16] = {
 		[14]=mdContext->i[0],
@@ -133,8 +135,8 @@ static void final(MD5_CTX *mdContext)
 	int mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
 
 	/* pad out to 56 mod 64 */
-	unsigned int padLen = (mdi < 56) ? (56 - mdi) : (120 - mdi);
-	update (mdContext, PADDING, padLen);
+	unsigned int pad_len = (mdi < 56) ? (56 - mdi) : (120 - mdi);
+	update (mdContext, PADDING, pad_len);
 
 	/* append length in bits and transform */
 	for (int i = 0, ii = 0; i < 14; i++, ii += 4)
@@ -144,7 +146,7 @@ static void final(MD5_CTX *mdContext)
 			((uint32_t)mdContext->in[ii]);
 	transform (mdContext->buf, in);
 
-	/* store buffer in digest */
+	/* store buf in digest */
 	for (int i=0, ii=0; i<4; i++, ii+=4) {
 		mdContext->digest[ii] = (uint8_t)(mdContext->buf[i] & 0xFF);
 		mdContext->digest[ii+1] =
@@ -158,7 +160,8 @@ static void final(MD5_CTX *mdContext)
 
 /* Basic MD5 step. transform buf based on in.
  */
-static void transform(uint32_t *restrict buf, uint32_t *restrict in)
+static void
+transform(uint32_t *restrict buf, uint32_t *restrict in)
 {
 	uint32_t a = buf[0], b = buf[1], c = buf[2], d = buf[3];
 
@@ -256,7 +259,8 @@ static void transform(uint32_t *restrict buf, uint32_t *restrict in)
 	buf[3] += d;
 }
 
-const char *ToBase64(const uint8_t *s)
+const char *
+MD5_to_base_64(const uint8_t *s)
 {
 	const char conv[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	static char code[BASE64_MD5_LENGTH + 1];
@@ -269,17 +273,19 @@ const char *ToBase64(const uint8_t *s)
 	return code;
 }
 
-void GetMD5Sum(const void *restrict bytes, size_t len, uint8_t *restrict buff)
+void
+MD5_calc_checksum(const void *restrict bytes, size_t len, uint8_t *restrict buf)
 {
 	MD5_CTX mdContext = {
 		.buf = MD5_INITIAL_BUFF,
-		.digest = buff,
+		.digest = buf,
 	};
 	update(&mdContext, bytes, len);
 	final(&mdContext);
 }
 
-void FromBase16(const char *restrict in, uint8_t *restrict out)
+void
+MD5_from_base_16(const char *restrict in, uint8_t *restrict out)
 {
 	#define FROM_XCHR(c) (c - '0' + (c > '9') * (10 - 'a' + '0'))
 	for (int i=0; i < 16; ++i)

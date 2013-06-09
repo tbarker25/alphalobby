@@ -19,20 +19,16 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-void PollServer(void);
-void Connect(void (*onFinish)(void));
-void Disconnect(void);
-void SendToServer(const char *format, ...)
-	__attribute__ ((format (ms_printf, 1, 2)));
-// char * GetLocalIP(void);
-
-enum ConnectionState {
+enum ServerStatus {
 	CONNECTION_OFFLINE,
 	CONNECTION_CONNECTING,
 	CONNECTION_ONLINE,
 };
 
-enum ConnectionState GetConnectionState(void)
-	__attribute__((pure));
+void Server_connect(void (*onFinish)(void));
+void Server_disconnect(void);
+void Server_poll(void);
+void Server_send(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
+enum ServerStatus Server_status(void) __attribute__((pure));
 
 #endif /* end of include guard: CLIENT_H */

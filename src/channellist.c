@@ -27,55 +27,58 @@
 #include "layoutmetrics.h"
 #include "resource.h"
 
-static HWND channelList;
+static HWND channel_list;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static void activate(int itemIndex)
+static void
+activate(int item_index)
 {
 	wchar_t name[MAX_NAME_LENGTH_NUL];
-	ListView_GetItemText(channelList, itemIndex, 0, name, LENGTH(name));
+	ListView_GetItemText(channel_list, item_index, 0, name, LENGTH(name));
 	JoinChannel(utf16to8(name), 1);
 }
 
-static void onInit(HWND window)
+static void
+on_init(HWND window)
 {
 	RECT rect;
 	LVCOLUMN columnInfo;
 
-	channelList = GetDlgItem(window, IDC_USERLIST_LIST);
-	GetClientRect(channelList, &rect);
+	channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
+	GetClientRect(channel_list, &rect);
 	columnInfo .mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH;
 
 	columnInfo.pszText = L"name";
 	columnInfo.cx = MAP_X(50);
 	columnInfo.iSubItem = 0;
-	ListView_InsertColumn(channelList, 0, (LPARAM)&columnInfo);
+	ListView_InsertColumn(channel_list, 0, (LPARAM)&columnInfo);
 
 	columnInfo.pszText = L"users";
 	columnInfo.cx = MAP_X(20);
 	columnInfo.iSubItem = 1;
-	ListView_InsertColumn(channelList, 1, (LPARAM)&columnInfo);
+	ListView_InsertColumn(channel_list, 1, (LPARAM)&columnInfo);
 
 	columnInfo.pszText = L"description";
-	columnInfo.cx = rect.right - MAP_X(70) - scrollWidth;
+	columnInfo.cx = rect.right - MAP_X(70) - scroll_width;
 	columnInfo.iSubItem = 2;
-	ListView_InsertColumn(channelList, 2, (LPARAM)&columnInfo);
+	ListView_InsertColumn(channel_list, 2, (LPARAM)&columnInfo);
 
-	ListView_SetExtendedListViewStyleEx(channelList,
+	ListView_SetExtendedListViewStyleEx(channel_list,
 			LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 }
 
-static BOOL CALLBACK channelListProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+channel_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		onInit(window);
+		on_init(window);
 		return 0;
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(channelList, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(channel_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
@@ -89,33 +92,35 @@ static BOOL CALLBACK channelListProc(HWND window, UINT msg, WPARAM wParam, LPARA
 		}
 		return 0;
 	case WM_DESTROY:
-		channelList = NULL;
+		channel_list = NULL;
 		return 0;
 	default:
 		return 0;
 	}
 }
 
-void ChannelList_AddChannel(const char *name, const char *userCount, const char *desc)
+void
+ChannelList_add_channel(const char *name, const char *userCount, const char *desc)
 {
-	int itemIndex;
+	int item_index;
 	LVITEM item;
 
 	item.mask = LVIF_TEXT;
 	item.iSubItem = 0;
 	item.pszText = utf8to16(name);
-	itemIndex = ListView_InsertItem(channelList, &item);
+	item_index = ListView_InsertItem(channel_list, &item);
 
-	assert(itemIndex != -1);
+	assert(item_index != -1);
 
-	ListView_SetItemText(channelList, itemIndex, 1, utf8to16(userCount));
-	ListView_SetItemText(channelList, itemIndex, 2, utf8to16(desc));
+	ListView_SetItemText(channel_list, item_index, 1, utf8to16(userCount));
+	ListView_SetItemText(channel_list, item_index, 2, utf8to16(desc));
 }
 
-void ChannelList_Show(void)
+void
+ChannelList_show(void)
 {
-	/* DestroyWindow(GetParent(channelList)); */
-	assert(channelList == NULL);
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, channelListProc);
+	/* DestroyWindow(GetParent(channel_list)); */
+	assert(channel_list == NULL);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, channel_list_proc);
 	RequestChannels();
 }

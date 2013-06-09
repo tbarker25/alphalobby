@@ -50,56 +50,55 @@
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 static void accepted(void);
-static void addBot(void);
-static void addUser(void);
-static void addStartRect(void);
+static void add_bot(void);
+static void add_user(void);
+static void add_start_rect(void);
 static void agreement(void);
-static void agreementEnd(void);
-static void battleOpened(void);
-static void battleClosed(void);
+static void agreement_end(void);
+static void battle_opened(void);
+static void battle_closed(void);
 static void broadcast(void);
 static void channel(void);
-static void channelTopic(void);
-static void clientBattleStatus(void);
+static void channel_topic(void);
+static void client_battle_status(void);
 static void clients(void);
-static void clientStatus(void);
+static void client_status(void);
 static void denied(void);
-static void forceQuitBattle(void);
+static void force_quit_battle(void);
 static void join(void);
-static void joinBattle(void);
-static void joinBattleFailed(void);
+static void join_battle(void);
+static void join_battle_failed(void);
 static void joined(void);
-static void joinedBattle(void);
-static void joinFailed(void);
+static void joined_battle(void);
+static void join_failed(void);
 static void left(void);
-static void leftBattle(void);
-static void loginInfoEnd(void);
-static void messageOfTheDay(void);
-static void openBattle(void);
-static void registrationAccepted(void);
-static void removeBot(void);
-static void removeStartRect(void);
-static void removeUser(void);
-static void requestBattleStatus(void);
+static void left_battle(void);
+static void login_info_end(void);
+static void message_of_the_day(void);
+static void open_battle(void);
+static void registration_accepted(void);
+static void remove_bot(void);
+static void remove_start_rect(void);
+static void remove_user(void);
+static void request_battle_status(void);
 static void ring(void);
 static void said(void);
-static void saidBattle(void);
-static void saidBattleEx(void);
-static void saidEx(void);
-static void saidPrivate(void);
-static void sayPrivate(void);
-static void serverMsg(void);
-static void serverMsgBox(void);
-static void setScriptTags(void);
-static void TASServer(void);
-static void updateBattleInfo(void);
-static void updateBot(void);
+static void said_battle(void);
+static void said_battle_ex(void);
+static void said_ex(void);
+static void said_private(void);
+static void say_private(void);
+static void server_msg(void);
+static void server_message_box(void);
+static void set_script_tags(void);
+static void TAS_server(void);
+static void update_battle_info(void);
+static void update_bot(void);
 
-
-static FILE *agreementFile;
-static DWORD timeJoinedBattle;
-extern uint32_t gLastBattleStatus;
-extern uint8_t gLastClientStatus;
+static FILE *agreement_file;
+static DWORD timeMyBattle_joined_battle;
+extern uint32_t g_last_battle_status;
+extern uint8_t g_last_client_status;
 static char *command;
 
 static const struct {
@@ -107,61 +106,63 @@ static const struct {
 	void (*func)(void);
 } serverCommands[] = {
 	{"ACCEPTED", accepted},
-	{"ADDBOT", addBot},
-	{"ADDSTARTRECT", addStartRect},
-	{"ADDUSER", addUser},
+	{"ADDBOT", add_bot},
+	{"ADDSTARTRECT", add_start_rect},
+	{"ADDUSER", add_user},
 	{"AGREEMENT", agreement},
-	{"AGREEMENTEND", agreementEnd},
-	{"BATTLECLOSED", battleClosed},
-	{"BATTLEOPENED", battleOpened},
+	{"AGREEMENTEND", agreement_end},
+	{"BATTLECLOSED", battle_closed},
+	{"BATTLEOPENED", battle_opened},
 	{"BROADCAST", broadcast},
 	{"CHANNEL", channel},
-	{"CHANNELTOPIC", channelTopic},
-	{"CLIENTBATTLESTATUS", clientBattleStatus},
+	{"CHANNELTOPIC", channel_topic},
+	{"CLIENTBATTLESTATUS", client_battle_status},
 	{"CLIENTS", clients},
-	{"CLIENTSTATUS", clientStatus},
+	{"CLIENTSTATUS", client_status},
 	{"DENIED", denied},
-	{"FORCEQUITBATTLE", forceQuitBattle},
+	{"FORCEQUITBATTLE", force_quit_battle},
 	{"JOIN", join},
-	{"JOINBATTLE", joinBattle},
-	{"JOINBATTLEFAILED", joinBattleFailed},
+	{"JOINBATTLE", join_battle},
+	{"JOINBATTLEFAILED", join_battle_failed},
 	{"JOINED", joined},
-	{"JOINEDBATTLE", joinedBattle},
-	{"JOINFAILED", joinFailed},
+	{"JOINEDBATTLE", joined_battle},
+	{"JOINFAILED", join_failed},
 	{"LEFT", left},
-	{"LEFTBATTLE", leftBattle},
-	{"LOGININFOEND", loginInfoEnd},
-	{"MOTD", messageOfTheDay},
-	{"OPENBATTLE", openBattle},
-	{"REGISTRATIONACCEPTED", registrationAccepted},
-	{"REMOVEBOT", removeBot},
-	{"REMOVESTARTRECT", removeStartRect},
-	{"REMOVEUSER", removeUser},
-	{"REQUESTBATTLESTATUS", requestBattleStatus},
+	{"LEFTBATTLE", left_battle},
+	{"LOGININFOEND", login_info_end},
+	{"MOTD", message_of_the_day},
+	{"OPENBATTLE", open_battle},
+	{"REGISTRATIONACCEPTED", registration_accepted},
+	{"REMOVEBOT", remove_bot},
+	{"REMOVESTARTRECT", remove_start_rect},
+	{"REMOVEUSER", remove_user},
+	{"REQUESTBATTLESTATUS", request_battle_status},
 	{"RING", ring},
 	{"SAID", said},
-	{"SAIDBATTLE", saidBattle},
-	{"SAIDBATTLEEX", saidBattleEx},
-	{"SAIDEX", saidEx},
-	{"SAIDPRIVATE", saidPrivate},
-	{"SAYPRIVATE", sayPrivate},
-	{"SERVERMSG", serverMsg},
-	{"SERVERMSGBOX", serverMsgBox },
-	{"SETSCRIPTTAGS", setScriptTags},
-	{"TASServer", TASServer},
-	{"UPDATEBATTLEINFO", updateBattleInfo},
-	{"UPDATEBOT", updateBot},
+	{"SAIDBATTLE", said_battle},
+	{"SAIDBATTLEEX", said_battle_ex},
+	{"SAIDEX", said_ex},
+	{"SAIDPRIVATE", said_private},
+	{"SAYPRIVATE", say_private},
+	{"SERVERMSG", server_msg},
+	{"SERVERMSGBOX", server_message_box },
+	{"SETSCRIPTTAGS", set_script_tags},
+	{"TASServer", TAS_server},
+	{"UPDATEBATTLEINFO", update_battle_info},
+	{"UPDATEBOT", update_bot},
 };
 
-static void copyNextWord(char *s) {
+static void
+copy_next_word(char *buf) {
 	size_t len = strcspn(command, " ");
 	char *word = command;
 	command += len + !!command[len];
 	word[len] = '\0';
-	memcpy(s, word, len + 1);
+	memcpy(buf, word, len + 1);
 }
 
-static char * getNextWord(void) {
+static char *
+get_next_word(void) {
 	size_t len = strcspn(command, " ");
 	char *word = command;
 	command += len + !!command[len];
@@ -169,23 +170,25 @@ static char * getNextWord(void) {
 	return word;
 }
 
-static int getNextInt(void) {
-	return atoi(getNextWord());
+static int
+get_next_int(void) {
+	return atoi(get_next_word());
 }
 
-static void copyNextSentence(char *s) {
+static void
+copy_next_sentence(char *buf) {
 	size_t len = strcspn(command, "\t");
 	char *word = command;
 	command += len + !!command[len];
 	word[len] = '\0';
-	memcpy(s, word, len + 1);
+	memcpy(buf, word, len + 1);
 }
 
-void handleCommand(char *s)
+void
+Messages_handle(char *s)
 {
-
 	command = s;
-	char *commandName = getNextWord();
+	char *commandName = get_next_word();
 	typeof(*serverCommands) *com =
 		bsearch(commandName, serverCommands, LENGTH(serverCommands),
 				sizeof(*serverCommands), (void *)strcmp);
@@ -193,254 +196,269 @@ void handleCommand(char *s)
 		com->func();
 }
 
-static void accepted(void)
+static void
+accepted(void)
 {
-	copyNextWord(gMyUser.name);
-	strcpy(gMyUser.alias, UNTAGGED_NAME(gMyUser.name));
+	copy_next_word(g_my_user.name);
+	strcpy(g_my_user.alias, UNTAGGED_NAME(g_my_user.name));
 }
 
 
-static void addBot(void)
+static void
+add_bot(void)
 {
 	// ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL}
 	__attribute__((unused))
-	char *battleID = getNextWord();
-	assert(atoi(battleID) == gMyBattle->id);
-	char *name = getNextWord();
-	User *owner = FindUser(getNextWord());
+	char *battleID = get_next_word();
+	assert(atoi(battleID) == g_my_battle->id);
+	char *name = get_next_word();
+	User *owner = Users_find(get_next_word());
 	assert(owner);
-	uint32_t battleStatus = getNextInt();
-	uint32_t color = getNextInt();
-	AddBot(name, owner, battleStatus, color, command);
+	uint32_t battle_status = get_next_int();
+	uint32_t color = get_next_int();
+	Users_add_bot(name, owner, battle_status, color, command);
 }
 
-static void addUser(void)
+static void
+add_user(void)
 {
-	char *name = getNextWord();
-	uint8_t country = 0;
-	for (int i=0; i < LENGTH(countryCodes); ++i) {
-		if (command[0] == countryCodes[i][0]
-				&& command[1] == countryCodes[i][1]) {
-			country = i;
-			break;
-		}
-	}
+	char *name = get_next_word();
 
+	uint8_t country = Country_get_id(command);
 	command += 3;
-	uint32_t cpu = getNextInt();
 
-	User *u = NewUser(getNextInt(), name);
+	uint32_t cpu = get_next_int();
+
+	User *u = Users_new(get_next_int(), name);
 	strcpy(u->name, name);
 	u->country = country;
 	u->cpu = cpu;
 
-	ChatWindow_AddUser(GetServerChat(), u);
-	if (gSettings.flags & (1<<DEST_SERVER))
-		Chat_Said(GetServerChat(), u->name, CHAT_SYSTEM, "has logged in");
+	Chat_add_user(Chat_get_server_window(), u);
+	if (g_settings.flags & (1<<DEST_SERVER))
+		Chat_said(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged in");
 
-	RelayHost_onAddUser(u->name);
+	RelayHost_on_add_user(u->name);
 }
 
-static void addStartRect(void)
+static void
+add_start_rect(void)
 {
-	typeof(*gBattleOptions.startRects) *rect = &gBattleOptions.startRects[getNextInt()];
-	rect->left = getNextInt();
-	rect->top = getNextInt();
-	rect->right = getNextInt();
-	rect->bottom = getNextInt();
-	BattleRoom_StartPositionsChanged();
+	typeof(*g_battle_options.startRects) *rect = &g_battle_options.startRects[get_next_int()];
+	rect->left = get_next_int();
+	rect->top = get_next_int();
+	rect->right = get_next_int();
+	rect->bottom = get_next_int();
+	BattleRoom_on_start_position_change();
 }
 
-static void agreement(void)
+static void
+agreement(void)
 {
-	agreementFile = agreementFile ?: tmpfile();
-	fputs(command, agreementFile);
+	agreement_file = agreement_file ?: tmpfile();
+	fputs(command, agreement_file);
 }
 
-static void agreementEnd(void)
+static void
+agreement_end(void)
 {
-	rewind(agreementFile);
-	SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)agreementFile);
-	agreementFile = NULL;
+	rewind(agreement_file);
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)agreement_file);
+	agreement_file = NULL;
 }
 
-static void battleOpened(void)
+static void
+battle_opened(void)
 {
-	Battle *b = NewBattle();
+	Battle *b = Battles_new();
 
-	b->id = getNextInt();
-	b->type = getNextInt();
-	b->natType = getNextInt();
+	b->id = get_next_int();
+	b->type = get_next_int();
+	b->nat_type = get_next_int();
 
 	char founderName[MAX_NAME_LENGTH_NUL];
-	copyNextWord(founderName);
-	b->founder = FindUser(founderName);
+	copy_next_word(founderName);
+	b->founder = Users_find(founderName);
 	assert(b->founder);
 	b->nbParticipants = 1;
 	b->founder->battle = b;
 
-	copyNextWord(b->ip);
-	b->port = getNextInt();
-	b->maxPlayers = getNextInt();
-	b->passworded = getNextInt();
-	b->rank = getNextInt();
-	b->mapHash = getNextInt();
-	copyNextSentence(b->mapName);
-	copyNextSentence(b->title);
-	copyNextSentence(b->modName);
+	copy_next_word(b->ip);
+	b->port = get_next_int();
+	b->max_players = get_next_int();
+	b->passworded = get_next_int();
+	b->rank = get_next_int();
+	b->map_hash = get_next_int();
+	copy_next_sentence(b->map_name);
+	copy_next_sentence(b->title);
+	copy_next_sentence(b->mod_name);
 
-	RelayHost_onBattleOpened(b);
+	RelayHost_on_battle_opened(b);
 
-	ChatWindow_UpdateUser(b->founder);
+	Chat_update_user(b->founder);
 }
 
-static void battleClosed(void)
+static void
+battle_closed(void)
 {
-	Battle *b = FindBattle(getNextInt());
+	Battle *b = Battles_find(get_next_int());
 	assert(b);
 	if (!b)
 		return;
 
-	if (b == gMyBattle){
-		if (gMyBattle->founder != &gMyUser)
-			MyMessageBox("Leaving Battle", "The battle was closed by the host.");
-		LeftBattle();
+	if (b == g_my_battle){
+		if (g_my_battle->founder != &g_my_user)
+			MainWindow_msg_box("Leaving Battle", "The battle was closed by the host.");
+		MyBattle_left_battle();
 	}
 
 	for (int i=0; i<b->nbParticipants; ++i)
 		b->users[i]->user.battle = NULL;
 
 	BattleList_CloseBattle(b);
-	DelBattle(b);
+	Battles_del(b);
 }
 
-static void broadcast(void)
+static void
+broadcast(void)
 {
-	serverMsgBox();
+	server_message_box();
 }
 
-static void channel(void)
+static void
+channel(void)
 {
-	const char *channame = getNextWord();
-	const char *usercount = getNextWord();
+	const char *channame = get_next_word();
+	const char *usercount = get_next_word();
 	const char *description = command;
-	ChannelList_AddChannel(channame, usercount, description);
+	ChannelList_add_channel(channame, usercount, description);
 }
 
-static void channelTopic(void)
+static void
+channel_topic(void)
 {
-	const char *chanName = getNextWord();
-	/* const char *username =  */getNextWord();
-	/* const char *unixTime =  */getNextWord();
+	const char *channel_name = get_next_word();
+	/* const char *username =  */get_next_word();
+	/* const char *unix_time =  */get_next_word();
 	char *s;
 	while ((s = strstr(command, "\\n")))
 		*(uint16_t *)s = *(uint16_t *)(char [2]){'\r', '\n'};
-	Chat_Said(GetChannelChat(chanName), NULL, CHAT_TOPIC, command);
+	Chat_said(Chat_get_channel_window(channel_name), NULL, CHAT_TOPIC, command);
 }
 
-static void clientBattleStatus(void)
+static void
+client_battle_status(void)
 {
-	User *u = FindUser(getNextWord());
-	uint32_t bs = getNextInt();
-	UpdateBattleStatus((UserOrBot *)u,
-			(bs & ~INTERNAL_MASK) | (u->battleStatus & INTERNAL_MASK),
-			getNextInt());
+	User *u = Users_find(get_next_word());
+	uint32_t bs = get_next_int();
+	MyBattle_update_battle_status((UserOrBot *)u,
+			(bs & ~BS_INTERNAL) | (u->battle_status & BS_INTERNAL),
+			get_next_int());
 }
 
-static void clients(void)
+static void
+clients(void)
 {
-	const char *chanName = getNextWord();
-	HWND window = GetChannelChat(chanName);
-	for (const char *userName; *(userName = getNextWord()); )
-		ChatWindow_AddUser(window, FindUser(userName));
+	const char *channel_name = get_next_word();
+	HWND window = Chat_get_channel_window(channel_name);
+	for (const char *username; *(username = get_next_word()); )
+		Chat_add_user(window, Users_find(username));
 }
 
-static void clientStatus(void)
+static void
+client_status(void)
 {
-	User *u = FindUser(getNextWord());
+	User *u = Users_find(get_next_word());
 	if (!u)
 		return;
 
-	uint8_t status = getNextInt();
-	uint8_t diff = status ^ u->clientStatus;
-	u->clientStatus = status;
+	uint8_t status = get_next_int();
+	uint8_t diff = status ^ u->client_status;
+	u->client_status = status;
 
-	if (gMyBattle && u->battle == gMyBattle)
-		BattleRoom_UpdateUser((void *)u);
+	if (g_my_battle && u->battle == g_my_battle)
+		BattleRoom_update_user((void *)u);
 
-	if (diff & (CS_INGAME_MASK | CS_AWAY_MASK))
-		ChatWindow_UpdateUser(u);
+	if (diff & (CS_INGAME | CS_AWAY))
+		Chat_update_user(u);
 
 	if (!u->battle)
 		return;
 
-	if (u == &gMyUser)
-		gLastClientStatus = (status & ~CS_INGAME_MASK)
-			| (gLastClientStatus & CS_INGAME_MASK);
+	if (u == &g_my_user)
+		g_last_client_status = (status & ~CS_INGAME)
+			| (g_last_client_status & CS_INGAME);
 
-	if (diff & CS_INGAME_MASK && u == u->battle->founder)
+	if (diff & CS_INGAME && u == u->battle->founder)
 		BattleList_UpdateBattle(u->battle);
 
-	if (gMyBattle == u->battle
-			&& diff & CS_INGAME_MASK
-			&& status & CS_INGAME_MASK
+	if (g_my_battle == u->battle
+			&& diff & CS_INGAME
+			&& status & CS_INGAME
 			&& u == u->battle->founder
-			&& u != &gMyUser)
-		LaunchSpring();
+			&& u != &g_my_user)
+		Spring_launch();
 }
 
-static void denied(void)
+static void
+denied(void)
 {
-	Disconnect();
-	MyMessageBox("Connection denied", command);
+	Server_disconnect();
+	MainWindow_msg_box("Connection denied", command);
 }
 
-static void forceQuitBattle(void)
+static void
+force_quit_battle(void)
 {
-	static char buff[sizeof(" has kicked you from the current battle") + MAX_TITLE];
-	sprintf(buff, "%s has kicked you from the current battle.", gMyBattle->founder->name);
-	MyMessageBox("Leaving battle", buff);
+	static char buf[sizeof(" has kicked you from the current battle") + MAX_TITLE];
+	sprintf(buf, "%s has kicked you from the current battle.", g_my_battle->founder->name);
+	MainWindow_msg_box("Leaving battle", buf);
 }
 
-static void join(void)
+static void
+join(void)
 {
-	const char *chanName = getNextWord();
-	ChatWindow_AddTab(GetChannelChat(chanName));
+	const char *channel_name = get_next_word();
+	ChatWindow_add_tab(Chat_get_channel_window(channel_name));
 }
 
-static void joinBattle(void)
+static void
+join_battle(void)
 {
-	Battle *b = FindBattle(getNextInt());
-	JoinedBattle(b, getNextInt());
-	timeJoinedBattle = GetTickCount();
+	Battle *b = Battles_find(get_next_int());
+	MyBattle_joined_battle(b, get_next_int());
+	timeMyBattle_joined_battle = GetTickCount();
 }
 
-static void joinBattleFailed(void)
+static void
+join_battle_failed(void)
 {
-	BattleRoom_Hide();
-	MyMessageBox("Failed to join battle", command);
+	BattleRoom_hide();
+	MainWindow_msg_box("Failed to join battle", command);
 }
 
-static void joined(void)
+static void
+joined(void)
 {
-	const char *chanName = getNextWord();
-	const char *userName = getNextWord();
-	ChatWindow_AddUser(GetChannelChat(chanName), FindUser(userName));
-	if (gSettings.flags & (1<<DEST_CHANNEL))
-		Chat_Said(GetChannelChat(chanName), userName, CHAT_SYSTEM, "has joined the channel");
+	const char *channel_name = get_next_word();
+	const char *username = get_next_word();
+	Chat_add_user(Chat_get_channel_window(channel_name), Users_find(username));
+	if (g_settings.flags & (1<<DEST_CHANNEL))
+		Chat_said(Chat_get_channel_window(channel_name), username, CHAT_SYSTEM, "has joined the channel");
 }
 
-static void joinedBattle(void)
-/* JOINEDBATTLE battleID userName [scriptPassword] */
+static void
+joined_battle(void)
+/* JOINEDBATTLE battleID username [script_password] */
 {
-	Battle *b = FindBattle(getNextInt());
-	User *u = FindUser(getNextWord());
+	Battle *b = Battles_find(get_next_int());
+	User *u = Users_find(get_next_word());
 	assert(u && b);
 	if (!u || !b)
 		return;
 	u->battle = b;
-	free(u->scriptPassword);
-	u->scriptPassword = _strdup(getNextWord());
+	free(u->script_password);
+	u->script_password = _strdup(get_next_word());
 
 	int i=1; //Start at 1 so founder is first
 	while (i<b->nbParticipants - b->nbBots && _stricmp(b->users[i]->name, u->name) < 0)
@@ -449,38 +467,41 @@ static void joinedBattle(void)
 		b->users[j] = b->users[j-1];
 	b->users[i] = (void *)u;
 	++b->nbParticipants;
-	u->battleStatus = 0;
+	u->battle_status = 0;
 	BattleList_UpdateBattle(b);
-	ChatWindow_UpdateUser(u);
+	Chat_update_user(u);
 
-	if (b == gMyBattle){
-		if (gSettings.flags & (1<<DEST_BATTLE))
-			Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has joined the battle");
+	if (b == g_my_battle){
+		if (g_settings.flags & (1<<DEST_BATTLE))
+			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has joined the battle");
 	}
 }
 
-static void joinFailed(void)
+static void
+join_failed(void)
 {
-	HWND chanWindow = GetChannelChat(getNextWord());
+	HWND chanWindow = Chat_get_channel_window(get_next_word());
 	if (chanWindow){
 		SendMessage(chanWindow, WM_CLOSE, 0, 0);
-		MyMessageBox("Couldn't join channel", command);
+		MainWindow_msg_box("Couldn't join channel", command);
 	}
 }
 
-static void left(void)
+static void
+left(void)
 {
-	const char *chanName = getNextWord();
-	const char *userName = getNextWord();
-	if (gSettings.flags & (1<<DEST_CHANNEL))
-		Chat_Said(GetChannelChat(chanName), userName, CHAT_SYSTEM, "has left the channel");
-	ChatWindow_RemoveUser(GetChannelChat(chanName), FindUser(userName));
+	const char *channel_name = get_next_word();
+	const char *username = get_next_word();
+	if (g_settings.flags & (1<<DEST_CHANNEL))
+		Chat_said(Chat_get_channel_window(channel_name), username, CHAT_SYSTEM, "has left the channel");
+	Chat_on_left_battle(Chat_get_channel_window(channel_name), Users_find(username));
 }
 
-static void leftBattle(void)
+static void
+left_battle(void)
 {
-	Battle *b = FindBattle(getNextInt()); //Battle Unused
-	User *u = FindUser(getNextWord());
+	Battle *b = Battles_find(get_next_int()); //Battle Unused
+	User *u = Users_find(get_next_word());
 	assert(b && u && b == u->battle);
 	if (!u || !b)
 		return;
@@ -497,129 +518,141 @@ static void leftBattle(void)
 	for (;i < b->nbParticipants; ++i)
 		b->users[i] = b->users[i + 1];
 
-	if (u == &gMyUser)
-		LeftBattle();
+	if (u == &g_my_user)
+		MyBattle_left_battle();
 
-	ChatWindow_UpdateUser(u);
+	Chat_update_user(u);
 	BattleList_UpdateBattle(b);
 
-	if (b == gMyBattle){
-		if (u->battleStatus & MODE_MASK && BattleRoom_IsAutoUnspec())
-			SetBattleStatus(&gMyUser, MODE_MASK, MODE_MASK);
-		if (gSettings.flags & (1<<DEST_BATTLE)){
-			Chat_Said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
-			BattleRoom_RemoveUser((void *)u);
+	if (b == g_my_battle){
+		if (u->battle_status & BS_MODE && BattleRoom_is_auto_unspec())
+			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
+		if (g_settings.flags & (1<<DEST_BATTLE)){
+			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
+			BattleRoom_on_left_battle((void *)u);
 		}
 	}
 }
 
-static void loginInfoEnd(void)
+static void
+login_info_end(void)
 {
-	OpenDefaultChannels();
+	Settings_open_default_channels();
 	BattleList_OnEndLoginInfo();
-	MainWindow_ChangeConnect(CONNECTION_ONLINE);
-	/* SendToServer("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
+	MainWindow_change_connect(CONNECTION_ONLINE);
+	/* Server_send("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
 }
 
-static void messageOfTheDay(void)
+static void
+message_of_the_day(void)
 {
-	Chat_Said(GetServerChat(), NULL, 0, command);
+	Chat_said(Chat_get_server_window(), NULL, 0, command);
 }
 
-static void openBattle(void)
+static void
+open_battle(void)
 {
 	// OPENBATTLE BATTLE_ID
-	Battle *b = FindBattle(getNextInt());
-	JoinedBattle(b, 0);
+	Battle *b = Battles_find(get_next_int());
+	MyBattle_joined_battle(b, 0);
 }
 
-static void registrationAccepted(void)
+static void
+registration_accepted(void)
 {
-	extern void login(void);
+	extern void
+login(void);
 	login();
-	MyMessageBox("Registration accepted", "Logging in now.");
+	MainWindow_msg_box("Registration accepted", "Logging in now.");
 }
 
-static void removeBot(void)
+static void
+remove_bot(void)
 {
 	// REMOVEBOT BATTLE_ID name
 	__attribute__((unused))
-	char *battleID = getNextWord();
-	assert(atoi(battleID) == gMyBattle->id);
-	DelBot(getNextWord());
+	char *battleID = get_next_word();
+	assert(atoi(battleID) == g_my_battle->id);
+	Users_del_bot(get_next_word());
 }
 
-static void removeStartRect(void)
+static void
+remove_start_rect(void)
 {
-	memset(&gBattleOptions.startRects[getNextInt()], 0, sizeof(typeof(*gBattleOptions.startRects)));
-	BattleRoom_StartPositionsChanged();
+	memset(&g_battle_options.startRects[get_next_int()], 0, sizeof(typeof(*g_battle_options.startRects)));
+	BattleRoom_on_start_position_change();
 }
 
-static void removeUser(void)
+static void
+remove_user(void)
 {
-	User *u = FindUser(getNextWord());
+	User *u = Users_find(get_next_word());
 	assert(u);
 	if (!u)
 		return;
-	if (gSettings.flags & (1<<DEST_SERVER))
-		Chat_Said(GetServerChat(), u->name, CHAT_SYSTEM, "has logged off");
+	if (g_settings.flags & (1<<DEST_SERVER))
+		Chat_said(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged off");
 	// TODO:
-	// if (u->chatWindow)
-	// Chat_Said(u->chatWindow, u->name, CHAT_SYSTEM, "has logged off");
-	ChatWindow_RemoveUser(GetServerChat(), u);
+	// if (u->chat_window)
+	// Chat_said(u->chat_window, u->name, CHAT_SYSTEM, "has logged off");
+	Chat_on_left_battle(Chat_get_server_window(), u);
 	assert(!u->battle);
-	DelUser(u);
+	Users_del(u);
 }
 
-static void requestBattleStatus(void)
+static void
+request_battle_status(void)
 {
-	gMyUser.battleStatus &= ~MODE_MASK;
+	g_my_user.battle_status &= ~BS_MODE;
 	battleInfoFinished = 1;
-	SetBattleStatus(&gMyUser, GetNewBattleStatus(), MODE_MASK | TEAM_MASK | ALLY_MASK | READY_MASK);
-	extern void resizePlayerListTabs(void);
-	resizePlayerListTabs();
+	SetBattleStatus(&g_my_user, MyBattle_new_battle_status(), BS_MODE | BS_TEAM | BS_ALLY | BS_READY);
+	BattleRoom_resize_columns();
 }
 
-static void ring(void)
+static void
+ring(void)
 {
-	Ring();
+	MainWindow_ring();
 }
 
-static void said(void)
+static void
+said(void)
 {
-	const char *chanName = getNextWord();
-	const char *username = getNextWord();
+	const char *channel_name = get_next_word();
+	const char *username = get_next_word();
 	const char *text = command;
-	Chat_Said(GetChannelChat(chanName), username, 0, text);
+	Chat_said(Chat_get_channel_window(channel_name), username, 0, text);
 }
 
-static void saidBattle(void)
+static void
+said_battle(void)
 {
-	const char *userName = getNextWord();
+	const char *username = get_next_word();
 	char *text = command;
 
-	if (gHostType && gHostType->saidBattle)
-		gHostType->saidBattle(userName, text);
+	if (g_host_type && g_host_type->said_battle)
+		g_host_type->said_battle(username, text);
 	else
-		Chat_Said(GetBattleChat(), userName, 0, text);
+		Chat_said(GetBattleChat(), username, 0, text);
 }
 
-static void saidBattleEx(void)
+static void
+said_battle_ex(void)
 {
-	const char *userName = getNextWord();
+	const char *username = get_next_word();
 	char *text = command;
 
 	// Check for autohost
 	// welcome message is configurable, but chanceOfAutohost should usually be between 5 and 8.
 	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
-	if (gMyBattle && !strcmp(userName, gMyBattle->founder->name) && GetTickCount() - timeJoinedBattle < 10000){
+	if (g_my_battle && !strcmp(username, g_my_battle->founder->name) && GetTickCount() - timeMyBattle_joined_battle < 10000){
 		int chanceOfAutohost = 0;
-		chanceOfAutohost += GetTickCount() - timeJoinedBattle < 2000;
+		chanceOfAutohost += GetTickCount() - timeMyBattle_joined_battle < 2000;
 		chanceOfAutohost += text[0] == '*' && text[1] == ' ';
 		chanceOfAutohost += StrStrIA(text, "hi ") != NULL;
 		chanceOfAutohost += StrStrIA(text, "welcome ") != NULL;
-		chanceOfAutohost += strstr(text, gMyUser.name) != NULL;
-		chanceOfAutohost += strstr(text, userName) != NULL;
+		chanceOfAutohost += strstr(text, g_my_user.name) != NULL;
+		chanceOfAutohost += strstr(text, username) != NULL;
 		chanceOfAutohost += strstr(text, "!help") != NULL;
 
 		char saidSpads = strstr(text, "SPADS") != NULL;
@@ -629,150 +662,159 @@ static void saidBattleEx(void)
 
 		if (chanceOfAutohost > 3){
 			if (saidSpads) {
-				gHostType = &gHostSpads;
+				g_host_type = &g_host_spads;
 			} else if (saidSpringie) {
-				gHostType = &gHostSpringie;
+				g_host_type = &g_host_springie;
 			} else {
-				gLastAutoMessage = GetTickCount();
-				SendToServer("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", userName, userName);
+				g_last_auto_message = GetTickCount();
+				Server_send("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
 			}
 		}
 	}
 
-	Chat_Said(GetBattleChat(), userName, CHAT_EX, text);
+	Chat_said(GetBattleChat(), username, CHAT_EX, text);
 }
 
-static void saidEx(void)
+static void
+said_ex(void)
 {
-	const char *chanName = getNextWord();
-	const char *username = getNextWord();
+	const char *channel_name = get_next_word();
+	const char *username = get_next_word();
 	const char *text = command;
-	Chat_Said(GetChannelChat(chanName), username, CHAT_EX, text);
+	Chat_said(Chat_get_channel_window(channel_name), username, CHAT_EX, text);
 }
 
-static void saidPrivate(void)
+static void
+said_private(void)
 {
-	const char *username = getNextWord();
+	const char *username = get_next_word();
 
-	if (RelayHost_handlePrivateMessage(username, command))
+	if (RelayHost_on_private_message(username, command))
 		return;
 
-	User *user = FindUser(username);
+	User *user = Users_find(username);
 	if (!user || user->ignore)
 		return;
 
 	// Zero-K juggler sends matchmaking command "!join <host>"
-	if (gMyBattle
-			&& user == gMyBattle->founder
+	if (g_my_battle
+			&& user == g_my_battle->founder
 			&& !memcmp(command, "!join ", sizeof("!join ") - 1)) {
-		User *user = FindUser(command + sizeof("!join ") - 1);
+		User *user = Users_find(command + sizeof("!join ") - 1);
 		if (user && user->battle)
 			JoinBattle(user->battle->id, NULL);
 		return;
 	}
 
 	// Check for pms that identify an autohost
-	if (gMyBattle && user == gMyBattle->founder
+	if (g_my_battle && user == g_my_battle->founder
 			&& strstr(command, username)
 			&& strstr(command, "running")) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
 		if (strstr(command, "Springie")) {
-			gHostType = &gHostSpringie;
+			g_host_type = &g_host_springie;
 			return;
 		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
 		if (strstr(command, "SPADS")) {
-			gHostType = &gHostSpads;
+			g_host_type = &g_host_spads;
 			return;
 		}
 	}
 
 	// Normal chat message:
-	HWND window = GetPrivateChat(user);
-	Chat_Said(window, username, 0, command);
-	if (!gMyBattle
-			|| strcmp(username, gMyBattle->founder->name)
-			|| GetTickCount() - gLastAutoMessage > 2000)
-		ChatWindow_SetActiveTab(window);
+	HWND window = Chat_get_private_window(user);
+	Chat_said(window, username, 0, command);
+	if (!g_my_battle
+			|| strcmp(username, g_my_battle->founder->name)
+			|| GetTickCount() - g_last_auto_message > 2000)
+		ChatWindow_set_active_tab(window);
 }
 
-static void sayPrivate(void)
+static void
+say_private(void)
 {
-	char *username = getNextWord();
+	char *username = get_next_word();
 	char *text = command;
-	User *u = FindUser(username);
+	User *u = Users_find(username);
 	if (u)
-		Chat_Said(GetPrivateChat(u), gMyUser.name, 0, text);
+		Chat_said(Chat_get_private_window(u), g_my_user.name, 0, text);
 }
 
-static void serverMsg(void)
+static void
+server_msg(void)
 {
-	messageOfTheDay();
+	message_of_the_day();
 }
 
-static void serverMsgBox(void)
+static void
+server_message_box(void)
 {
-	MyMessageBox("Message from the server", command);
+	MainWindow_msg_box("Message from the server", command);
 }
 
-static void setScriptTags(void)
+static void
+set_script_tags(void)
 {
-	AppendScriptTags(command);
+	MyBattle_append_script(command);
 }
 
-static void TASServer(void)
+static void
+TAS_server(void)
 {
-	getNextWord(); //= serverVersion
-	const char *serverSpringVersion = getNextWord();
-	const char *mySpringVersion = _GetSpringVersion();
+	get_next_word(); //= serverVersion
+	const char *serverSpringVersion = get_next_word();
+	const char *mySpringVersion = Sync_spring_version();
 	*strchr(serverSpringVersion, '.') = '\0';
 	if (strcmp(serverSpringVersion, mySpringVersion)){
-		char buff[128];
-		sprintf(buff, "Server requires %s.\nYou are using %s.\n", serverSpringVersion, mySpringVersion);
-		MyMessageBox("Wrong Spring version", buff);
-		Disconnect();
+		char buf[128];
+		sprintf(buf, "Server requires %s.\nYou are using %s.\n", serverSpringVersion, mySpringVersion);
+		MainWindow_msg_box("Wrong Spring version", buf);
+		Server_disconnect();
 		return;
 	}
-	gUdpHelpPort = getNextInt();
+	g_udp_help_port = get_next_int();
 }
 
-static void updateBattleInfo(void)
+static void
+update_battle_info(void)
 {
-	Battle *b = FindBattle(getNextInt());
+	Battle *b = Battles_find(get_next_int());
 #ifndef UNSAFE
 	if (!b)
 		return;
 #endif
 
-	uint32_t lastMapHash = b->mapHash;
+	uint32_t lastMapHash = b->map_hash;
 
-	b->nbSpectators = getNextInt();
-	b->locked = getNextInt();
-	b->mapHash = getNextInt();
-	copyNextSentence(b->mapName);
+	b->nbSpectators = get_next_int();
+	b->locked = get_next_int();
+	b->map_hash = get_next_int();
+	copy_next_sentence(b->map_name);
 
-	if (b == gMyBattle && (b->mapHash != lastMapHash || !gMapHash))
-		ChangedMap(b->mapName);
+	if (b == g_my_battle && (b->map_hash != lastMapHash || !g_map_hash))
+		Sync_on_changed_map(b->map_name);
 
 	BattleList_UpdateBattle(b);
 }
 
-static void updateBot(void)
+static void
+update_bot(void)
 {
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
 	__attribute__((unused))
-		char *battleID = getNextWord();
-	assert(atoi(battleID) == gMyBattle->id);
-	char *name = getNextWord();
-	for (int i=gMyBattle->nbParticipants - gMyBattle->nbBots; i<gMyBattle->nbParticipants; ++i){
-		struct Bot *s = &gMyBattle->users[i]->bot;
+		char *battleID = get_next_word();
+	assert(atoi(battleID) == g_my_battle->id);
+	char *name = get_next_word();
+	for (int i=g_my_battle->nbParticipants - g_my_battle->nbBots; i<g_my_battle->nbParticipants; ++i){
+		struct Bot *s = &g_my_battle->users[i]->bot;
 		if (!strcmp(name, s->name)){
-			uint32_t bs = getNextInt() | AI_MASK | MODE_MASK;
-			UpdateBattleStatus((UserOrBot *)s, bs, getNextInt());
+			uint32_t bs = get_next_int() | BS_AI | BS_MODE;
+			MyBattle_update_battle_status((UserOrBot *)s, bs, get_next_int());
 			return;
 		}
 	}

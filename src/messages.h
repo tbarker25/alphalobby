@@ -19,6 +19,6 @@
 #ifndef MESSAGES_H
 #define MESSAGES_H
 
-void handleCommand(char *s);
+void Messages_handle(char *);
 
 #endif /* end of include guard: MESSAGES_H */

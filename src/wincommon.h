@@ -25,15 +25,15 @@ typedef struct DialogItem {
 	// uint8_t flags;
 } DialogItem;
 
-HWND CreateDlgItem(HWND parent, const DialogItem *item, int dlgID);
+HWND CreateDlgItem(HWND parent, const DialogItem *item, int dialog_id);
 void CreateDlgItems(HWND parent, const DialogItem items[], size_t n);
 
 #define CreateWindowExW MyCreateWindowExW
 HWND MyCreateWindowExW(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowName, DWORD dwStyle,
-		int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
+		int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lp_param);
 
 
-int MyGetWindowTextA(HWND, char *str, int strLen);
+int MyGetWindowTextA(HWND, char *str, int str_len);
 #define GetWindowTextA MyGetWindowTextA
 #define GetDlgItemTextA(_win, _id, _str, _len) MyGetWindowTextA(GetDlgItem((_win), (_id)), (_str), (_len))
 

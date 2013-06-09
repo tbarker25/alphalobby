@@ -35,11 +35,11 @@ enum DLG_ID {
 	DLG_LAST = DLG_RAPID,
 };
 
-HWND gDownloadTabWindow;
+HWND g_download_list;
 
 static const wchar_t *const columns[] = {L"Name", L"Status"};
 
-static const DialogItem dialogItems[] = {
+static const DialogItem dialog_items[] = {
 	[DLG_LIST] = {
 		.class = WC_LISTVIEW,
 		.style = WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS | LVS_SINGLESEL,
@@ -50,10 +50,11 @@ static const DialogItem dialogItems[] = {
 	},
 };
 
-static void resizeColumns(void)
+static void
+resize_columns(void)
 {
 	RECT rect;
-	HWND list = GetDlgItem(gDownloadTabWindow, DLG_LIST);
+	HWND list = GetDlgItem(g_download_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
 	int columnRem = rect.right % LENGTH(columns);
@@ -63,17 +64,19 @@ static void resizeColumns(void)
 		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
 }
 
-void RemoveDownload(const wchar_t *name)
+void
+DownloadList_remove(const wchar_t *name)
 {
-	int item = SendDlgItemMessage(gDownloadTabWindow, DLG_LIST, LVM_FINDITEM, -1,
+	int item = SendDlgItemMessage(g_download_list, DLG_LIST, LVM_FINDITEM, -1,
 		(LPARAM)&(LVFINDINFO){.flags = LVFI_STRING, .psz  = (wchar_t *)name}
 	);
-	SendDlgItemMessage(gDownloadTabWindow, DLG_LIST, LVM_DELETEITEM, item, 0);
+	SendDlgItemMessage(g_download_list, DLG_LIST, LVM_DELETEITEM, item, 0);
 }
 
-void UpdateDownload(const wchar_t *name, const wchar_t *text)
+void
+DownloadList_update(const wchar_t *name, const wchar_t *text)
 {
-	HWND list = GetDlgItem(gDownloadTabWindow, DLG_LIST);
+	HWND list = GetDlgItem(g_download_list, DLG_LIST);
 	int item = ListView_FindItem(list, -1,
 		(&(LVFINDINFO){.flags = LVFI_STRING, .psz  = (wchar_t *)name})
 	);
@@ -89,16 +92,17 @@ void UpdateDownload(const wchar_t *name, const wchar_t *text)
 		);
 }
 
-static LRESULT CALLBACK downloadTabProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK
+download_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		gDownloadTabWindow = window;
-		CreateDlgItems(window, dialogItems, DLG_LAST + 1);
+		g_download_list = window;
+		CreateDlgItems(window, dialog_items, DLG_LAST + 1);
 
-		HWND listDlg = GetDlgItem(gDownloadTabWindow, DLG_LIST);
+		HWND listDlg = GetDlgItem(g_download_list, DLG_LIST);
 
 		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
 			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
@@ -111,7 +115,7 @@ static LRESULT CALLBACK downloadTabProc(HWND window, UINT msg, WPARAM wParam, LP
 	case WM_SIZE: {
 		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam) - MAP_Y(14 + 7 + 4), TRUE);
 		MoveWindow(GetDlgItem(window, DLG_RAPID), LOWORD(lParam) - MAP_X(50 + 7), HIWORD(lParam) - MAP_Y(14 + 7), MAP_X(50), MAP_Y(14), TRUE);
-		resizeColumns();
+		resize_columns();
 		return 0;
 	}
 	case WM_COMMAND:
@@ -126,12 +130,13 @@ static LRESULT CALLBACK downloadTabProc(HWND window, UINT msg, WPARAM wParam, LP
 }
 
 
-static void __attribute__((constructor)) _init_ (void)
+static void __attribute__((constructor))
+init (void)
 {
 	RegisterClassEx((&(WNDCLASSEX){
 		.lpszClassName = WC_DOWNLOADTAB,
 		.cbSize        = sizeof(WNDCLASSEX),
-		.lpfnWndProc   = downloadTabProc,
+		.lpfnWndProc   = download_list_proc,
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	}));

@@ -20,6 +20,7 @@
 #define USERMENU_H
 
 typedef struct HWND__* HWND;
-void CreateUserMenu(union UserOrBot *s, HWND window);
+
+void UserMenu_spawn(union UserOrBot *s, HWND window);
 
 #endif /* end of include guard: USERMENU_H */
