@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -41,221 +42,241 @@
 #include "sync.h"
 #include "user.h"
 
-int lastStatusUpdate, gLastAutoMessage;
-static char myPassword[BASE16_MD5_LENGTH];
-static char myUserName[MAX_NAME_LENGTH+1];
-uint32_t gLastBattleStatus;
-uint8_t gLastClientStatus;
+int      g_last_auto_message;
+int      g_last_status_update;
+uint32_t g_last_battle_status;
+uint8_t  g_last_client_status;
 
-void JoinBattle(uint32_t id, const char *password)
+static char my_password[BASE16_MD5_LENGTH];
+static char my_username[MAX_NAME_LENGTH+1];
+
+void
+JoinBattle(uint32_t id, const char *password)
 {
-	static const char *passwordToJoin;
-	Battle *b = FindBattle(id);
+	static const char *password_to_join;
+	Battle *b = Battles_find(id);
 
 	if (!b) {
 		assert(0);
 		return;
 	}
 
-	if (b == gMyBattle) {
-		BattleRoom_Show();
+	if (b == g_my_battle) {
+		BattleRoom_show();
 		return;
 	}
 
-	ChangedMod(b->modName);
-	if (gMapHash != b->mapHash || !gMapHash)
-		ChangedMap(b->mapName);
+	Sync_on_changed_mod(b->mod_name);
+	if (g_map_hash != b->map_hash || !g_map_hash)
+		Sync_on_changed_map(b->map_name);
 
-	if (gMyBattle) {
-		battleToJoin = id;
-		free((void *)passwordToJoin);
-		passwordToJoin = _strdup(password);
+	if (g_my_battle) {
+		g_battle_to_join = id;
+		free((void *)password_to_join);
+		password_to_join = _strdup(password);
 		LeaveBattle();
 
 	} else {
-		battleToJoin = 0;
-		gMyUser.battleStatus = 0;
-		password = password ?: passwordToJoin;
-		//NB: This section must _not_ be accessed from PollServer
+		g_battle_to_join = 0;
+		g_my_user.battle_status = 0;
+		password = password ?: password_to_join;
+		//NB: This section must _not_ be accessed from Server_poll
 		if (b->passworded && !password) {
-			char *buff = _alloca(1024);
-			buff[0] = '\0';
-			if (GetTextDlg("Enter password", buff, 1024))
+			char *buf = _alloca(1024);
+			buf[0] = '\0';
+			if (GetTextDlg("Enter password", buf, 1024))
 				return;
-			password = buff;
+			password = buf;
 		}
-		gHostType = NULL;
-		BattleRoom_Show();
-		SendToServer("JOINBATTLE %u %s %x",
+		g_host_type = NULL;
+		BattleRoom_show();
+		Server_send("JOINBATTLE %u %s %x",
 				id, password ?: "",
 				(uint32_t)(rand() ^ (rand() << 16)));
-		free((void *)passwordToJoin);
+		free((void *)password_to_join);
 	}
 }
 
 
-void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, uint32_t color)
+void
+SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, uint32_t color)
 {
 	if (!s)
 		return;
 	if (color == -1)
 		color = s->color;
-	uint32_t bs = ((orMask & nandMask) | (s->battleStatus & ~nandMask)) & ~INTERNAL_MASK;
+	uint32_t bs = ((orMask & nandMask) | (s->battle_status & ~nandMask)) & ~BS_INTERNAL;
 
-	if (&s->user == &gMyUser) {
-		uint32_t bs = (orMask & nandMask) | (gLastBattleStatus & ~nandMask & ~SYNC_MASK) | GetSyncStatus() | READY_MASK;
-		if (bs != gLastBattleStatus || color != gMyUser.color) {
-			gLastBattleStatus=bs;
+	if (&s->user == &g_my_user) {
+		uint32_t bs = (orMask & nandMask) | (g_last_battle_status & ~nandMask & ~BS_SYNC) | Sync_get_status() | BS_READY;
+		if (bs != g_last_battle_status || color != g_my_user.color) {
+			g_last_battle_status=bs;
 			if (battleInfoFinished)
-				SendToServer("MYBATTLESTATUS %d %d", bs & ~INTERNAL_MASK, color);
+				Server_send("MYBATTLESTATUS %d %d", bs & ~BS_INTERNAL, color);
 		}
 		return;
 	}
 
-	if ((s->battleStatus & ~INTERNAL_MASK) == bs && color == s->color)
+	if ((s->battle_status & ~BS_INTERNAL) == bs && color == s->color)
 		return;
 
-	if (s->battleStatus & AI_MASK) {
-		SendToServer("UPDATEBOT %s %d %d" + (s->bot.owner == &gMyUser), s->name, bs, color);
-		return;
-	}
-
-	if (nandMask & TEAM_MASK)
-		if (gHostType && gHostType->forceTeam)
-			gHostType->forceTeam(s->name, FROM_TEAM_MASK(orMask));
-
-	if (nandMask & ALLY_MASK)
-		if (gHostType && gHostType->forceAlly)
-			gHostType->forceAlly(s->name, FROM_ALLY_MASK(orMask));
-}
-
-void Kick(union UserOrBot *s)
-{
-	if (s->battleStatus & AI_MASK) {
-		SendToServer("REMOVEBOT %s", s->name);
+	if (s->battle_status & BS_AI) {
+		Server_send("UPDATEBOT %s %d %d" + (s->bot.owner == &g_my_user), s->name, bs, color);
 		return;
 	}
 
-	if (gHostType && gHostType->kick) {
-		gHostType->kick(s->name);
+	if (nandMask & BS_TEAM)
+		if (g_host_type && g_host_type->force_team)
+			g_host_type->force_team(s->name, FROM_BS_TEAM(orMask));
+
+	if (nandMask & BS_ALLY)
+		if (g_host_type && g_host_type->force_ally)
+			g_host_type->force_ally(s->name, FROM_BS_ALLY(orMask));
+}
+
+void
+Kick(union UserOrBot *s)
+{
+	if (s->battle_status & BS_AI) {
+		Server_send("REMOVEBOT %s", s->name);
+		return;
+	}
+
+	if (g_host_type && g_host_type->kick) {
+		g_host_type->kick(s->name);
 		return;
 	}
 }
 
-void SetClientStatus(uint8_t s, uint8_t mask)
+void
+SetClientStatus(uint8_t s, uint8_t mask)
 {
-	uint8_t cs = (s & mask) | (gLastClientStatus & ~mask);
-	if (cs != gLastClientStatus)
-		SendToServer("MYSTATUS %d", (gLastClientStatus=cs));
+	uint8_t cs = (s & mask) | (g_last_client_status & ~mask);
+	if (cs != g_last_client_status)
+		Server_send("MYSTATUS %d", (g_last_client_status=cs));
 }
 
-void LeaveChannel(const char *chanName)
+void
+LeaveChannel(const char *channel_name)
 {
-	SendDlgItemMessage(GetChannelChat(chanName), 2, LVM_DELETEALLITEMS, 0, 0);
-	SendToServer("LEAVE %s", chanName);
+	SendDlgItemMessage(Chat_get_channel_window(channel_name), 2, LVM_DELETEALLITEMS, 0, 0);
+	Server_send("LEAVE %s", channel_name);
 }
 
-void RequestIngameTime(const char username[])
+void
+RequestIngame_time(const char username[])
 {
-	SendToServer("GETINGAMETIME %s", username?:"");
+	Server_send("GETINGAMETIME %s", username?:"");
 }
 
 
-void LeaveBattle(void)
+void
+LeaveBattle(void)
 {
-	SendToServer("LEAVEBATTLE");
+	Server_send("LEAVEBATTLE");
 }
 
-void ChangeMap(const char *mapName)
+void
+ChangeMap(const char *map_name)
 {
-	if (gHostType && gHostType->setMap) {
-		gHostType->setMap(mapName);
+	if (g_host_type && g_host_type->set_map) {
+		g_host_type->set_map(map_name);
 	}
 }
 
-void RequestChannels(void)
+void
+RequestChannels(void)
 {
-	SendToServer("CHANNELS");
+	Server_send("CHANNELS");
 }
 
-void JoinChannel(const char *chanName, int focus)
+void
+JoinChannel(const char *channel_name, int focus)
 {
-	chanName += *chanName == '#';
+	channel_name += *channel_name == '#';
 
-	for (const char *c=chanName; *c; ++c) {
+	for (const char *c=channel_name; *c; ++c) {
 		if (!isalnum(*c) && *c != '[' && *c != ']') {
-			MyMessageBox("Couldn't join channel", "Unicode channels are not allowed.");
+			MainWindow_msg_box("Couldn't join channel", "Unicode channels are not allowed.");
 			return;
 		}
 	}
 
-	SendToServer("JOIN %s", chanName);
+	Server_send("JOIN %s", channel_name);
 	if (focus)
-		ChatWindow_SetActiveTab(GetChannelChat(chanName));
+		ChatWindow_set_active_tab(Chat_get_channel_window(channel_name));
 }
 
-void RenameAccount(const char *newUsername)
+void
+RenameAccount(const char *new_username)
 {
-	SendToServer("RENAMEACCOUNT %s", newUsername);
+	Server_send("RENAMEACCOUNT %s", new_username);
 }
 
-void ChangePassword(const char *oldPassword, const char *newPassword)
+void
+Change_password(const char *old_password, const char *new_password)
 {
-	SendToServer("CHANGEPASSWORD %s %s", oldPassword, newPassword);
+	Server_send("CHANGEPASSWORD %s %s", old_password, new_password);
 }
 
-void login(void)
+void
+login(void)
 {
-/* LOGIN userName password cpu localIP {lobby name and version} [userID] [{compFlags}] */
-	SendToServer("LOGIN %s %s 0 * AlphaLobby"
+/* LOGIN username password cpu localIP {lobby name and version} [userID] [{compFlags}] */
+	Server_send("LOGIN %s %s 0 * AlphaLobby"
 	#ifdef VERSION
 	" " STRINGIFY(VERSION)
 	#endif
-	"\t0\ta m sp", myUserName, myPassword);//, GetLocalIP() ?: "*");
+	"\t0\ta m sp", my_username, my_password);//, GetLocalIP() ?: "*");
 }
 
-static void registerAccount(void)
+static void
+registerAccount(void)
 {
-	SendToServer("REGISTER %s %s", myUserName, myPassword);
+	Server_send("REGISTER %s %s", my_username, my_password);
 }
 
-void RegisterAccount(const char *username, const char *password)
+void
+RegisterAccount(const char *username, const char *password)
 {
-	strcpy(myUserName, username);
-	strcpy(myPassword, password);
-	Connect(registerAccount);
+	strcpy(my_username, username);
+	strcpy(my_password, password);
+	Server_connect(registerAccount);
 }
 
 char Autologin(void)
 {
 	const char *s;
-	s = LoadSetting("username");
+	s = Settings_load_str("username");
 	if (!s)
 		return 0;
-	strcpy(myUserName, s);
-	s = LoadSetting("password");
+	strcpy(my_username, s);
+	s = Settings_load_str("password");
 	if (!s)
 		return 0;
-	strcpy(myPassword, s);
-	Connect(login);
+	strcpy(my_password, s);
+	Server_connect(login);
 	return 1;
 }
 
-void Login(const char *username, const char *password)
+void
+Login(const char *username, const char *password)
 // LOGIN username password cpu localIP {lobby name and version} [{userID}] [{compFlags}]
 {
-	strcpy(myUserName, username);
-	strcpy(myPassword, password);
-	Connect(login);
+	strcpy(my_username, username);
+	strcpy(my_password, password);
+	Server_connect(login);
 }
 
-void ConfirmAgreement(void)
+void
+ConfirmAgreement(void)
 {
-	SendToServer("CONFIRMAGREEMENT");
+	Server_send("CONFIRMAGREEMENT");
 	login();
 }
 
-void OpenBattle(const char *title, const char *password, const char *modName, const char *mapName, uint16_t port)
+void
+OpenBattle(const char *title, const char *password, const char *mod_name, const char *map_name, uint16_t port)
 {
-	SendToServer("OPENBATTLE 0 0 %s %hu 16 %d 0 %d %s\t%s\t%s", password ?: "*", port, GetModHash(modName), GetMapHash(mapName), mapName, title, modName);
+	Server_send("OPENBATTLE 0 0 %s %hu 16 %d 0 %d %s\t%s\t%s", password ?: "*", port, Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
 }

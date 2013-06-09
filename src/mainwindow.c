@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -37,7 +38,7 @@
 #include "dialogboxes.h"
 #include "downloader.h"
 #include "downloadtab.h"
-#include "imagelist.h"
+#include "iconlist.h"
 #include "layoutmetrics.h"
 #include "mainwindow.h"
 #include "mybattle.h"
@@ -53,7 +54,7 @@
 #define TBSTATE_DISABLED TBSTATE_ENABLED
 #endif
 
-HWND gMainWindow;
+HWND g_main_window;
 
 static HWND currentTab;
 
@@ -88,7 +89,7 @@ enum {
 };
 
 
-static const DialogItem dialogItems[] = {
+static const DialogItem dialog_items[] = {
 	[DLG_TOOLBAR] {
 		.class = TOOLBARCLASSNAME,
 		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
@@ -105,66 +106,72 @@ static const DialogItem dialogItems[] = {
 	}
 };
 
-static void resizeCurrentTab(int16_t width, int16_t height)
+static void
+resize_current_tab(int16_t width, int16_t height)
 {
 	RECT toolbarRect;
-	GetClientRect(GetDlgItem(gMainWindow, DLG_TOOLBAR), &toolbarRect);
+	GetClientRect(GetDlgItem(g_main_window, DLG_TOOLBAR), &toolbarRect);
 
 	SetWindowPos(currentTab, NULL, 0, toolbarRect.bottom, width, height - toolbarRect.bottom, 0);
 }
 
-static void setCurrentTabChecked(char enable) {
-	int tabIndex = currentTab == gBattleList   ? ID_BATTLELIST
-		: currentTab == gBattleRoom        ? ID_BATTLEROOM
-		: currentTab == gChatWindow        ? ID_CHAT
-		: currentTab == gDownloadTabWindow ? ID_DOWNLOADS
+static void
+set_current_tab_checked(char enable) {
+	int tabIndex = currentTab == g_battle_list   ? ID_BATTLELIST
+		: currentTab == g_battle_room        ? ID_BATTLEROOM
+		: currentTab == g_chat_window        ? ID_CHAT
+		: currentTab == g_download_list ? ID_DOWNLOADS
 		: -1;
-	WPARAM state = SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_GETSTATE, tabIndex, 0);
+	WPARAM state = SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_GETSTATE, tabIndex, 0);
 	if (enable)
 		state |= TBSTATE_CHECKED;
 	else
 		state &= ~TBSTATE_CHECKED;
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
 	ShowWindow(currentTab, enable);
 }
 
-void MainWindow_SetActiveTab(HWND newTab)
+void
+MainWindow_set_active_tab(HWND newTab)
 {
 	if (newTab == currentTab)
 		return;
 
-	setCurrentTabChecked(0);
+	set_current_tab_checked(0);
 	currentTab = newTab;
-	setCurrentTabChecked(1);
+	set_current_tab_checked(1);
 
 	RECT rect;
-	GetClientRect(gMainWindow, &rect);
-	resizeCurrentTab(rect.right, rect.bottom);
+	GetClientRect(g_main_window, &rect);
+	resize_current_tab(rect.right, rect.bottom);
 }
 
-void Ring(void)
+void
+MainWindow_ring(void)
 {
 	FLASHWINFO flashInfo = {
 		.cbSize = sizeof(FLASHWINFO),
-		.hwnd = gMainWindow,
+		.hwnd = g_main_window,
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */
 			0x0000000C, /* FLASHW_TIMERNOFG */
 	};
 	FlashWindowEx(&flashInfo);
-	MainWindow_SetActiveTab(gBattleRoom);
+	MainWindow_set_active_tab(g_battle_room);
 }
 
-void MainWindow_DisableBattleroomButton(void)
+void
+MainWindow_disable_battleroom_button(void)
 {
-	if (currentTab == gBattleRoom)
-		MainWindow_SetActiveTab(gBattleList);
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
+	if (currentTab == g_battle_room)
+		MainWindow_set_active_tab(g_battle_list);
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
 }
 
-void MainWindow_EnableBattleroomButton(void)
+void
+MainWindow_enable_battleroom_button(void)
 {
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
-	MainWindow_SetActiveTab(gBattleRoom);
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
+	MainWindow_set_active_tab(g_battle_room);
 }
 
 static const TBBUTTON tbButtons[] = {
@@ -184,52 +191,55 @@ static const TBBUTTON tbButtons[] = {
 	{ ICONS_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
 };
 
-static void onDestroy()
+static void
+on_destroy()
 {
-	char windowPlacementText[128];
-	WINDOWPLACEMENT windowPlacement;
+	char window_placementText[128];
+	WINDOWPLACEMENT window_placement;
 	RECT *r;
 
-	Disconnect();
-	SaveLastChatWindows();
-	windowPlacement.length = sizeof(windowPlacement);
-	GetWindowPlacement(gMainWindow, &windowPlacement);
-	r = &windowPlacement.rcNormalPosition;
+	Server_disconnect();
+	Chat_save_windows();
+	window_placement.length = sizeof(window_placement);
+	GetWindowPlacement(g_main_window, &window_placement);
+	r = &window_placement.rcNormalPosition;
 	r->bottom -= r->top;
 	r->right -= r->left;
-	if (windowPlacement.showCmd == SW_MAXIMIZE) {
+	if (window_placement.showCmd == SW_MAXIMIZE) {
 		r->left = CW_USEDEFAULT;
 		r->top = SW_SHOWMAXIMIZED;
 	}
-	sprintf(windowPlacementText, "%ld,%ld,%ld,%ld", r->left, r->top, r->right, r->bottom);
-	SaveSetting("window_placement", windowPlacementText);
-	UnitSync_Cleanup();
-	SaveAliases();
+	sprintf(window_placementText, "%ld,%ld,%ld,%ld", r->left, r->top, r->right, r->bottom);
+	Settings_save_str("window_placement", window_placementText);
+	Sync_cleanup();
+	Settings_save_aliases();
 	PostQuitMessage(0);
 }
 
-static void onCreate(HWND window)
+static void
+on_create(HWND window)
 {
-	gMainWindow = window;
-	CreateDlgItems(window, dialogItems, DLG_LAST+1);
+	g_main_window = window;
+	CreateDlgItems(window, dialog_items, DLG_LAST+1);
 
 	HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
 	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-	SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)gIconList);
+	SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)g_icon_list);
 
 	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tbButtons), 0);
 	SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tbButtons) / sizeof(*tbButtons), (LPARAM)&tbButtons);
 	SendMessage(toolbar, TB_AUTOSIZE, 0, 0);
 
-	MainWindow_SetActiveTab(GetDlgItem(window, DLG_BATTLELIST));
+	MainWindow_set_active_tab(GetDlgItem(window, DLG_BATTLELIST));
 }
 
-static LRESULT onCommand(int dialogID)
+static LRESULT
+on_command(int dialog_id)
 {
-	switch (dialogID) {
+	switch (dialog_id) {
 	case ID_CONNECT:
-		if (GetConnectionState())
-			Disconnect();
+		if (Server_status())
+			Server_disconnect();
 		else if (!Autologin())
 			CreateLoginBox();
 		return 0;
@@ -239,15 +249,15 @@ static LRESULT onCommand(int dialogID)
 		return 0;
 
 	case ID_BATTLEROOM:
-		MainWindow_SetActiveTab(gBattleRoom);
+		MainWindow_set_active_tab(g_battle_room);
 		return 0;
 
 	case ID_BATTLELIST:
-		MainWindow_SetActiveTab(gBattleList);
+		MainWindow_set_active_tab(g_battle_list);
 		return 0;
 
 	case ID_DOWNLOADS:
-		MainWindow_SetActiveTab(gDownloadTabWindow);
+		MainWindow_set_active_tab(g_download_list);
 		return 0;
 
 		/* case ID_SINGLEPLAYER: */
@@ -260,19 +270,19 @@ static LRESULT onCommand(int dialogID)
 		return 0;
 
 	case ID_CHAT:
-		MainWindow_SetActiveTab(gChatWindow);
+		MainWindow_set_active_tab(g_chat_window);
 		return 0;
 
 	case ID_PRIVATE:
-		UserList_Show();
+		UserList_show();
 		return 0;
 
 	case ID_CHANNEL:
-		ChannelList_Show();
+		ChannelList_show();
 		return 0;
 
 	case ID_SERVERLOG:
-		ChatWindow_SetActiveTab(GetServerChat());
+		ChatWindow_set_active_tab(Chat_get_server_window());
 		return 0;
 
 	case ID_SPRING_SETTINGS:
@@ -292,7 +302,7 @@ static LRESULT onCommand(int dialogID)
 		return 0;
 
 	case ID_RESYNC:
-		ReloadMapsAndMod();
+		Sync_reload();
 		return 0;
 
 		// case IDM_SPRING_RTS:
@@ -317,19 +327,20 @@ static LRESULT onCommand(int dialogID)
 		// RenameAccount(name);
 		// } return 0;
 		// case IDM_CHANGE_PASSWORD:
-		// CreateChangePasswordDlg();
+		// CreateChange_passwordDlg();
 		// return 0;
 	}
 	return 1;
 }
 
-static LRESULT createDropdown(NMTOOLBAR *info)
+static LRESULT
+create_dropdown(NMTOOLBAR *info)
 {
 	HMENU menu = CreatePopupMenu();
 
 	switch (info->iItem) {
 	case ID_CONNECT:
-		AppendMenu(menu, 0, ID_CONNECT, GetConnectionState() ? L"Disconnect" : L"Connect");
+		AppendMenu(menu, 0, ID_CONNECT, Server_status() ? L"Server_disconnect" : L"Server_connect");
 		SetMenuDefaultItem(menu, ID_CONNECT, 0);
 		AppendMenu(menu, MF_SEPARATOR, 0, NULL);
 		AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
@@ -357,40 +368,41 @@ static LRESULT createDropdown(NMTOOLBAR *info)
 		return 0;
 	}
 
-	ClientToScreen(gMainWindow, (POINT *)&info->rcButton);
+	ClientToScreen(g_main_window, (POINT *)&info->rcButton);
 	TrackPopupMenuEx(menu, TPM_LEFTALIGN | TPM_RIGHTBUTTON,
 			info->rcButton.left,
 			info->rcButton.top + info->rcButton.bottom,
-			gMainWindow, NULL);
+			g_main_window, NULL);
 
 	DestroyMenu(menu);
 	return TBDDRET_DEFAULT;
 }
 
-static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK
+main_window_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch(msg) {
 	case WM_CREATE:
-		onCreate(window);
+		on_create(window);
 		return 0;
 
 	case WM_DESTROY:
-		onDestroy();
+		on_destroy();
 		return 0;
 
 	case WM_SIZE:
 		MoveWindow(GetDlgItem(window, DLG_TOOLBAR), 0, 0, LOWORD(lParam), 0, 0);
-		resizeCurrentTab(LOWORD(lParam), HIWORD(lParam));
+		resize_current_tab(LOWORD(lParam), HIWORD(lParam));
 		return 0;
 
 	case WM_NOTIFY:
 		if (((NMHDR *)lParam)->idFrom == DLG_TOOLBAR
 				&& ((NMHDR *)lParam)->code == TBN_DROPDOWN)
-			return createDropdown((NMTOOLBAR *)lParam);
+			return create_dropdown((NMTOOLBAR *)lParam);
 		break;
 
 	case WM_COMMAND:
-		return onCommand(wParam);
+		return on_command(wParam);
 
 	case WM_MAKE_MESSAGEBOX:
 		MessageBoxA(window, (char *)wParam, (char *)lParam, 0);
@@ -403,7 +415,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		return 0;
 
 	case WM_POLL_SERVER:
-		PollServer();
+		Server_poll();
 		return 0;
 
 	case WM_EXECFUNC:
@@ -419,7 +431,7 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 
 	case WM_TIMER:
 		if (wParam == 1) {
-			// Ping();
+			// Server_ping();
 			return 0;
 		}
 		break;
@@ -427,22 +439,24 @@ static LRESULT CALLBACK winMainProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	return DefWindowProc(window, msg, wParam, lParam);
 }
 
-void MyMessageBox(const char *caption, const char *text)
+void
+MainWindow_msg_box(const char *caption, const char *text)
 {
-	PostMessage(gMainWindow, WM_MAKE_MESSAGEBOX, (WPARAM)_strdup(text), (WPARAM)_strdup(caption));
+	PostMessage(g_main_window, WM_MAKE_MESSAGEBOX, (WPARAM)_strdup(text), (WPARAM)_strdup(caption));
 }
 
-void MainWindow_ChangeConnect(enum ConnectionState state)
+void
+MainWindow_change_connect(enum ServerStatus state)
 {
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_CHAT,
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_CHAT,
 			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, ID_HOSTBATTLE,
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_HOSTBATTLE,
 			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
 
-	// SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
-	// SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
+	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
+	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tabIndex, state);
 
-	SendDlgItemMessage(gMainWindow, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
 			(LPARAM)&(TBBUTTONINFO){
 			.cbSize = sizeof(TBBUTTONINFO),
 			.dwMask = TBIF_IMAGE | TBIF_TEXT,
@@ -451,52 +465,53 @@ void MainWindow_ChangeConnect(enum ConnectionState state)
 			});
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int WINAPI
+WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	InitSettings();
+	Settings_init();
 
 	srand(time(NULL));
 
-	InitializeSystemMetrics();
+	/* InitializeSystemMetrics(); */
 	LoadLibrary(L"Riched20.dll");
 
 	RegisterClassEx(&(WNDCLASSEX) {
 			.cbSize = sizeof(WNDCLASSEX),
 			.lpszClassName = WC_ALPHALOBBY,
-			.lpfnWndProc	= winMainProc,
-			.hIcon          = ImageList_GetIcon(gIconList, 0, 0),
+			.lpfnWndProc	= main_window_proc,
+			.hIcon          = ImageList_GetIcon(g_icon_list, 0, 0),
 			.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 			.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 			});
 
 	LONG left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
-	const char *windowPlacement = LoadSetting("window_placement");
-	if (windowPlacement)
-		sscanf(windowPlacement, "%ld,%ld,%ld,%ld", &left, &top, &width, &height);
+	const char *window_placement = Settings_load_str("window_placement");
+	if (window_placement)
+		sscanf(window_placement, "%ld,%ld,%ld,%ld", &left, &top, &width, &height);
 
-	Sync_Init();
+	Sync_init();
 	CreateWindowEx(0, WC_ALPHALOBBY, L"AlphaLobby", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
 			left, top, width, height,
 			NULL, (HMENU)0, NULL, NULL);
 
-	GetServerChat();
-	Downloader_Init();
+	Chat_get_server_window();
+	Downloader_init();
 	/* CreateRapidDlg(); */
 
 	char username[MAX_NAME_LENGTH_NUL], *s;
-	if (gSettings.flags & SETTING_AUTOCONNECT
-			&& (s = LoadSetting("username")) && strcpy(username, s)
-			&& (s = LoadSetting("password")))
+	if (g_settings.flags & SETTING_AUTOCONNECT
+			&& (s = Settings_load_str("username")) && strcpy(username, s)
+			&& (s = Settings_load_str("password")))
 		Login(username, s);
 
 #ifndef NDEBUG
-	if ((s = LoadSetting("last_map")))
-		ChangedMap(_strdup(s));
-	if ((s = LoadSetting("last_mod")))
-		ChangedMod(_strdup(s));
-	gBattleOptions.startPosType = STARTPOS_CHOOSE_INGAME;
-	gBattleOptions.startRects[0] = (StartRect){0, 0, 50, 200};
-	gBattleOptions.startRects[1] = (StartRect){150, 0, 200, 200};
+	if ((s = Settings_load_str("last_map")))
+		Sync_on_changed_map(_strdup(s));
+	if ((s = Settings_load_str("last_mod")))
+		Sync_on_changed_mod(_strdup(s));
+	g_battle_options.startPosType = STARTPOS_CHOOSE_INGAME;
+	g_battle_options.startRects[0] = (StartRect){0, 0, 50, 200};
+	g_battle_options.startRects[1] = (StartRect){150, 0, 200, 200};
 #endif
 
 	for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {

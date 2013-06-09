@@ -67,23 +67,23 @@ typedef enum StartPosType {
 #define HOST_FLAG  0x01
 
 #define INVALID_STARTPOS (StartPos){-1, -1}
-#define GET_STARTPOS(_team) (gBattleOptions.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&gBattleOptions.positions[_team] != -1\
-		? gBattleOptions.positions[_team]\
-		: gMapInfo.positions[_team])
+#define GET_STARTPOS(_team) (g_battle_options.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&g_battle_options.positions[_team] != -1\
+		? g_battle_options.positions[_team]\
+		: g_map_info.positions[_team])
 
 typedef struct StartRect {
 	uint16_t left, top, right, bottom;
 } StartRect;
 
 typedef struct HostType {
-	void (*forceAlly)(const char *name, int allyId);
-	void (*forceTeam)(const char *name, int teamId);
+	void (*force_ally)(const char *name, int allyId);
+	void (*force_team)(const char *name, int teamId);
 	void (*kick)(const char *name);
-	void (*saidBattle)(const char *userName, char *text);
-	void (*setMap)(const char *mapName);
-	void (*setOption)(Option *opt, const char *val);
-	void (*setSplit)(int size, SplitType type);
-	void (*startGame)(void);
+	void (*said_battle)(const char *username, char *text);
+	void (*set_map)(const char *map_name);
+	void (*set_option)(Option *opt, const char *val);
+	void (*set_split)(int size, SplitType type);
+	void (*start_game)(void);
 } HostType;
 
 typedef struct BattleOptions {
@@ -104,39 +104,39 @@ union UserOrBot;
 struct Battle;
 
 extern struct _LargeMapInfo _gLargeMapInfo;
-#define gMapInfo (_gLargeMapInfo.mapInfo)
+#define g_map_info (_gLargeMapInfo.mapInfo)
 
 struct Battle;
-extern struct Battle *gMyBattle;
-extern uint32_t battleToJoin;
+extern struct Battle *g_my_battle;
+extern uint32_t g_battle_to_join;
 
-extern ssize_t gNbModOptions, gNbMapOptions;
-extern Option *gModOptions, *gMapOptions;
-extern uint32_t gMapHash, gModHash;
+extern ssize_t g_mod_option_count, g_map_option_count;
+extern Option *g_mod_options, *g_map_options;
+extern uint32_t g_map_hash, g_mod_hash;
 
-extern char **gMaps, **gMods;
-extern ssize_t gNbMaps, gNbMods;
+extern char **g_maps, **g_mods;
+extern ssize_t g_map_count, g_mod_count;
 
-extern BattleOption gBattleOptions;
-extern const HostType *gHostType;
+extern BattleOption g_battle_options;
+extern const HostType *g_host_type;
 
-extern uint8_t gNbSides;
-extern char gSideNames[16][32];
+extern uint8_t g_side_count;
+extern char g_side_names[16][32];
 
-extern uint32_t gUdpHelpPort;
+extern uint32_t g_udp_help_port;
 
-void AppendScriptTags(char *restrict script);
-void ChangeOption(struct Option *restrict opt);
-void FixPlayerStatus(const union UserOrBot *u); // u=NULL means all players
-uint32_t GetNewBattleStatus(void)
+void MyBattle_append_script(char *restrict script);
+void MyBattle_change_option(struct Option *restrict opt);
+uint32_t MyBattle_new_battle_status(void)
 	__attribute__((pure));
-void JoinedBattle(struct Battle *restrict b, uint32_t modHash);
-void LeftBattle(void);
+void MyBattle_joined_battle(struct Battle *restrict b, uint32_t modHash);
+void MyBattle_left_battle(void);
 void Rebalance(void);
 void ResetBattleOptions(void);
-void SetMap(const char *name);
-void SetSplit(SplitType, int size);
-void UpdateModOptions(void);
+void MyBattle_set_map(const char *name);
+void MyBattle_set_split(SplitType, int size);
+void MyBattle_update_battle_status(union UserOrBot *s, uint32_t battle_status, uint32_t color);
+void MyBattle_update_mod_options(void);
 
 
 #endif /* end of include guard: BATTLETOOLS_H */

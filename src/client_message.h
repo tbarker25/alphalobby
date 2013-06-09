@@ -19,7 +19,6 @@
 #ifndef CLIENT_MESSAGE_H
 #define CLIENT_MESSAGE_H
 
-void SendToServer(const char *format, ...);
 
 void JoinBattle(uint32_t id, const char *password);
 
@@ -34,19 +33,22 @@ void Kick(union UserOrBot *);
 void SetClientStatus(uint8_t s, uint8_t mask);
 void RequestChannels(void);
 void LeaveBattle(void);
-void JoinChannel(const char *chanName, int focus);
-void LeaveChannel(const char *chanName);
-void RenameAccount(const char *newUsername);
-void ChangePassword(const char *oldPassword, const char *newPassword);
+void JoinChannel(const char *channel_name, int focus);
+void LeaveChannel(const char *channel_name);
+void RenameAccount(const char *new_username);
+void Change_password(const char *old_password, const char *new_password);
 void RegisterAccount(const char *username, const char *password);
 char Autologin(void);
 void Login(const char *username, const char *password);
-void OpenBattle(const char *title, const char *password, const char *modName, const char *mapName, uint16_t port);
-void OpenRelayBattle(const char *title, const char *password, const char *modName, const char *mapName, const char *manager);
+void OpenBattle(const char *title, const char *password, const char *mod_name, const char *map_name, uint16_t port);
+void RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager);
 void ConfirmAgreement(void);
-void RequestIngameTime(const char *username);
-void ChangeMap(const char *mapName);
+void RequestIngame_time(const char *username);
+void ChangeMap(const char *map_name);
 
-extern int lastStatusUpdate, gLastAutoMessage;
+extern int      g_last_auto_message;
+extern int      g_last_status_update;
+extern uint32_t g_last_battle_status;
+extern uint8_t  g_last_client_status;
 
 #endif /* end of include guard: CLIENT_MESSAGE_H */

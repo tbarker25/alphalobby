@@ -27,43 +27,46 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-HWND CreateDlgItem(HWND parent, const DialogItem *item, int dlgID)
+HWND
+CreateDlgItem(HWND parent, const DialogItem *item, int dialog_id)
 {
 	HWND window = CreateWindowEx(item->exStyle, item->class, item->name, item->style | (parent ? WS_CHILD : 0),
 		0, 0, 0, !item->class || wcscmp(item->class, WC_COMBOBOXEX) ? 0 : 1000,
-		parent, (HMENU)dlgID, NULL, NULL);
+		parent, (HMENU)dialog_id, NULL, NULL);
 
 	return window;
 }
 
-void CreateDlgItems(HWND parent, const DialogItem items[], size_t n)
+void
+CreateDlgItems(HWND parent, const DialogItem items[], size_t n)
 {
 	for (int i=0; i < n; ++i)
 		CreateDlgItem(parent, &items[i], i);
 }
 
 #undef CreateWindowExW
-HWND MyCreateWindowExW(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowName, DWORD dwStyle,
-		int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
+HWND
+MyCreateWindowExW(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowName, DWORD dwStyle,
+		int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lp_param)
 {
 	HWND window = CreateWindowEx(dwExStyle, lpClassName, lpWindowName, dwStyle,
-			x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-	SendMessage(window, WM_SETFONT, (WPARAM)gFont, TRUE);
+			x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lp_param);
+	SendMessage(window, WM_SETFONT, (WPARAM)g_font, TRUE);
 	return window;
 }
 
-int MyGetWindowTextA(HWND window, char *str, int strLen)
+int
+MyGetWindowTextA(HWND window, char *str, int str_len)
 {
-	wchar_t buff[MAX_SERVER_MESSAGE];
-	GetWindowText(window, buff, LENGTH(buff));
-	return WideCharToMultiByte(CP_UTF8, 0, buff, -1, str, strLen, NULL, NULL);
+	wchar_t buf[MAX_SERVER_MESSAGE];
+	GetWindowText(window, buf, LENGTH(buf));
+	return WideCharToMultiByte(CP_UTF8, 0, buf, -1, str, str_len, NULL, NULL);
 }
 
-char * MyGetWindowTextA2(HWND window)
+char *
+MyGetWindowTextA2(HWND window)
 {
-	static char buff[MAX_SERVER_MESSAGE];
-	MyGetWindowTextA(window, buff, LENGTH(buff));
-	return buff;
+	static char buf[MAX_SERVER_MESSAGE];
+	MyGetWindowTextA(window, buf, LENGTH(buf));
+	return buf;
 }
-
-

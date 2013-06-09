@@ -33,60 +33,63 @@
 #include "user.h"
 
 #define LAUNCH_SPRING(path)\
-	CreateThread(NULL, 0, _launchSpring2, (LPVOID)(_wcsdup(path)), 0, NULL);
+	CreateThread(NULL, 0, spring_proc, (LPVOID)(_wcsdup(path)), 0, NULL);
 
-static DWORD WINAPI _launchSpring2(LPVOID path)
+static DWORD WINAPI
+spring_proc(LPVOID path)
 {
 	PROCESS_INFORMATION processInfo = {};
 	STARTUPINFO startupInfo = {.cb = sizeof(startupInfo)};
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startupInfo, &processInfo)) {
-		SetClientStatus(CS_INGAME_MASK, CS_INGAME_MASK);
+		SetClientStatus(CS_INGAME, CS_INGAME);
 		#ifdef NDEBUG
-		WaitForSingleObject(processInfo.hProcess, INFINITE);
+		WaitForSingleObject(processInfo.h_process, INFINITE);
 		#endif
-		SetClientStatus(0, CS_INGAME_MASK);
+		SetClientStatus(0, CS_INGAME);
 	} else
-		MyMessageBox("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
+		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
 
 	free(path);
 	return 0;
 }
 
-void LaunchSpring(void)
+void
+Spring_launch(void)
 //Script is unreadably compact because it might need to be sent to relayhost.
 //This lets us send it in 1-2 packets, so it doesnt take 5 seconds like in springlobby.
 {
-	Battle *b = gMyBattle;
+	Battle *b = g_my_battle;
 	assert(b);
 
-	char buff[8192], *buffEnd=buff;
+	char buf[8192], *buffEnd=buf;
 
 	#define APPEND_LINE(format, ...) \
 		(buffEnd += sprintf(buffEnd, (format), ## __VA_ARGS__))
 
 	APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;MyPlayerName=%s;MyPasswd=%s;}",
-			b->ip, b->port, gMyUser.name, gMyUser.scriptPassword ?: "");
+			b->ip, b->port, g_my_user.name, g_my_user.script_password ?: "");
 
-	wchar_t *scriptPath = GetDataDir(L"script.txt");
-	FILE *fp = _wfopen(scriptPath, L"w");
+	wchar_t *script_path = Settings_get_data_dir(L"script.txt");
+	FILE *fp = _wfopen(script_path, L"w");
 	if (!fp) {
 		MessageBox(NULL, L"Could not open script.txt for writing", L"Launch failed", MB_OK);
 		fclose(fp);
 		return;
 	}
-	fwrite(buff, 1, buffEnd - buff, fp);
+	fwrite(buf, 1, buffEnd - buf, fp);
 	fclose(fp);
 	wchar_t path[256];
-	_swprintf(path, L"\"%hs\" \"%s\"", gSettings.spring_path, scriptPath);
+	_swprintf(path, L"\"%hs\" \"%s\"", g_settings.spring_path, script_path);
 	LAUNCH_SPRING(path);
 	return;
 }
 
-void LaunchReplay(const wchar_t *replayName)
+void
+Spring_launch_replay(const wchar_t *replayName)
 {
 	wchar_t path[256];
-	_swprintf(path, L"%hs demos/%s", gSettings.spring_path, replayName);
+	_swprintf(path, L"%hs demos/%s", g_settings.spring_path, replayName);
 	LAUNCH_SPRING(path);
 }

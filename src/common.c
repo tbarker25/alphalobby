@@ -22,7 +22,8 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-char *strsep(char *restrict *restrict s, const char *restrict delimiters)
+char *
+strsep(char *restrict *restrict s, const char *restrict delimiters)
 {
 	*s += strspn(*s, delimiters);
 	if (!**s)
@@ -34,23 +35,26 @@ char *strsep(char *restrict *restrict s, const char *restrict delimiters)
 	return ret;
 }
 
-char *strpcpy(char *restrict dst, const char *restrict src)
+char *
+strpcpy(char *restrict dst, const char *restrict src)
 {
 	size_t len = strlen(src) + 1;
 	memcpy(dst, src, len);
 	return dst + len;
 }
 
-wchar_t *utf8to16(const char *restrict str)
+wchar_t *
+utf8to16(const char *restrict s)
 {
-	static wchar_t wStr[MAX_SERVER_MESSAGE];
-	MultiByteToWideChar(CP_UTF8, 0, str, -1, wStr, LENGTH(wStr));
-	return wStr;
+	static wchar_t ws[MAX_SERVER_MESSAGE];
+	MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, LENGTH(ws));
+	return ws;
 }
 
-char *utf16to8(const wchar_t *restrict wStr)
+char *
+utf16to8(const wchar_t *restrict ws)
 {
-	static char str[MAX_SERVER_MESSAGE];
-	WideCharToMultiByte(CP_UTF8, 0, wStr, -1, str, LENGTH(str), NULL, NULL);
-	return str;
+	static char s[MAX_SERVER_MESSAGE];
+	WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, LENGTH(s), NULL, NULL);
+	return s;
 }

@@ -21,12 +21,12 @@
 
 #define MAX_TITLE 128 //Also used for mapnames, modnames. Overflow is truncated to fit
 
-enum battleType {
+enum BattleType {
 	BATTLE_NORMAL = 0,
 	BATTLE_REPLAY = 1,
 };
 
-enum natType {
+enum NatType {
 	NAT_NONE  = 0,
 	NAT_OTHER,
 };
@@ -34,21 +34,21 @@ enum natType {
 typedef struct Battle {
 	//MUST BE FIRST SINCE IT IS USED BY HASH:
 	uint32_t id;
-	uint32_t mapHash;
-	char mapName[MAX_TITLE+1], modName[MAX_TITLE+1], title[MAX_TITLE+1], ip[16];
+	uint32_t map_hash;
+	char map_name[MAX_TITLE+1], mod_name[MAX_TITLE+1], title[MAX_TITLE+1], ip[16];
 	uint16_t port;
-	uint8_t passworded, locked, type, natType, maxPlayers, rank, nbParticipants, nbSpectators, nbBots;
+	uint8_t passworded, locked, type, max_players, rank, nbParticipants, nbSpectators, nbBots;
+	enum NatType nat_type;
 	union {
 		union UserOrBot *users[128];
 		struct User *founder;
 	};
-}Battle;
+} Battle;
 
-Battle * FindBattle(uint32_t id)
-	__attribute__((pure));
-Battle *NewBattle(void);
-void DelBattle(Battle *);
-void ResetBattles(void);
+void     Battles_del(Battle *);
+Battle * Battles_find(uint32_t id) __attribute__((pure));
+Battle * Battles_new(void);
+void     Battles_reset(void);
 
 #define FOR_EACH_PARTICIPANT(_u, _b)\
 	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->nbParticipants; ++__u)
@@ -60,10 +60,10 @@ void ResetBattles(void);
 	for (User **__u = (Bot **)&(_b)->users[(_b)->nbBots], *(_u); (_u) = *__u, __u - (Bot **)(_b)->users < (_b)->nbParticipants; ++__u)
 
 #define FOR_EACH_PLAYER(_u, _b)\
-	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->nbParticipants; ++__u) if (!((_u)->battleStatus & MODE_MASK)) continue; else
+	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->nbParticipants; ++__u) if (!((_u)->battle_status & BS_MODE)) continue; else
 
 #define FOR_EACH_HUMAN_PLAYER(_u, _b)\
-	for (User **__u = (User **)(_b)->users, *(_u); (_u) = *__u, __u - (User **)(_b)->users < (_b)->nbParticipants - (_b)->nbBots; ++__u) if (!((_u)->battleStatus & MODE_MASK)) continue; else
+	for (User **__u = (User **)(_b)->users, *(_u); (_u) = *__u, __u - (User **)(_b)->users < (_b)->nbParticipants - (_b)->nbBots; ++__u) if (!((_u)->battle_status & BS_MODE)) continue; else
 
 
 #define GetNumPlayers(_b)\

@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -25,84 +26,94 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
-#include "client_message.h"
+#include "client.h"
 #include "common.h"
 #include "host_self.h"
 #include "mybattle.h"
 #include "sync.h"
 #include "user.h"
 
-static void forceAlly(const char *name, int allyId);
-static void forceTeam(const char *name, int teamId);
+static void force_ally(const char *name, int ally);
+static void force_team(const char *name, int team);
 static void kick(const char *name);
-static void saidBattle(const char *userName, char *text);
-static void setMap(const char *mapName);
-static void setOption(Option *opt, const char *val);
-static void setSplit(int size, SplitType type);
+static void said_battle(const char *username, char *text);
+static void set_map(const char *map_name);
+static void set_option(Option *opt, const char *val);
+static void set_split(int size, SplitType type);
 
-const HostType gHostSelf = {
-	.forceAlly = forceAlly,
-	.forceTeam = forceTeam,
+const HostType g_host_self = {
+	.force_ally = force_ally,
+	.force_team = force_team,
 	.kick = kick,
-	.saidBattle = saidBattle,
-	.setMap = setMap,
-	.setOption = setOption,
-	.setSplit = setSplit,
+	.said_battle = said_battle,
+	.set_map = set_map,
+	.set_option = set_option,
+	.set_split = set_split,
 };
 
-static void forceAlly(const char *name, int allyId)
+static void
+force_ally(const char *name, int ally)
 {
-	SendToServer("FORCEALLYNO %s %d" , name, allyId);
+	Server_send("FORCEALLYNO %s %d" , name, ally);
 }
 
-static void forceTeam(const char *name, int teamId)
+static void
+force_team(const char *name, int team)
 {
-	SendToServer("FORCETEAMNO %s %d" , name, teamId);
+	Server_send("FORCETEAMNO %s %d" , name, team);
 }
 
-/* static void forceColor(const char *name, uint32_t color)    */
+/* static void
+forceColor(const char *name, uint32_t color)    */
 /* {                                                           */
-/*         SendToServer("FORCETEAMCOLOR %s %d", name, color); */
+/*         Server_send("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
 
-static void kick(const char *name)
+static void
+kick(const char *name)
 {
-	SendToServer("KICKFROMBATTLE %s", name);
+	Server_send("KICKFROMBATTLE %s", name);
 }
 
-static void saidBattle(const char *userName, char *text)
+static void
+said_battle(const char *username, char *text)
 {
-	Chat_Said(GetBattleChat(), userName, 0, text);
+	Chat_said(GetBattleChat(), username, 0, text);
 }
 
-static void setMap(const char *mapName)
+static void
+set_map(const char *map_name)
 {
-	SendToServer("UPDATEBATTLEINFO 0 0 %d %s",
-			GetMapHash(mapName), mapName);
+	Server_send("UPDATEBATTLEINFO 0 0 %d %s",
+			Sync_map_hash(map_name), map_name);
 }
 
-static void setOption(Option *opt, const char *val)
+static void
+set_option(Option *opt, const char *val)
 {
-	if (opt >= gModOptions && opt < gModOptions + gNbModOptions)
-		SendToServer("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
+	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_count)
+		Server_send("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
 
-	else if (opt >= gMapOptions && opt < gMapOptions + gNbMapOptions)
-		SendToServer("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
+	else if (opt >= g_map_options && opt < g_map_options + g_map_option_count)
+		Server_send("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
 	else
 		assert(0);
 }
 
-static void addStartBox(int i, int left, int top, int right, int bottom)
+static void
+addStartBox(int i, int left, int top, int right, int bottom)
 {
-	SendToServer("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
+	Server_send("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
-static void delStartBox(int i)
+static void
+delStartBox(int i)
 {
-	SendToServer("REMOVESTARTRECT %d", i);
+	Server_send("REMOVESTARTRECT %d", i);
 }
 
-static void setSplit(int size, SplitType type)
+static void
+set_split(int size, SplitType type)
 {
 	switch (type) {
 	case SPLIT_HORZ:

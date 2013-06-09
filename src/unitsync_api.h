@@ -173,11 +173,11 @@ EXPORT2(void        , RemoveAllArchives, ())
  * @brief Gets the real path to the archive
  * @return NULL on error a path to the archive on success
  */
-// EXPORT2(const char* , GetArchivePath, (const char* arname))
+// EXPORT2(const char* , GetArchive_path, (const char* arname))
 
 /**
  * @brief Retrieve map info
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  * @param outInfo pointer to structure which is filled with map info
  * @param version this determines which fields of the MapInfo structure are filled
  * @return Zero on error non-zero on success
@@ -186,7 +186,7 @@ EXPORT2(void        , RemoveAllArchives, ())
  *
  * If version >= 1, then the author field is filled.
  *
- * Important: the description and author fields must point to a valid, and sufficiently long buffer
+ * Important: the description and author fields must point to a valid, and sufficiently long buf
  * to store their contents.  Description is max 255 chars, and author is max 200 chars. , (including
  * terminating zero byte).
  *
@@ -207,16 +207,16 @@ EXPORT2(void        , RemoveAllArchives, ())
  *		}
  *		@endcode
  */
-EXPORT2(int         , GetMapInfoEx, (const char* mapName, MapInfo* outInfo, int version))
+EXPORT2(int         , GetMapInfoEx, (const char* map_name, MapInfo* outInfo, int version))
 /**
  * @brief Retrieve map info, equivalent to GetMapInfoEx, (name, outInfo, 0)
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  * @param outInfo pointer to structure which is filled with map info
  * @return Zero on error non-zero on success
  * @deprecated
  * @see GetMapCount
  */
-// EXPORT2(int         , GetMapInfo, (const char* mapName, MapInfo* outInfo))
+// EXPORT2(int         , GetMapInfo, (const char* map_name, MapInfo* outInfo))
 
 /**
  * @brief Get the number of maps available
@@ -330,7 +330,7 @@ EXPORT2(const char* , GetMapName, (int index))
 
 /**
  * @brief return the map's minimum height
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  *
  * Together with maxHeight, this determines the
  * range of the map's height values in-game. The
@@ -339,25 +339,25 @@ EXPORT2(const char* , GetMapName, (int index))
  *
  *    <code>minHeight + , (h * , (maxHeight - minHeight, / 65536.0f)</code>
  */
-// EXPORT2(float       , GetMapMinHeight, (const char* mapName))
+// EXPORT2(float       , GetMapMinHeight, (const char* map_name))
 /**
  * @brief return the map's maximum height
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  *
  * Together with minHeight, this determines the
  * range of the map's height values in-game. See
  * GetMapMinHeight, (, for the conversion formula.
  */
-// EXPORT2(float       , GetMapMaxHeight, (const char* mapName))
+// EXPORT2(float       , GetMapMaxHeight, (const char* map_name))
 
 /**
  * @brief Retrieves the number of archives a map requires
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  * @return Zero on error the number of archives on success
  *
  * Must be called before GetMapArchiveName, ()
  */
-// EXPORT2(int         , GetMapArchiveCount, (const char* mapName))
+// EXPORT2(int         , GetMapArchiveCount, (const char* map_name))
 /**
  * @brief Retrieves an archive a map requires
  * @param index the index of the archive
@@ -378,11 +378,11 @@ EXPORT2(const char* , GetMapName, (int index))
 // EXPORT2(unsigned int, GetMapChecksum, (int index))
 /**
  * @brief Get map checksum given a map name
- * @param mapName name of the map, e.g. "SmallDivide"
+ * @param map_name name of the map, e.g. "SmallDivide"
  * @return Zero on error the checksum on success
  * @see GetMapChecksum
  */
-EXPORT2(unsigned int, GetMapChecksumFromName, (const char* mapName))
+EXPORT2(unsigned int, GetMapChecksumFromName, (const char* map_name))
 /**
  * @brief Retrieves a minimap image for a map.
  * @param filename The name of the map, including extension.
@@ -400,17 +400,17 @@ EXPORT2(unsigned int, GetMapChecksumFromName, (const char* mapName))
 EXPORT2(unsigned short*, GetMinimap, (const char* filename, int miplevel))
 /**
  * @brief Retrieves dimensions of infomap for a map.
- * @param mapName  The name of the map, e.g. "SmallDivide".
+ * @param map_name  The name of the map, e.g. "SmallDivide".
  * @param name     Of which infomap to retrieve the dimensions.
  * @param width    This is set to the width of the infomap, or 0 on error.
  * @param height   This is set to the height of the infomap, or 0 on error.
  * @return Non-zero when the infomap was found with a non-zero size zero on error.
  * @see GetInfoMap
  */
-EXPORT2(int         , GetInfoMapSize, (const char* mapName, const char* name, int* width, int* height))
+EXPORT2(int         , GetInfoMapSize, (const char* map_name, const char* name, int* width, int* height))
 /**
  * @brief Retrieves infomap data of a map.
- * @param mapName  The name of the map, e.g. "SmallDivide".
+ * @param map_name  The name of the map, e.g. "SmallDivide".
  * @param name     Which infomap to extract from the file.
  * @param data     Pointer to memory location with enough room to hold the infomap data.
  * @param typeHint One of bm_grayscale_8 , (or 1, and bm_grayscale_16 , (or 2).
@@ -424,7 +424,7 @@ EXPORT2(int         , GetInfoMapSize, (const char* mapName, const char* name, in
  * this function to convert from one format to another. Currently only the
  * conversion from 16 bpp to 8 bpp is implemented.
  */
-EXPORT2(int         , GetInfoMap, (const char* mapName, const char* name, unsigned char* data, int typeHint))
+EXPORT2(int         , GetInfoMap, (const char* map_name, const char* name, unsigned char* data, int typeHint))
 
 // TODO documentation
 EXPORT2(int         , GetSkirmishAICount, ())
@@ -588,10 +588,10 @@ EXPORT2(const char* , GetSideName, (int side))
 
 /**
  * @brief Retrieve the number of map options available
- * @param mapName  the name of the map, e.g. "SmallDivide"
+ * @param map_name  the name of the map, e.g. "SmallDivide"
  * @return Zero on error the number of map options available on success
  */
-EXPORT2(int         , GetMapOptionCount, (const char* mapName))
+EXPORT2(int         , GetMapOptionCount, (const char* map_name))
 /**
  * @brief Retrieve the number of mod options available
  * @return Zero on error the number of mod options available on success
@@ -733,7 +733,7 @@ EXPORT2(float       , GetOptionNumberDef, (int optIndex))
  * Be sure you've made a call to either GetMapOptionCount, ()
  * or GetModOptionCount, (, prior to using this.
  */
-// EXPORT2(int         , GetOptionStringMaxLen, (int optIndex))
+// EXPORT2(int         , GetOptionStringMax_len, (int optIndex))
 
 /**
  * @brief Retrieve an opt_list option's number of available items
@@ -756,33 +756,33 @@ EXPORT2(const char* , GetOptionListDef, (int optIndex))
 /**
  * @brief Retrieve an opt_list option item's key
  * @param optIndex option index/id
- * @param itemIndex list item index/id
+ * @param item_index list item index/id
  * @return NULL on error the option item's key , (list item key, on success
  *
  * Be sure you've made a call to either GetMapOptionCount, ()
  * or GetModOptionCount, (, prior to using this.
  */
-EXPORT2(const char* , GetOptionListItemKey, (int optIndex, int itemIndex))
+EXPORT2(const char* , GetOptionListItemKey, (int optIndex, int item_index))
 /**
  * @brief Retrieve an opt_list option item's name
  * @param optIndex option index/id
- * @param itemIndex list item index/id
+ * @param item_index list item index/id
  * @return NULL on error the option item's name on success
  *
  * Be sure you've made a call to either GetMapOptionCount, ()
  * or GetModOptionCount, (, prior to using this.
  */
-EXPORT2(const char* , GetOptionListItemName, (int optIndex, int itemIndex))
+EXPORT2(const char* , GetOptionListItemName, (int optIndex, int item_index))
 /**
  * @brief Retrieve an opt_list option item's description
  * @param optIndex option index/id
- * @param itemIndex list item index/id
+ * @param item_index list item index/id
  * @return NULL on error the option item's description on success
  *
  * Be sure you've made a call to either GetMapOptionCount, ()
  * or GetModOptionCount, (, prior to using this.
  */
-// EXPORT2(const char* , GetOptionListItemDesc, (int optIndex, int itemIndex))
+// EXPORT2(const char* , GetOptionListItemDesc, (int optIndex, int item_index))
 
 /**
  * @brief Retrieve the number of valid maps for the current mod
@@ -822,7 +822,7 @@ EXPORT2(void        , CloseFileVFS, (int handle))
 /**
  * @brief Read some data from a file in the VFS
  * @param handle the file handle as returned by OpenFileVFS, ()
- * @param buf output buffer, must be at least length bytes
+ * @param buf output buf, must be at least length bytes
  * @param length how many bytes to read from the file
  * @return -1 on error the number of bytes read on success
  * , (if this is less than length you reached the end of the file.)
@@ -904,12 +904,12 @@ EXPORT2(int         , FindFilesVFS, (int handle, char* nameBuf, int size))
  * @brief Read some data from an archive member
  * @param archive the archive handle as returned by OpenArchive, ()
  * @param handle the file handle as returned by OpenArchiveFile, ()
- * @param buffer output buffer, must be at least numBytes bytes
- * @param numBytes how many bytes to read from the file
+ * @param buf output buf, must be at least num_bytes bytes
+ * @param num_bytes how many bytes to read from the file
  * @return -1 on error the number of bytes read on success
- * , (if this is less than numBytes you reached the end of the file.)
+ * , (if this is less than num_bytes you reached the end of the file.)
  */
-// EXPORT2(int         , ReadArchiveFile, (int archive, int handle, unsigned char* buffer, int numBytes))
+// EXPORT2(int         , ReadArchiveFile, (int archive, int handle, unsigned char* buf, int num_bytes))
 /**
  * @brief Close an archive member
  * @param archive the archive handle as returned by OpenArchive, ()
@@ -925,7 +925,7 @@ EXPORT2(int         , FindFilesVFS, (int handle, char* nameBuf, int size))
 // EXPORT2(int         , SizeArchiveFile, (int archive, int handle))
 
 // TODO documentation
-// EXPORT2(void        , SetSpringConfigFile, (const char* filenameAsAbsolutePath))
+// EXPORT2(void        , SetSpringConfigFile, (const char* filenameAsAbsolute_path))
 // TODO documentation
 // EXPORT2(const char* , GetSpringConfigFile, ())
 /**

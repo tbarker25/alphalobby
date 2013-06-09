@@ -29,10 +29,9 @@
 #define _STR(x) #x
 #define STRINGIFY(x) _STR(x)
 
-char *strsep(char *restrict *restrict s, const char *restrict delim);
-char *strpcpy(char *restrict dst, const char *restrict src);
-
-wchar_t *utf8to16(const char *restrict str);
-char *utf16to8(const wchar_t *restrict wStr);
+char *    strsep(char *restrict *restrict s, const char *restrict delim);
+char *    strpcpy(char *restrict dst, const char *restrict src);
+wchar_t * utf8to16(const char *restrict str);
+char *    utf16to8(const wchar_t *restrict wStr);
 
 #endif /* end of include guard: COMMON_H */

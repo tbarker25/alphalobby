@@ -41,113 +41,118 @@
 
 static SOCKET sock = INVALID_SOCKET;
 
-void PollServer(void)
+void
+Server_poll(void)
 {
 	//Static since incomplete commands overflow for next call:
-	static size_t bufferLength = 0;
-	static char buffer[RECV_SIZE+MAX_MESSAGE_LENGTH];
+	static size_t buf_len = 0;
+	static char buf[RECV_SIZE+MAX_MESSAGE_LENGTH];
 
-	int bytesReceived = recv(sock, buffer + bufferLength, RECV_SIZE, 0);
-	if (bytesReceived <= 0) {
-		printf("bytes recv = %d, err = %d\n", bytesReceived,
+	int bytes_received = recv(sock, buf + buf_len, RECV_SIZE, 0);
+	if (bytes_received <= 0) {
+		printf("bytes recv = %d, err = %d\n", bytes_received,
 				WSAGetLastError());
-		Disconnect();
-		assert(bytesReceived == 0);
+		Server_disconnect();
+		assert(bytes_received == 0);
 		return;
 	}
 
-	bufferLength += bytesReceived;
+	buf_len += bytes_received;
 
-	char *s = buffer;
-	for (int i=0; i<bufferLength; ++i) {
-		if (buffer[i] != '\n')
+	char *s = buf;
+	for (int i=0; i<buf_len; ++i) {
+		if (buf[i] != '\n')
 			continue;
-		buffer[i] = '\0';
+		buf[i] = '\0';
 		#ifndef NDEBUG
 		printf("> %s\n", s);
 		#endif
-		/* HWND serverWindow = GetServerChat(); */
-		/* Chat_Said(serverWindow, NULL, CHAT_SERVERIN, s); */
-		handleCommand(s);
+		/* HWND serverWindow = Chat_get_server_window(); */
+		/* Chat_said(serverWindow, NULL, CHAT_SERVERIN, s); */
+		Messages_handle(s);
 
-		s = buffer + i + 1;
+		s = buf + i + 1;
 	}
-	bufferLength -= s - buffer;
+	buf_len -= s - buf;
 
-	memmove(buffer, s, bufferLength);
+	memmove(buf, s, buf_len);
 }
 
-void SendToServer(const char *format, ...)
+void
+Server_send(const char *format, ...)
 {
 	if (sock == INVALID_SOCKET)
 		return;
 
-	char buff[MAX_MESSAGE_LENGTH]; //NOTE this is coded at server level...
+	char buf[MAX_MESSAGE_LENGTH]; //NOTE this is coded at server level...
 
 	va_list args;
 	va_start (args, format);
-	int commandStart = 0;
+	int command_start = 0;
 
-	size_t len = vsprintf(buff + commandStart, format, args) + commandStart;
+	size_t len = vsprintf(buf + command_start, format, args) + command_start;
 	va_end(args);
 
-	if (commandStart)  //Use lowercase for relay host
-		for (char *s = &buff[commandStart]; *s && *s != ' '; ++s)
+	if (command_start)  //Use lowercase for relay host
+		for (char *s = &buf[command_start]; *s && *s != ' '; ++s)
 			*s |= 0x20; //tolower
 	#ifndef NDEBUG
-	printf("< %s\n", buff);
+	printf("< %s\n", buf);
 	#endif
 
-	/* HWND serverWindow = GetServerChat(); */
+	/* HWND serverWindow = Chat_get_server_window(); */
 	/* if (GetTabIndex(serverWindow) >= 0) */
-		/* Chat_Said(serverWindow, NULL, CHAT_SERVEROUT, buff); */
-	buff[len] = '\n';
+		/* Chat_said(serverWindow, NULL, CHAT_SERVEROUT, buf); */
+	buf[len] = '\n';
 
-	if (send(sock, buff, len+1, 0) == SOCKET_ERROR) {
+	if (send(sock, buf, len+1, 0) == SOCKET_ERROR) {
 		assert(0);
-		Disconnect();
-		MyMessageBox("Connection to server interupted",
+		Server_disconnect();
+		MainWindow_msg_box("Connection to server interupted",
 				"Please check your internet connection.");
 	}
 }
 
-void Disconnect(void)
+void
+Server_disconnect(void)
 {
-	KillTimer(gMainWindow, 1);
+	KillTimer(g_main_window, 1);
 	shutdown(sock, SD_BOTH);
 	closesocket(sock);
 	sock = INVALID_SOCKET;
 	WSACleanup();
-	MainWindow_ChangeConnect(CONNECTION_OFFLINE);
+	MainWindow_change_connect(CONNECTION_OFFLINE);
 
-	if (gMyBattle)
-		LeftBattle();
-	BattleList_Reset();
-	ResetBattles();
-	ResetUsers();
-	Chat_OnDisconnect();
+	if (g_my_battle)
+		MyBattle_left_battle();
+	BattleList_reset();
+	Battles_reset();
+	Users_reset();
+	Chat_on_disconnect();
 }
 
-void CALLBACK Ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
+void CALLBACK
+Server_ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dw_time)
 {
-	SendToServer("PING");
+	Server_send("PING");
 }
 
-DWORD WINAPI _Connect(void (*onFinish)(void))
+static DWORD WINAPI
+connect_proc(void (*onFinish)(void))
 {
 	if (sock != INVALID_SOCKET)
-		Disconnect();
-	MainWindow_ChangeConnect(CONNECTION_CONNECTING);
+		Server_disconnect();
+	MainWindow_change_connect(CONNECTION_CONNECTING);
 
 	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
-		MyMessageBox("Could not connect to server.",
+		MainWindow_msg_box("Could not connect to server.",
 				"WSAStartup failed.\nPlease check your internet connection.");
 		return 1;
 	}
 
 	struct hostent *host = gethostbyname("lobby.springrts.com");
 	if (!host) {
-		MyMessageBox("Could not connect to server.",
+		MainWindow_msg_box("Could not connect to server.",
 				"Could not retrieve host information.\nPlease check your internet connection.");
 		return 1;
 	}
@@ -160,25 +165,26 @@ DWORD WINAPI _Connect(void (*onFinish)(void))
 	sock = socket(PF_INET, SOCK_STREAM, 0);
 
 	if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
-		MyMessageBox("Could not connect to server.",
+		MainWindow_msg_box("Could not connect to server.",
 				"Could not finalize connection.\nPlease check your internet connection.");
 		closesocket(sock);
 		sock = INVALID_SOCKET;
 	}
 
-	WSAAsyncSelect(sock, gMainWindow, WM_POLL_SERVER, FD_READ|FD_CLOSE);
+	WSAAsyncSelect(sock, g_main_window, WM_POLL_SERVER, FD_READ|FD_CLOSE);
 	onFinish();
 
-	SetTimer(gMainWindow, 1, 30000 / 2, Ping);
+	SetTimer(g_main_window, 1, 30000 / 2, Server_ping);
 	return 0;
 }
 
-enum ConnectionState GetConnectionState(void)
+enum ServerStatus Server_status(void)
 {
 	return sock != INVALID_SOCKET;
 }
 
-void Connect(void (*onFinish)(void))
+void
+Server_connect(void (*onFinish)(void))
 {
-	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE )_Connect, (LPVOID)onFinish, 0, 0);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE )connect_proc, (LPVOID)onFinish, 0, 0);
 }

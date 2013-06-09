@@ -1,11 +1,14 @@
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
+
 #include <windows.h>
 
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
+#include "client.h"
 #include "client_message.h"
 #include "common.h"
 #include "host_spads.h"
@@ -13,89 +16,97 @@
 #include "spring.h"
 #include "user.h"
 
-static void forceAlly(const char *name, int allyId);
-static void forceTeam(const char *name, int teamId);
+static void force_ally(const char *name, int ally);
+static void force_team(const char *name, int team);
 static void kick(const char *name);
-static void saidBattle(const char *userName, char *text);
-static void setMap(const char *mapName);
-static void setOption(Option *opt, const char *val);
-static void setSplit(int size, SplitType type);
-static void startGame(void);
+static void said_battle(const char *username, char *text);
+static void set_map(const char *map_name);
+static void set_option(Option *opt, const char *val);
+static void set_split(int size, SplitType type);
+static void start_game(void);
 
-#define SendToServer(format, ...)\
-	(gLastAutoMessage = GetTickCount(), SendToServer(format, ## __VA_ARGS__))
+#define Server_send(format, ...)\
+	(g_last_auto_message = GetTickCount(), Server_send(format, ## __VA_ARGS__))
 
-const HostType gHostSpads = {
-	.forceAlly = forceAlly,
-	.forceTeam = forceTeam,
+const HostType g_host_spads = {
+	.force_ally = force_ally,
+	.force_team = force_team,
 	.kick = kick,
-	.saidBattle = saidBattle,
-	.setMap = setMap,
-	.setOption = setOption,
-	.setSplit = setSplit,
-	.startGame = startGame,
+	.said_battle = said_battle,
+	.set_map = set_map,
+	.set_option = set_option,
+	.set_split = set_split,
+	.start_game = start_game,
 };
 
-static void forceAlly(const char *name, int allyId)
+static void
+force_ally(const char *name, int ally)
 {
-	SendToServer("SAYPRIVATE %s !force %s team %d",
-			gMyBattle->founder->name, name, allyId);
+	Server_send("SAYPRIVATE %s !force %s team %d",
+			g_my_battle->founder->name, name, ally);
 }
 
-static void forceTeam(const char *name, int teamId)
+static void
+force_team(const char *name, int team)
 {
-	SendToServer("SAYPRIVATE %s !force %s id %d",
-			gMyBattle->founder->name, name, teamId);
+	Server_send("SAYPRIVATE %s !force %s id %d",
+			g_my_battle->founder->name, name, team);
 }
 
-static void kick(const char *name)
+static void
+kick(const char *name)
 {
-	SendToServer("SAYPRIVATE %s !kick %s",
-			gMyBattle->founder->name, name);
+	Server_send("SAYPRIVATE %s !kick %s",
+			g_my_battle->founder->name, name);
 }
 
-static void saidBattle(const char *userName, char *text)
+static void
+said_battle(const char *username, char *text)
 {
-	char ingameUserName[MAX_NAME_LENGTH_NUL];
+	char ingame_name[MAX_NAME_LENGTH_NUL];
 
-	if (!strcmp(userName, gMyBattle->founder->name)
-			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingameUserName) == 1) {
-		text += 3 + strlen(ingameUserName);
-		Chat_Said(GetBattleChat(), ingameUserName, CHAT_INGAME, text);
+	if (!strcmp(username, g_my_battle->founder->name)
+			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingame_name) == 1) {
+		text += 3 + strlen(ingame_name);
+		Chat_said(GetBattleChat(), ingame_name, CHAT_INGAME, text);
 		return;
 	}
 
-	Chat_Said(GetBattleChat(), userName, 0, text);
+	Chat_said(GetBattleChat(), username, 0, text);
 }
 
-static void setMap(const char *mapName)
+static void
+set_map(const char *map_name)
 {
-	SendToServer("SAYPRIVATE %s !map %s",
-			gMyBattle->founder->name, mapName);
+	Server_send("SAYPRIVATE %s !map %s",
+			g_my_battle->founder->name, map_name);
 }
 
-static void setOption(Option *opt, const char *val)
+static void
+set_option(Option *opt, const char *val)
 {
-	SendToServer("SAYPRIVATE %s !bSet %s %s",
-			gMyBattle->founder->name, opt->key, val);
+	Server_send("SAYPRIVATE %s !bSet %s %s",
+			g_my_battle->founder->name, opt->key, val);
 }
 
-static void setSplit(int size, SplitType type)
+static void
+set_split(int size, SplitType type)
 {
-	if (STARTPOS_CHOOSE_INGAME != gBattleOptions.startPosType)
-		SendToServer("SAYPRIVATE %s !bSet startpostype 2",
-				gMyBattle->founder->name);
-	SendToServer("SAYPRIVATE %s !split %s %d",
-			gMyBattle->founder->name,
+	if (STARTPOS_CHOOSE_INGAME != g_battle_options.startPosType)
+		Server_send("SAYPRIVATE %s !bSet startpostype 2",
+				g_my_battle->founder->name);
+	Server_send("SAYPRIVATE %s !split %s %d",
+			g_my_battle->founder->name,
 			(char [][3]){"h", "v", "c1", "c2"}[type],
 			size/2);
 }
 
-static void startGame(void)
+static void
+start_game(void)
 {
-	if (gMyBattle->founder->clientStatus & CS_INGAME_MASK)
-		LaunchSpring();
+	if (g_my_battle->founder->client_status & CS_INGAME)
+		Spring_launch();
 	else
-		SendToServer("SAYPRIVATE %s !start",
-				gMyBattle->founder->name);
+		Server_send("SAYPRIVATE %s !start",
+				g_my_battle->founder->name);
 }

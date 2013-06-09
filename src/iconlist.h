@@ -16,14 +16,14 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef IMAGELIST_H
-#define IMAGELIST_H
+#ifndef ICONLIST_H
+#define ICONLIST_H
 
 #define INGAME_MASK 1
 #define PW_MASK 2
 #define FULL_MASK 4
 #define USER_MASK 8
-#define UNSYNC_MASK 1
+#define UNBS_SYNC 1
 #define AWAY_MASK 2
 #define IGNORE_MASK 4
 enum ICONS {
@@ -79,21 +79,22 @@ enum ICONS {
 
 union UserOrBot;
 
-int GetColorIndex(const union UserOrBot *);
+int IconList_get_user_color(const union UserOrBot *);
+
 #ifdef WINVER
-extern HIMAGELIST gIconList;
+extern HIMAGELIST g_icon_list;
 #endif
 
-#define EnableIcons(window)\
+#define EnableIconList(window)\
 {\
-	extern HIMAGELIST gIconList;\
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)gIconList);\
+	extern HIMAGELIST g_icon_list;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)g_icon_list);\
 }
 
-#define EnableStateIcons(window)\
+#define EnableStateIconList(window)\
 {\
-	extern HIMAGELIST gIconList;\
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)gIconList);\
+	extern HIMAGELIST g_icon_list;\
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)g_icon_list);\
 }
 
-#endif /* end of include guard: IMAGELIST_H */
+#endif /* end of include guard: ICONLIST_H */

@@ -19,7 +19,6 @@
 #ifndef HOST_SPRINGIE_H
 #define HOST_SPRINGIE_H
 
-extern const struct HostType gHostSpringie;
+extern const struct HostType g_host_springie;
 
 #endif /* end of include guard: HOST_SPRINGIE_H */
-

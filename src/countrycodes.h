@@ -19,7 +19,7 @@
 #ifndef COUNTRYCODES_H
 #define COUNTRYCODES_H
 
-extern const char countryCodes[242][2] __attribute__((aligned(2)));
-extern const char *countryNames[242];
+uint8_t      Country_get_id(const char *code);
+const char * Country_get_name(uint8_t id);
 
 #endif /* end of include guard: COUNTRYCODES_H */

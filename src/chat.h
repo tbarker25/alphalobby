@@ -23,7 +23,7 @@
 
 struct User;
 
-extern HWND gChatWindow;
+extern HWND g_chat_window;
 
 typedef enum ChatType {
 	CHAT_NORMAL,
@@ -46,17 +46,15 @@ typedef enum ChatDest {
 	DEST_LAST = DEST_SERVER,
 }ChatDest;
 
-void Chat_Said(HWND window, const char *username, ChatType type, const char *text);
-HWND GetChannelChat(const char *name);
-HWND GetPrivateChat(struct User *);
-HWND GetServerChat(void);
-
-// void UpdateUser(struct User *u);
-void ChatWindow_AddUser(HWND window, struct User *u);
-void ChatWindow_RemoveUser(HWND window, struct User *u);
-void SaveLastChatWindows(void);
-void Chat_OnDisconnect(void);
-void ChatWindow_UpdateUser(struct User *u);
+void Chat_add_user(HWND window, struct User *u);
+HWND Chat_get_channel_window(const char *name);
+HWND Chat_get_private_window(struct User *);
+HWND Chat_get_server_window(void);
+void Chat_on_disconnect(void);
+void Chat_on_left_battle(HWND window, struct User *u);
+void Chat_said(HWND window, const char *username, ChatType type, const char *text);
+void Chat_save_windows(void);
+void Chat_update_user(struct User *u);
 
 
 #endif /* end of include guard: CHAT_H */

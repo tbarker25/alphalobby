@@ -33,28 +33,25 @@ enum {
 #define DLG_PROGRESS_BUTTON 0x200
 
 #define ExecuteInMainThreadAsync(_func)\
-	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)
+	SendMessage(g_main_window, WM_EXECFUNC, (WPARAM)(_func), 0)
 
 #define ExecuteInMainThread(_func)\
-	SendMessage(gMainWindow, WM_EXECFUNC, (WPARAM)(_func), 0)
+	SendMessage(g_main_window, WM_EXECFUNC, (WPARAM)(_func), 0)
 
-#define ExecuteInMainThreadParam(_func, _param)\
-	SendMessage(gMainWindow, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)
+#define ExecuteInMainThread_param(_func, _param)\
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)
 
-extern HWND gMainWindow;
-void MainWindow_SetActiveTab(HWND newTab);
+extern HWND g_main_window;
+void MainWindow_set_active_tab(HWND newTab);
 
 #endif
 
-enum ConnectionState;
-void MainWindow_ChangeConnect(enum ConnectionState);
+enum ServerStatus;
 
-
-void MyMessageBox(const char *caption, const char *text);
-
-void MainWindow_EnableBattleroomButton(void);
-void MainWindow_DisableBattleroomButton(void);
-void Ring(void);
+void MainWindow_change_connect(enum ServerStatus);
+void MainWindow_disable_battleroom_button(void);
+void MainWindow_enable_battleroom_button(void);
+void MainWindow_msg_box(const char *caption, const char *text);
+void MainWindow_ring(void);
 
 #endif /* end of include guard: ALPHALOBBY_H */
-

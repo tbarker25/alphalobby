@@ -26,25 +26,25 @@
 
 struct Option;
 
-uint32_t GetMapHash(const char *mapName);
-uint32_t GetModHash(const char *modName);
-void ReloadMapsAndMod(void);
-void ChangedMod(const char *modName);
-void ChangedMap(const char *mapName);
-const char * _GetSpringVersion(void);
-uint32_t GetSyncStatus(void)
-	__attribute__((pure));
-void ForEachAiName(void (*func)(const char *, void *), void *arg);
-int UnitSync_GetSkirmishAIOptionCount(const char *name);
+int          Sync_ai_option_count(const char *name);
+void         Sync_cleanup(void);
+void         Sync_for_each_ai(void (*func)(const char *, void *), void *arg);
+uint32_t     Sync_get_status(void) __attribute__((pure));
+void         Sync_init(void);
+uint32_t     Sync_map_hash(const char *map_name);
+uint32_t     Sync_mod_hash(const char *mod_name);
+void         Sync_on_changed_mod(const char *mod_name);
+void         Sync_on_changed_map(const char *map_name);
+void         Sync_reload(void);
+const char * Sync_spring_version(void);
+
 #ifdef _WINDOWS_
-void CALLBACK UnitSync_AddReplaysToListView(HWND listViewWindow);
+void CALLBACK Sync_add_replays_to_listview(HWND listViewWindow);
 #endif
-void UnitSync_Cleanup(void);
-void Sync_Init(void);
 
 #define RUN_IN_SYNC_THREAD(_func, _param) {\
-	extern HANDLE gSyncThread;\
-	QueueUserAPC((void *)(_func), gSyncThread, (ULONG_PTR)(_param));\
+	extern HANDLE g_sync_thread;\
+	QueueUserAPC((void *)(_func), g_sync_thread, (ULONG_PTR)(_param));\
 }
 
 #endif /* end of include guard: SYNC_H */

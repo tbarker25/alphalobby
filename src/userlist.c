@@ -25,7 +25,7 @@
 #include <Commctrl.h>
 
 #include "common.h"
-#include "imagelist.h"
+#include "iconlist.h"
 #include "layoutmetrics.h"
 #include "resource.h"
 #include "user.h"
@@ -36,17 +36,19 @@ static HWND userList;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static void activate(int itemIndex)
+static void
+activate(int item_index)
 {
 	LVITEM itemInfo;
 	itemInfo.mask = LVIF_PARAM;
-	itemInfo.iItem = itemIndex;
+	itemInfo.iItem = item_index;
 	itemInfo.iSubItem = 2;
 	ListView_GetItem(userList, &itemInfo);
-	ChatWindow_SetActiveTab(GetPrivateChat((User *)itemInfo.lParam));
+	ChatWindow_set_active_tab(Chat_get_private_window((User *)itemInfo.lParam));
 }
 
-static void onInit(HWND window)
+static void
+onInit(HWND window)
 {
 	RECT rect;
 	LVCOLUMN columnInfo;
@@ -59,12 +61,12 @@ static void onInit(HWND window)
 			LVS_NOCOLUMNHEADER);
 
 	ListView_SetExtendedListViewStyle(userList, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-	EnableIcons(userList);
+	EnableIconList(userList);
 
 	GetClientRect(userList, &rect);
 	columnInfo.mask = LVCF_SUBITEM | LVCF_WIDTH;
 
-	columnInfo.cx = rect.right - ICON_SIZE - scrollWidth;
+	columnInfo.cx = rect.right - ICON_SIZE - scroll_width;
 	columnInfo.iSubItem = 0;
 	ListView_InsertColumn(userList, 0, (LPARAM)&columnInfo);
 
@@ -72,7 +74,7 @@ static void onInit(HWND window)
 	columnInfo.iSubItem = 1;
 	ListView_InsertColumn(userList, 1, (LPARAM)&columnInfo);
 
-	for (const User *u; (u = GetNextUser());) {
+	for (const User *u; (u = Users_get_next());) {
 		if (!*u->name)
 			continue;
 		LVITEM item = {};
@@ -87,16 +89,16 @@ static void onInit(HWND window)
 				u->name, u->alias);
 		item.pszText = name;
 
-		item.iImage = u->clientStatus & CS_INGAME_MASK ? ICONS_INGAME
+		item.iImage = u->client_status & CS_INGAME ? ICONS_INGAME
 			: u->battle ? INGAME_MASK
 			: -1;
 
-		int imageIndex = USER_MASK;
-		if (u->clientStatus & CS_AWAY_MASK)
-		imageIndex |= AWAY_MASK;
+		int icon_index = USER_MASK;
+		if (u->client_status & CS_AWAY)
+		icon_index |= AWAY_MASK;
 		if (u->ignore)
-		imageIndex |= IGNORE_MASK;
-		item.state = INDEXTOOVERLAYMASK(imageIndex);
+		icon_index |= IGNORE_MASK;
+		item.state = INDEXTOOVERLAYMASK(icon_index);
 		item.stateMask = LVIS_OVERLAYMASK;
 
 		item.iItem = ListView_InsertItem(userList, &item);
@@ -108,7 +110,8 @@ static void onInit(HWND window)
 	}
 }
 
-static BOOL CALLBACK userListProc(HWND window, UINT msg, WPARAM wParam,
+static BOOL CALLBACK
+user_list_proc(HWND window, UINT msg, WPARAM wParam,
 		LPARAM lParam)
 {
 	switch (msg) {
@@ -139,7 +142,8 @@ static BOOL CALLBACK userListProc(HWND window, UINT msg, WPARAM wParam,
 	}
 }
 
-void UserList_Show(void)
+void
+UserList_show(void)
 {
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, userListProc);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, user_list_proc);
 }

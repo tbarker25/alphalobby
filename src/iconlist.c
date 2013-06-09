@@ -25,15 +25,15 @@
 #include "battle.h"
 #include "common.h"
 #include "icons.h"
-#include "imagelist.h"
+#include "iconlist.h"
 #include "mybattle.h"
 #include "user.h"
 
-HIMAGELIST gIconList;
+HIMAGELIST g_icon_list;
 
-int GetColorIndex(const union UserOrBot *s)
+int IconList_get_user_color(const union UserOrBot *s)
 {
-	if (!(s->battleStatus & MODE_MASK))
+	if (!(s->battle_status & BS_MODE))
 		return -1;
 
 	static const UserOrBot *colors[ICONS_LAST_COLOR - ICONS_FIRST_COLOR + 1];
@@ -43,7 +43,7 @@ int GetColorIndex(const union UserOrBot *s)
 			goto doit;
 
 	for (i=0; i <= ICONS_LAST_COLOR - ICONS_FIRST_COLOR; ++i) {
-		FOR_EACH_PLAYER(p, gMyBattle)
+		FOR_EACH_PLAYER(p, g_my_battle)
 			if (p == colors[i])
 				goto end;
 		doit:
@@ -57,7 +57,7 @@ int GetColorIndex(const union UserOrBot *s)
 			SetPixelV(bitmapDC, i%16, i/16, s->color);
 		DeleteDC(bitmapDC);
 
-		ImageList_Replace(gIconList, ICONS_FIRST_COLOR + i, bitmap, NULL);
+		ImageList_Replace(g_icon_list, ICONS_FIRST_COLOR + i, bitmap, NULL);
 		DeleteObject(bitmap);
 		return ICONS_FIRST_COLOR + i;
 
@@ -70,15 +70,16 @@ int GetColorIndex(const union UserOrBot *s)
 #define ICONS_HEIGHT (16)
 #define ICONS_WIDTH (sizeof(iconData) / ICONS_BBP / ICONS_HEIGHT)
 
-static void __attribute__((constructor)) Init(void)
+static void __attribute__((constructor))
+init(void)
 {
-	gIconList = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
+	g_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
 
 	HBITMAP iconsBitmap = CreateBitmap(ICONS_WIDTH, ICONS_HEIGHT, 1, ICONS_BBP*8, iconData);
-	ImageList_Add(gIconList, iconsBitmap, NULL);
+	ImageList_Add(g_icon_list, iconsBitmap, NULL);
 	DeleteObject(iconsBitmap);
 
 	for (int i=1; i<=ICONS_MASK; ++i)
 		if (i & ~ USER_MASK)
-			ImageList_SetOverlayImage(gIconList, i, i);
+			ImageList_SetOverlayImage(g_icon_list, i, i);
 }

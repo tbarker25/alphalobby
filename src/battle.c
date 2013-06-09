@@ -34,7 +34,7 @@
 static size_t nbBattles;
 static Battle **battles;
 
-Battle * FindBattle(uint32_t id)
+Battle * Battles_find(uint32_t id)
 {
 	for (int i=0; i<nbBattles; ++i)
 		if (battles[i] && battles[i]->id == id)
@@ -42,7 +42,7 @@ Battle * FindBattle(uint32_t id)
 	return NULL;
 }
 
-Battle *NewBattle(void)
+Battle *Battles_new(void)
 {
 	int i=0;
 	for (; i<nbBattles; ++i) {
@@ -58,7 +58,8 @@ Battle *NewBattle(void)
 	return battles[i];
 }
 
-void DelBattle(Battle *b)
+void
+Battles_del(Battle *b)
 {
 	free(b);
 	for (int i=0; i<nbBattles; ++i) {
@@ -70,7 +71,8 @@ void DelBattle(Battle *b)
 	assert(0);
 }
 
-void ResetBattles(void)
+void
+Battles_reset(void)
 {
 	for (int i=0; i<nbBattles; ++i)
 		free(battles[i]);

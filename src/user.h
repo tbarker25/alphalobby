@@ -28,39 +28,39 @@ enum modeType {
 };
 
 enum {
-	READY_MASK    = 0x01 << 1,
-	TEAM_MASK     = 0x0F << 2,
-	ALLY_MASK     = 0x0F << 6,
-	MODE_MASK     = 0x01 << 10,
-	HANDICAP_MASK = 0x8F << 11,
-	SYNC_MASK     = 0x03 << 22,
-	SIDE_MASK     = 0x0F << 24,
+	BS_READY    = 0x01 << 1,
+	BS_TEAM     = 0x0F << 2,
+	BS_ALLY     = 0x0F << 6,
+	BS_MODE     = 0x01 << 10,
+	BS_HANDICAP = 0x8F << 11,
+	BS_SYNC     = 0x03 << 22,
+	BS_SIDE     = 0x0F << 24,
 
-	AI_MASK       = 0x01 << 31,
+	BS_AI       = 0x01 << 31,
 };
 
-#define INTERNAL_MASK (AI_MASK)
+#define BS_INTERNAL (BS_AI)
 
-#define TO_TEAM_MASK(x)     ((x) << 2)
-#define TO_ALLY_MASK(x)     ((x) << 6)
-#define TO_HANDICAP_MASK(x) ((x) << 11)
-#define TO_SIDE_MASK(x)     ((x) << 24)
+#define TO_BS_TEAM_MASK(x)     ((x) << 2)
+#define TO_BS_ALLY_MASK(x)     ((x) << 6)
+#define TO_BS_HANDICAP_MASK(x) ((x) << 11)
+#define TO_BS_SIDE_MASK(x)     ((x) << 24)
 
 #define SYNCED          (1 << 22)
 #define UNSYNCED        (2 << 22)
-#define TO_SIDE_MASK(x) ((x) << 24)
+#define TO_BS_SIDE_MASK(x) ((x) << 24)
 
-#define FROM_TEAM_MASK(x)     (((x) & TEAM_MASK)     >> 2)
-#define FROM_ALLY_MASK(x)     (((x) & ALLY_MASK)     >> 6)
-#define FROM_HANDICAP_MASK(x) (((x) & HANDICAP_MASK) >> 11)
-#define FROM_SIDE_MASK(x)     (((x) & SIDE_MASK)     >> 24)
+#define FROM_BS_TEAM(x)     (((x) & BS_TEAM)     >> 2)
+#define FROM_BS_ALLY(x)     (((x) & BS_ALLY)     >> 6)
+#define FROM_BS_HANDICAP(x) (((x) & BS_HANDICAP) >> 11)
+#define FROM_BS_SIDE(x)     (((x) & BS_SIDE)     >> 24)
 
 enum {
-	CS_INGAME_MASK = 0x01 << 0,
-	CS_AWAY_MASK   = 0x01 << 1,
-	CS_RANK_MASK   = 0x07 << 2,
-	CS_ACCESS_MASK = 0x01 << 5,
-	CS_BOT_MASK    = 0x01 << 6,
+	CS_INGAME = 0x01 << 0,
+	CS_AWAY   = 0x01 << 1,
+	CS_RANK   = 0x07 << 2,
+	CS_ACCESS = 0x01 << 5,
+	CS_BOT    = 0x01 << 6,
 };
 
 #define TO_INGAME_MASK(x) ((x) << 0)
@@ -69,7 +69,7 @@ enum {
 #define TO_ACCESS_MASK(x) ((x) << 5)
 #define TO_BOT_MASK(x)    ((x) << 6)
 
-#define FROM_RANK_MASK(x) (((x) & CS_RANK_MASK) >> 2)
+#define FROM_RANK_MASK(x) (((x) & CS_RANK) >> 2)
 
 enum USER_SYNC_STATUS {
 	USER_SYNC_UNKNOWN = 0,
@@ -81,7 +81,7 @@ enum USER_SYNC_STATUS {
 
 typedef struct UserBot {
 	char name[MAX_NAME_LENGTH_NUL];
-	uint32_t battleStatus;
+	uint32_t battle_status;
 	struct Battle *battle;
 	union {
 		uint32_t color;
@@ -94,12 +94,12 @@ typedef struct UserBot {
 typedef struct User {
 	UserBot;
 
-	HWND chatWindow;
+	HWND chat_window;
 	uint32_t cpu, id;
 
 	char alias[MAX_NAME_LENGTH_NUL];
-	char *scriptPassword;
-	uint8_t clientStatus, country, ignore;
+	char *script_password;
+	uint8_t client_status, country, ignore;
 	char *skill;
 }User;
 
@@ -113,23 +113,21 @@ typedef struct Bot {
 	struct Bot *next;
 } Bot;
 
-//Identify them with AI_MASK of battleStatus
+//Identify them with BS_AI of battle_status
 typedef union UserOrBot {
 	UserBot;
 	User user;
 	Bot bot;
 }UserOrBot;
 
-extern User gMyUser;
+extern User g_my_user;
 
-User * FindUser(const char username[])
-	__attribute__((pure));
-User * NewUser(uint32_t id, const char *name);
-User * GetNextUser(void);
-void DelUser(User *u);
-void AddBot(const char *name, User *owner, uint32_t battleStatus, uint32_t color, const char *aiDll);
-void DelBot(const char *name);
-void UpdateBattleStatus(UserOrBot *s, uint32_t battleStatus, uint32_t color);
-void ResetUsers(void);
+void   Users_add_bot(const char *name, User *owner, uint32_t battle_status, uint32_t color, const char *aiDll);
+void   Users_del(User *u);
+void   Users_del_bot(const char *name);
+User * Users_find(const char username[]) __attribute__((pure));
+User * Users_get_next(void);
+User * Users_new(uint32_t id, const char *name);
+void   Users_reset(void);
 
 #endif /* end of include guard: USER_H */

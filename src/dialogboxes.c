@@ -47,7 +47,8 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-void ToMD5(char *password)
+static void
+to_md5(char *password)
 {
 	if (strlen(password) != 24)
 		goto doit;
@@ -56,11 +57,12 @@ void ToMD5(char *password)
 			goto doit;
 	return;
 	doit:
-	strcpy(password, GetBase64MD5sum(password, strlen(password)));
+	strcpy(password, MD5_calc_checksum_base_64(password, strlen(password)));
 }
 
 __attribute__((pure))
-static int isMD5(const char *hash)
+static int
+is_md5(const char *hash)
 {
 	if (strlen(hash) != 24)
 		return 0;
@@ -70,31 +72,33 @@ static int isMD5(const char *hash)
 	return 1;
 }
 
-static void ToMD52(char *md5, const char *password)
+static void
+to_md5_2(char *md5, const char *password)
 {
-	memcpy(md5, isMD5(password) ? password : GetBase64MD5sum(password, strlen(password)), BASE16_MD5_LENGTH);
+	memcpy(md5, is_md5(password) ? password : MD5_calc_checksum_base_64(password, strlen(password)), BASE16_MD5_LENGTH);
 	md5[BASE16_MD5_LENGTH] = 0;
 }
 
-static int onLogin(HWND window, int isRegistering)
+static int
+on_login(HWND window, int isRegistering)
 {
 	char username[MAX_NAME_LENGTH+1];
 	if (!GetDlgItemTextA(window, IDC_LOGIN_USERNAME, username, LENGTH(username))) {
 		MessageBox(window, L"Enter a username less than "
 				STRINGIFY(MAX_NAME_LENGTH) L" characters.",
-				L"Username too long", MB_OK);
+				L"_username too long", MB_OK);
 		return 1;
 	}
 
 	char password[BASE16_MD5_LENGTH+1];
-	ToMD52(password, GetDlgItemTextA2(window, IDC_LOGIN_PASSWORD));
+	to_md5_2(password, GetDlgItemTextA2(window, IDC_LOGIN_PASSWORD));
 
 
 	if (SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0)) {
-		SaveSetting("username", username);
-		SaveSetting("password", password);
+		Settings_save_str("username", username);
+		Settings_save_str("password", password);
 	}
-	gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_GETCHECK, 0, 0);
+	g_settings.flags = (g_settings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_GETCHECK, 0, 0);
 
 	if (isRegistering) {
 		Login(username, password);
@@ -102,15 +106,15 @@ static int onLogin(HWND window, int isRegistering)
 
 	}
 
-	char confirmPassword[sizeof(password)];
+	char confirm_password[sizeof(password)];
 retry:
-	confirmPassword[0] = 0;
-	if (GetTextDlg2(window, "Confirm password", confirmPassword, LENGTH(confirmPassword)))
+	confirm_password[0] = 0;
+	if (GetTextDlg2(window, "Confirm password", confirm_password, LENGTH(confirm_password)))
 		return 1;
 
-	ToMD5(confirmPassword);
-	if (strcmp(password, confirmPassword)) {
-		MessageBox(window, L"Passwords do not match.", L"Can not register new account", 0);
+	to_md5(confirm_password);
+	if (strcmp(password, confirm_password)) {
+		MessageBox(window, L"_passwords do not match.", L"Can not register new account", 0);
 		goto retry;
 	}
 
@@ -118,16 +122,17 @@ retry:
 	return 0;
 }
 
-static BOOL CALLBACK loginProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+login_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		SetDlgItemText(window, IDC_LOGIN_USERNAME, utf8to16(LoadSetting("username")));
-		char *pw = LoadSetting("password");
+		SetDlgItemText(window, IDC_LOGIN_USERNAME, utf8to16(Settings_load_str("username")));
+		char *pw = Settings_load_str("password");
 		if (pw) {
 			SetDlgItemText(window, IDC_LOGIN_PASSWORD, utf8to16(pw));
 			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 1, 0);
-			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_SETCHECK, gSettings.flags & SETTING_AUTOCONNECT, 0);
+			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_SETCHECK, g_settings.flags & SETTING_AUTOCONNECT, 0);
 		} else
 			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), 0);
 		return 1;
@@ -135,7 +140,7 @@ static BOOL CALLBACK loginProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		case MAKEWPARAM(IDC_LOGIN_REGISTER, BN_CLICKED):
-			if (onLogin(window, wParam == MAKEWPARAM(IDOK, BN_CLICKED)))
+			if (on_login(window, wParam == MAKEWPARAM(IDOK, BN_CLICKED)))
 				return 1;
 			//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -149,41 +154,42 @@ static BOOL CALLBACK loginProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 	return 0;
 }
 
-static void onHostInit(HWND window)
+static void
+on_host_init(HWND window)
 {
-	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(LoadSetting("last_host_description")));
-	const char *def; int defIndex;
+	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(Settings_load_str("last_host_description")));
+	const char *def; int def_index;
 
-
-	def = LoadSetting("last_host_mod"); defIndex=0;
-	for (int i=0; i<gNbMods; ++i) {
-		if (def && !strcmp(def, gMods[i]))
-			defIndex = i;
-		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (LPARAM)gMods[i]);
+	def = Settings_load_str("last_host_mod"); def_index=0;
+	for (int i=0; i<g_mod_count; ++i) {
+		if (def && !strcmp(def, g_mods[i]))
+			def_index = i;
+		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (LPARAM)g_mods[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, def_index, 0);
 
-	def = LoadSetting("last_host_map"); defIndex=0;
-	for (int i=0; i<gNbMaps; ++i) {
-		if (def && !strcmp(def, gMaps[i]))
-			defIndex = i;
-		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)gMaps[i]);
+	def = Settings_load_str("last_host_map"); def_index=0;
+	for (int i=0; i<g_map_count; ++i) {
+		if (def && !strcmp(def, g_maps[i]))
+			def_index = i;
+		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)g_maps[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, def_index, 0);
 
 	SetDlgItemInt(window, IDC_HOST_PORT, 8452, 0);
 	SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_SETCHECK, 1, 0);
 
-	def = LoadSetting("last_host_manager"); defIndex=0;
-	for (int i=1; i<gRelayManagersCount; ++i) {
-		if (def && !strcmp(def, gRelayManagers[i]))
-			defIndex = i;
-		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (LPARAM)utf8to16(gRelayManagers[i]));
+	def = Settings_load_str("last_host_manager"); def_index=0;
+	for (int i=1; i<g_relay_managersCount; ++i) {
+		if (def && !strcmp(def, g_relay_managers[i]))
+			def_index = i;
+		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (LPARAM)utf8to16(g_relay_managers[i]));
 	}
-	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, def_index, 0);
 }
 
-static int onHostOk(HWND window)
+static int
+on_host_ok(HWND window)
 {
 	char description[128], mod[128], password[128], map[128];
 
@@ -198,19 +204,19 @@ static int onHostOk(HWND window)
 		MessageBox(window, L"Please enter a password without spaces", L"Spaces are not allowed in passwords", 0);
 		return 1;
 	}
-	SaveSetting("last_host_description", description);
-	SaveSetting("last_host_mod", mod);
-	SaveSetting("last_host_map", map);
+	Settings_save_str("last_host_description", description);
+	Settings_save_str("last_host_mod", mod);
+	Settings_save_str("last_host_map", map);
 	if (SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_GETCHECK, 0, 0)) {
 		char manager[128];
 		GetDlgItemTextA(window, IDC_HOST_RELAY, manager, LENGTH(manager));
-		SaveSetting("last_host_manager", manager);
-		OpenRelayBattle(description, password, mod, map, manager);
+		Settings_save_str("last_host_manager", manager);
+		RelayHost_open_battle(description, password, mod, map, manager);
 	} else {
 		uint16_t port;
 		port = GetDlgItemInt(window, IDC_HOST_PORT, NULL, 0);
 		if (!port) {
-			if (MessageBox(window, L"Use the default port? (8452)", L"Can't Proceed Without a Valid Port", MB_YESNO) == IDYES)
+			if (MessageBox(window, L"Use the default port? (8452)", L"Can't _proceed Without a Valid Port", MB_YESNO) == IDYES)
 				port = 8452;
 			else
 				return 1;
@@ -220,17 +226,18 @@ static int onHostOk(HWND window)
 	return 0;
 }
 
-static BOOL CALLBACK hostProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+host_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		onHostInit(window);
+		on_host_init(window);
 		return 1;
 
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			if (onHostOk(window))
+			if (on_host_ok(window))
 				return 1;
 			//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -249,13 +256,15 @@ static BOOL CALLBACK hostProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPara
 	return 0;
 }
 
-static COLORREF getRGB(HWND window)
+static COLORREF
+get_rgb(HWND window)
 {
 	return RGB(SendDlgItemMessage(window, IDC_COLOR_R_L, UDM_GETPOS, 0, 0),
 			SendDlgItemMessage(window, IDC_COLOR_G_L, UDM_GETPOS, 0, 0),
 			SendDlgItemMessage(window, IDC_COLOR_B_L, UDM_GETPOS, 0, 0));
 }
-static BOOL CALLBACK colorProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+color_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -288,7 +297,7 @@ static BOOL CALLBACK colorProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
 			union UserOrBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
-			uint32_t color = getRGB(window);
+			uint32_t color = get_rgb(window);
 			SetColor(s, color);
 		} // fallthrough:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -297,12 +306,13 @@ static BOOL CALLBACK colorProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 		}
 		break;
 	case WM_CTLCOLORSTATIC:
-		return (GetDlgCtrlID((HWND)lParam) == IDC_COLOR_PREVIEW) * (INT_PTR)CreateSolidBrush(getRGB(window));
+		return (GetDlgCtrlID((HWND)lParam) == IDC_COLOR_PREVIEW) * (INT_PTR)CreateSolidBrush(get_rgb(window));
 	}
 	return 0;
 }
 
-static BOOL CALLBACK getTextProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+get_text_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -319,8 +329,8 @@ static BOOL CALLBACK getTextProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
-			char *buff = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
-			GetDlgItemTextA(window, IDC_GETTEXT, buff, GetWindowLongPtr(GetDlgItem(window, IDC_GETTEXT), GWLP_USERDATA));
+			char *buf = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
+			GetDlgItemTextA(window, IDC_GETTEXT, buf, GetWindowLongPtr(GetDlgItem(window, IDC_GETTEXT), GWLP_USERDATA));
 			EndDialog(window, 0);
 			return 1;
 		}
@@ -333,25 +343,26 @@ static BOOL CALLBACK getTextProc(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 }
 
 
-static BOOL CALLBACK changePasswordProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+change_password_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
-			char oldPassword[BASE16_MD5_LENGTH+1];
-			char newPassword[BASE16_MD5_LENGTH+1];
-			char confirmPassword[BASE16_MD5_LENGTH+1];
+			char old_password[BASE16_MD5_LENGTH+1];
+			char new_password[BASE16_MD5_LENGTH+1];
+			char confirm_password[BASE16_MD5_LENGTH+1];
 
-			ToMD52(GetDlgItemTextA2(window, IDC_PASSWORD_OLD), oldPassword);
-			ToMD52(GetDlgItemTextA2(window, IDC_PASSWORD_NEW), newPassword);
-			ToMD52(GetDlgItemTextA2(window, IDC_PASSWORD_CONFIRM), confirmPassword);
+			to_md5_2(GetDlgItemTextA2(window, IDC_PASSWORD_OLD), old_password);
+			to_md5_2(GetDlgItemTextA2(window, IDC_PASSWORD_NEW), new_password);
+			to_md5_2(GetDlgItemTextA2(window, IDC_PASSWORD_CONFIRM), confirm_password);
 
-			if (strcmp(newPassword, confirmPassword))
-				MessageBox(window, L"Passwords don't match", L"Couldn't Change Password", 0);
+			if (strcmp(new_password, confirm_password))
+				MessageBox(window, L"_passwords don't match", L"Couldn't Change _password", 0);
 			else {
-				ChangePassword(oldPassword, newPassword);
+				Change_password(old_password, new_password);
 				EndDialog(window, 0);
 			}
 			return 1;
@@ -364,26 +375,27 @@ static BOOL CALLBACK changePasswordProc(HWND window, UINT msg, WPARAM wParam, LP
 	return 0;
 }
 
-static BOOL CALLBACK preferencesProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+preferences_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
 		HWND autoconnect = GetDlgItem(window, IDC_PREFERENCES_AUTOCONNECT);
-		SendMessage(autoconnect, BM_SETCHECK, gSettings.flags & SETTING_AUTOCONNECT, 0);
-		ShowWindow(autoconnect, !!LoadSetting("password"));
-		SetDlgItemTextA(window, IDC_PREFERENCES_PATH, gSettings.spring_path);
+		SendMessage(autoconnect, BM_SETCHECK, g_settings.flags & SETTING_AUTOCONNECT, 0);
+		ShowWindow(autoconnect, !!Settings_load_str("password"));
+		SetDlgItemTextA(window, IDC_PREFERENCES_PATH, g_settings.spring_path);
 		return 0;
 	}
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
-			char buff[1024];
-			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buff, sizeof(buff));
-			free(gSettings.spring_path);
-			gSettings.spring_path = _strdup(buff);
-			gSettings.flags = (gSettings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);
+			char buf[1024];
+			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buf, sizeof(buf));
+			free(g_settings.spring_path);
+			g_settings.spring_path = _strdup(buf);
+			g_settings.flags = (g_settings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);
 		}	//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
@@ -391,7 +403,7 @@ static BOOL CALLBACK preferencesProc(HWND window, UINT msg, WPARAM wParam, LPARA
 
 		case MAKEWPARAM(IDC_PREFERENCES_RESET, BN_CLICKED):
 			if (IDYES == MessageBox(window, L"This action cannot be reversed.", L"Reset Preferences", MB_YESNO)) {
-				ResetSettings();
+				Settings_reset();
 				SendMessage(window, WM_INITDIALOG, 0, 0);
 			}
 			return 1;
@@ -400,7 +412,8 @@ static BOOL CALLBACK preferencesProc(HWND window, UINT msg, WPARAM wParam, LPARA
 	return 0;
 }
 
-static BOOL CALLBACK agreementProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+agreement_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -426,7 +439,8 @@ static BOOL CALLBACK agreementProc(HWND window, UINT msg, WPARAM wParam, LPARAM 
 	return 0;
 }
 
-static BOOL CALLBACK aboutProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+about_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -462,17 +476,18 @@ static BOOL CALLBACK aboutProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 	return 0;
 }
 
-static void activateReplayListItem(HWND listViewWindow, int index)
+static void
+activate_replay_list_item(HWND listViewWindow, int index)
 {
 	printf("index = %d\n", index);
-	wchar_t buff[1024];
-	LVITEM item = {.pszText = buff, LENGTH(buff)};
+	wchar_t buf[1024];
+	LVITEM item = {.pszText = buf, LENGTH(buf)};
 	SendMessage(listViewWindow, LVM_GETITEMTEXT, index, (LPARAM)&item);
-	wprintf(L"buff = %s\n", buff);
-	LaunchReplay(buff);
+	wprintf(L"buf = %s\n", buf);
+	Spring_launch_replay(buf);
 }
 
-static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK replayList_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	HWND listWindow;
 	switch (msg) {
@@ -481,14 +496,14 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		SendMessage(listWindow, LVM_INSERTCOLUMN, 0,
 				(LPARAM)&(LVCOLUMN){LVCF_TEXT, .pszText = L"filename"});
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
-		UnitSync_AddReplaysToListView(listWindow);
+		Sync_add_replays_to_listview(listWindow);
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
 		return 0;
 	case WM_COMMAND:
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 			listWindow = GetDlgItem(window, IDC_REPLAY_LIST);
-			activateReplayListItem(listWindow, SendMessage(listWindow, LVM_GETNEXTITEM, -1, LVNI_SELECTED));
+			activate_replay_list_item(listWindow, SendMessage(listWindow, LVM_GETNEXTITEM, -1, LVNI_SELECTED));
 			//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
@@ -496,7 +511,7 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 		} break;
 	case WM_NOTIFY:
 		if (((NMHDR *)lParam)->code == LVN_ITEMACTIVATE) {
-			activateReplayListItem(((NMITEMACTIVATE *)lParam)->hdr.hwndFrom, ((NMITEMACTIVATE *)lParam)->iItem);
+			activate_replay_list_item(((NMITEMACTIVATE *)lParam)->hdr.hwndFrom, ((NMITEMACTIVATE *)lParam)->iItem);
 			EndDialog(window, 0);
 		}
 		break;
@@ -504,129 +519,132 @@ static BOOL CALLBACK replayListProc(HWND window, UINT msg, WPARAM wParam, LPARAM
 	return 0;
 }
 
-static void rapid_addAvailable(HWND window, char downloadOnly)
+static void
+rapid_add_available(HWND window, char downloadOnly)
 {
 #define TVGN_NEXTSELECTED       0x000B
 	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
 #undef TVGN_NEXTSELECTED
 
-	char itemText1[256];
-	char itemText2[256];
-	char *textA = itemText1;
-	char *textB = NULL;
+	char item_text1[256];
+	char item_text2[256];
+	char *text_a = item_text1;
+	char *text_b = NULL;
 	while (item) {
 		TVITEMA itemInfo = {TVIF_HANDLE | TVIF_TEXT | TVIF_CHILDREN, item,
-			.pszText = textA,
+			.pszText = text_a,
 			.cchTextMax = 256};
 		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (LPARAM)&itemInfo);
 
-		if (textB)
-			sprintf(textA + strlen(textA), ":%s", textB);
+		if (text_b)
+			sprintf(text_a + strlen(text_a), ":%s", text_b);
 		else if (itemInfo.cChildren)
 			return;
 		else
-			textB = itemText2;
+			text_b = item_text2;
 
 		char *swap;
-		swap = textA;
-		textA = textB;
-		textB = swap;
+		swap = text_a;
+		text_a = text_b;
+		text_b = swap;
 		item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)item);
 	}
 	if (downloadOnly)
-		DownloadShortMod(textB);
+		DownloadShortMod(text_b);
 	else
-		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)textB);
+		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)text_b);
 }
 
-static void rapid_OnInit(HWND window)
+static void
+rapid_on_init(HWND window)
 {
 #ifdef NDEBUG
 	ShowWindow(GetDlgItem(window, IDC_RAPID_ERRORCHECK), 0);
 	ShowWindow(GetDlgItem(window, IDC_RAPID_CLEANUP), 0);
 #endif
 
-	if (gSettings.selected_packages) {
-		size_t len = strlen(gSettings.selected_packages);
-		char buffer[len + 1];
-		buffer[len] = '\0';
-		char *start = buffer;
+	if (g_settings.selected_packages) {
+		size_t len = strlen(g_settings.selected_packages);
+		char buf[len + 1];
+		buf[len] = '\0';
+		char *start = buf;
 		for (int i=0; i<len; ++i) {
-			buffer[i] = gSettings.selected_packages[i];
-			if (buffer[i] != ';')
+			buf[i] = g_settings.selected_packages[i];
+			if (buf[i] != ';')
 				continue;
-			buffer[i] = '\0';
+			buf[i] = '\0';
 			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
-			start = buffer + i + 1;
+			start = buf + i + 1;
 		}
 		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
 	}
 
 	char path[MAX_PATH];
-	WIN32_FIND_DATAA findFileData;
-	char *pathEnd = path + sprintf(path, "%lsrepos\\*", gDataDir) - 1;
+	WIN32_FIND_DATAA find_fileData;
+	char *path_end = path + sprintf(path, "%lsrepos\\*", g_data_dir) - 1;
 
-	HANDLE find = FindFirstFileA(path, &findFileData);
+	HANDLE find = FindFirstFileA(path, &find_fileData);
 	do {
-		if (findFileData.cFileName[0] == '.')
+		if (find_fileData.cFileName[0] == '.')
 			continue;
-		sprintf(pathEnd, "%s\\versions.gz", findFileData.cFileName);
+		sprintf(path_end, "%s\\versions.gz", find_fileData.cFileName);
 		gzFile file = gzopen(path, "rb");
 
-		char buff[1024];
+		char buf[1024];
 		char root[1024] = {};
 		HTREEITEM rootItems[5] = {};
 
-		while (gzgets(file, buff, sizeof(buff))) {
-			*strchr(buff, ',') = '\0';
+		while (gzgets(file, buf, sizeof(buf))) {
+			*strchr(buf, ',') = '\0';
 
 			size_t rootLevel = 0;
 			int start = 0;
 			int i=0;
-			for (; buff[i]; ++i) {
-				if (root[i] != buff[i])
+			for (; buf[i]; ++i) {
+				if (root[i] != buf[i])
 					break;
-				if (buff[i] == ':') {
+				if (buf[i] == ':') {
 					++rootLevel;
 					start = i + 1;
 				}
 			}
 
 			for ( ; ; ++i) {
-				root[i] = buff[i];
-				if (buff[i] && buff[i] != ':')
+				root[i] = buf[i];
+				if (buf[i] && buf[i] != ':')
 					continue;
 				root[i] = '\0';
 
-				TVINSERTSTRUCTA info = {rootItems[rootLevel], buff[i] ? TVI_SORT : 0};
-				info.item = (TVITEMA){TVIF_TEXT, .pszText = &root[start], .cChildren = !buff[i]};
+				TVINSERTSTRUCTA info = {rootItems[rootLevel], buf[i] ? TVI_SORT : 0};
+				info.item = (TVITEMA){TVIF_TEXT, .pszText = &root[start], .cChildren = !buf[i]};
 				rootItems[++rootLevel] = (HTREEITEM)SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_INSERTITEMA, 0, (LPARAM)&info);
 
-				if (!buff[i])
+				if (!buf[i])
 					break;
-				root[i] = buff[i];
+				root[i] = buf[i];
 				start = i + 1;
 			}
 		}
 		gzclose(file);
 
-	} while (FindNextFileA(find, &findFileData));
+	} while (FindNextFileA(find, &find_fileData));
 	FindClose(find);
 }
 
 
-static BOOL CALLBACK rapidProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static BOOL CALLBACK
+rapid_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		rapid_OnInit(window);
+		rapid_on_init(window);
 		return 0;
 	case WM_NOTIFY:
 	{
 		NMHDR *info = (NMHDR *)lParam;
 		if (info->idFrom == IDC_RAPID_AVAILABLE
 				&& (info->code == NM_DBLCLK || info->code == NM_RETURN)) {
-			rapid_addAvailable(window, 0);
+			rapid_add_available(window, 0);
 		}
 		return 0;
 	}
@@ -634,16 +652,16 @@ static BOOL CALLBACK rapidProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 		switch (wParam) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
-			HWND listBox = GetDlgItem(window, IDC_RAPID_SELECTED);
-			int nbPackages = SendMessageA(listBox, LB_GETCOUNT, 0, 0);
+			HWND list_box = GetDlgItem(window, IDC_RAPID_SELECTED);
+			int nbPackages = SendMessageA(list_box, LB_GETCOUNT, 0, 0);
 			char text[1024];
 			char *s = text;
 			for (int i=0; i<nbPackages; ++i) {
 				*s++ = ';';
-				s += SendMessageA(listBox, LB_GETTEXT, i, (LPARAM)s);
+				s += SendMessageA(list_box, LB_GETTEXT, i, (LPARAM)s);
 			}
-			gSettings.selected_packages = _strdup(text + 1);
-			GetSelectedPackages();
+			g_settings.selected_packages = _strdup(text + 1);
+			Downloader_get_selected_packages();
 		}
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -656,16 +674,16 @@ static BOOL CALLBACK rapidProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 			return 0;
 		}
 		case MAKEWPARAM(IDC_RAPID_SELECT, BN_CLICKED):
-			rapid_addAvailable(window, 0);
+			rapid_add_available(window, 0);
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_DOWNLOAD, BN_CLICKED):
-			rapid_addAvailable(window, 1);
+			rapid_add_available(window, 1);
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_ERRORCHECK, BN_CLICKED):
-			// MyMessageBox(NULL, "Not implemented yet");
+			// MainWindow_msg_box(NULL, "Not implemented yet");
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_CLEANUP, BN_CLICKED):
-			// MyMessageBox(NULL, "Not implemented yet");
+			// MainWindow_msg_box(NULL, "Not implemented yet");
 			return 0;
 		} break;
 	}
@@ -673,60 +691,69 @@ static BOOL CALLBACK rapidProc(HWND window, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 
-void CreateAgreementDlg(FILE *agreement)
+void
+CreateAgreementDlg(FILE *agreement)
 {
-	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_AGREEMENT), gMainWindow, agreementProc, (LPARAM)agreement);
+	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_AGREEMENT), g_main_window, agreement_proc, (LPARAM)agreement);
 	fclose(agreement);
 }
 
-void CreatePreferencesDlg(void)
+void
+CreatePreferencesDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_PREFERENCES), gMainWindow, preferencesProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_PREFERENCES), g_main_window, preferences_proc);
 }
 
-LPARAM GetTextDlg2(HWND window, const char *title, char *buff, size_t buffLen)
+LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len)
 {
-	const char *param[] = {title, buff, (void *)buffLen};
-	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), window, getTextProc, (LPARAM)param);
+	const char *param[] = {title, buf, (void *)buf_len};
+	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), window, get_text_proc, (LPARAM)param);
 }
 
-LPARAM GetTextDlg(const char *title, char *buff, size_t buffLen)
+LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len)
 {
-	const char *param[] = {title, buff, (void *)buffLen};
-	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), gMainWindow, getTextProc, (LPARAM)param);
+	const char *param[] = {title, buf, (void *)buf_len};
+	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), g_main_window, get_text_proc, (LPARAM)param);
 }
 
-void CreateChangePasswordDlg(void)
+void
+CreateChange_passwordDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_CHANGEPASSWORD), gMainWindow, changePasswordProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_CHANGEPASSWORD), g_main_window, change_password_proc);
 }
 
-void CreateLoginBox(void)
+void
+CreateLoginBox(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_LOGIN), gMainWindow, loginProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_LOGIN), g_main_window, login_proc);
 }
 
-void CreateHostBattleDlg(void)
+void
+CreateHostBattleDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_HOST), gMainWindow, hostProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_HOST), g_main_window, host_proc);
 }
 
-void CreateColorDlg(union UserOrBot *u)
+void
+CreateColorDlg(union UserOrBot *u)
 {
-	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_COLOR), gMainWindow, colorProc, (LPARAM)u);
+	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_COLOR), g_main_window, color_proc, (LPARAM)u);
 }
 
-void CreateAboutDlg(void)
+void
+CreateAboutDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_ABOUT), gMainWindow, aboutProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_ABOUT), g_main_window, about_proc);
 }
 
-void CreateReplayDlg(void)
+void
+CreateReplayDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), gMainWindow, replayListProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), g_main_window, replayList_proc);
 }
 
-void CreateRapidDlg(void)
+void
+CreateRapidDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), gMainWindow, rapidProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), g_main_window, rapid_proc);
 }

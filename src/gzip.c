@@ -20,12 +20,13 @@
 #include <stdlib.h>
 #include <zlib.h>
 
-void InflateGzip(void *restrict src, size_t srcLen, void *restrict dst, size_t dstLen)
+void
+Gzip_inflate(void *restrict src, size_t src_len, void *restrict dst, size_t dst_len)
 {
 	z_stream stream = {
-		.avail_in = srcLen,
+		.avail_in = src_len,
 		.next_in = src,
-		.avail_out = dstLen,
+		.avail_out = dst_len,
 		.next_out =  dst,
 	};
 	inflateInit2(&stream, 15 + 16);
@@ -34,19 +35,20 @@ void InflateGzip(void *restrict src, size_t srcLen, void *restrict dst, size_t d
 	assert(!stream.avail_out && !stream.avail_in);
 }
 
-void *DeflateGzip(void *src, size_t *len)
+void *
+Gzip_deflate(void *src, size_t *len)
 {
 	z_stream stream = {
 		.avail_in = *len,
 		.next_in = src,
 	};
 	deflateInit2(&stream, 9, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
-	size_t dstLen = deflateBound(&stream, *len);
-	void *dst = malloc(dstLen);
-	stream.avail_out = dstLen;
+	size_t dst_len = deflateBound(&stream, *len);
+	void *dst = malloc(dst_len);
+	stream.avail_out = dst_len;
 	stream.next_out = dst;
 	deflate(&stream, Z_FINISH);
-	*len = dstLen - stream.avail_out;
+	*len = dst_len - stream.avail_out;
 	deflateEnd(&stream);
 	return dst;
 }

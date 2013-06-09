@@ -25,12 +25,12 @@ int main(int argc, char **argv)
 	setmode(STDIN_FILENO, O_BINARY);
 
 	puts("static const uint8_t iconData[] = {");
-	uint8_t buff[16384];
+	uint8_t buf[16384];
 	size_t len;
-	while ((len = fread(buff, 1, sizeof(buff), stdin))) {
+	while ((len = fread(buf, 1, sizeof(buf), stdin))) {
 		for (int i=0; i < len / 4; ++i)
 			fprintf(stdout, "0x%X, 0x%X, 0x%X, 0x%X, \n",
-			buff[i*4+2], buff[i*4+1], buff[i*4], buff[i*4+3]);
+			buf[i*4+2], buf[i*4+1], buf[i*4], buf[i*4+3]);
 	}
 	puts("};\n");
 	return 0;

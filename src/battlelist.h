@@ -22,11 +22,12 @@
 #define WC_BATTLELIST L"BattleListClass"
 
 struct Battle;
+
 void BattleList_UpdateBattle(struct Battle *);
 void BattleList_CloseBattle(struct Battle *);
 void BattleList_OnEndLoginInfo(void);
-void BattleList_Reset(void);
+void BattleList_reset(void);
 
-extern HWND gBattleList;
+extern HWND g_battle_list;
 
 #endif /* end of include guard: BATTLELIST_H */
