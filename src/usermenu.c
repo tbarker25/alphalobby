@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -48,8 +49,8 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 
 	HMENU menus[100];
 
-	int lastMenu = AI_MENU;
-	for (int i=0; i<=lastMenu; ++i)
+	int last_menu = AI_MENU;
+	for (int i=0; i<=last_menu; ++i)
 		menus[i] = CreatePopupMenu();
 
 	uint32_t battle_status = s->battle_status;
@@ -133,17 +134,17 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 			// s->bot.dll = malloc(len+1);
 			// GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
 			// free(s->bot.options);
-			// s->bot.nbOptions = Sync_ai_option_count(s->bot.dll);
-			// s->bot.options = calloc(s->bot.nbOptions, sizeof(*s->bot.options));
-			// UnitSync_GetOptions(s->bot.options, s->bot.nbOptions);
+			// s->bot.option_count = Sync_ai_option_count(s->bot.dll);
+			// s->bot.options = calloc(s->bot.option_count, sizeof(*s->bot.options));
+			// UnitSync_GetOptions(s->bot.options, s->bot.option_count);
 		// } else if (clicked & AI_OPTIONS_FLAG) {
 			// Option2 *opt= &s->bot.options[clicked & 0xFF];
 			// switch (opt->type) {
 			// case opt_list:
-				// strcpy(opt->val, opt->listItems[clicked >> 8 & 0xFF].key);
+				// strcpy(opt->val, opt->list_items[clicked >> 8 & 0xFF].key);
 				// break;
 			// case opt_number:
-				// GetTextDlg(opt->name, opt->val, opt->val - opt->extraData + sizeof(opt->extraData));
+				// GetTextDlg(opt->name, opt->val, opt->val - opt->extra_data + sizeof(opt->extra_data));
 				// break;
 			// case opt_bool:
 				// opt->val[0] ^= '0' ^ '1';
@@ -159,6 +160,6 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 		break;
 	}
 
-	for (int i=0; i<=lastMenu; ++i)
+	for (int i=0; i<=last_menu; ++i)
 		DestroyMenu(menus[i]);
 }

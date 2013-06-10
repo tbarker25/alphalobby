@@ -30,7 +30,7 @@
 HWND
 CreateDlgItem(HWND parent, const DialogItem *item, int dialog_id)
 {
-	HWND window = CreateWindowEx(item->exStyle, item->class, item->name, item->style | (parent ? WS_CHILD : 0),
+	HWND window = CreateWindowEx(item->ex_style, item->class, item->name, item->style | (parent ? WS_CHILD : 0),
 		0, 0, 0, !item->class || wcscmp(item->class, WC_COMBOBOXEX) ? 0 : 1000,
 		parent, (HMENU)dialog_id, NULL, NULL);
 
@@ -46,11 +46,11 @@ CreateDlgItems(HWND parent, const DialogItem items[], size_t n)
 
 #undef CreateWindowExW
 HWND
-MyCreateWindowExW(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowName, DWORD dwStyle,
-		int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lp_param)
+MyCreateWindowExW(DWORD dwEx_style, LPCTSTR lp_class_name, LPCTSTR lp_window_name, DWORD dwStyle,
+		int x, int y, int n_width, int n_height, HWND hWnd_parent, HMENU hMenu, HINSTANCE hInstance, LPVOID lp_param)
 {
-	HWND window = CreateWindowEx(dwExStyle, lpClassName, lpWindowName, dwStyle,
-			x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lp_param);
+	HWND window = CreateWindowEx(dwEx_style, lp_class_name, lp_window_name, dwStyle,
+			x, y, n_width, n_height, hWnd_parent, hMenu, hInstance, lp_param);
 	SendMessage(window, WM_SETFONT, (WPARAM)g_font, TRUE);
 	return window;
 }

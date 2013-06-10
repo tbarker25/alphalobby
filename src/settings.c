@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -37,13 +38,13 @@
 
 typedef struct KeyPair{
 	char *key, *val;
-	char isInt;
+	char is_int;
 }KeyPair;
 
 typeof(g_settings) g_settings;
 wchar_t g_data_dir[MAX_PATH];
 
-static const KeyPair defaultSettings[] = {
+static const KeyPair default_settings[] = {
 	{"spring_path", "spring.exe"},
 	{"flags", (void *)0x17, 1},
 	{"autojoin", "main"},
@@ -133,18 +134,18 @@ Settings_init(void)
 		fclose(fd);
 	}
 
-	for(int i=0; i<LENGTH(defaultSettings); ++i)
-		((char **)&g_settings)[i] = defaultSettings[i].isInt ? defaultSettings[i].val
-		                         : defaultSettings[i].val ? _strdup(defaultSettings[i].val)
+	for(int i=0; i<LENGTH(default_settings); ++i)
+		((char **)&g_settings)[i] = default_settings[i].is_int ? default_settings[i].val
+		                         : default_settings[i].val ? _strdup(default_settings[i].val)
 								 : NULL;
 
 	fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
 		return;
 	for (KeyPair s; (s = get_line(fd)).key;)
-		for(int i=0; i<LENGTH(defaultSettings); ++i)
-			if (!strcmp(defaultSettings[i].key, s.key)) {
-				if (defaultSettings[i].isInt)
+		for(int i=0; i<LENGTH(default_settings); ++i)
+			if (!strcmp(default_settings[i].key, s.key)) {
+				if (default_settings[i].is_int)
 					((intptr_t *)&g_settings)[i] = atoi(s.val);
 				else {
 					free(((char **)&g_settings)[i]);
@@ -169,47 +170,47 @@ void
 Settings_save_str(const char *key, const char *val)
 {
 	printf("saving %s=%s\n", key, val);
-	wchar_t tmpConfigName[MAX_PATH];
-	GetTempPath(MAX_PATH, tmpConfigName);
-	GetTempFileName(tmpConfigName, NULL, 0, tmpConfigName);
+	wchar_t tmp_config_name[MAX_PATH];
+	GetTempPath(MAX_PATH, tmp_config_name);
+	GetTempFileName(tmp_config_name, NULL, 0, tmp_config_name);
 
-	FILE *tmpConfig = _wfopen(tmpConfigName, L"w");
-	assert(tmpConfig);
-	if (!tmpConfig)
+	FILE *tmp_config = _wfopen(tmp_config_name, L"w");
+	assert(tmp_config);
+	if (!tmp_config)
 		return;
 
 	const wchar_t *config_path = Settings_get_data_dir(L"alphalobby.conf");
 
-	FILE *oldConfig = _wfopen(config_path, L"r");
-	if (oldConfig) {
-		for (KeyPair s; (s = get_line(oldConfig)).key;) {
+	FILE *old_config = _wfopen(config_path, L"r");
+	if (old_config) {
+		for (KeyPair s; (s = get_line(old_config)).key;) {
 			if (key && !strcmp(key, s.key))
-				goto skipKey;
-			for(int i=0; i<LENGTH(defaultSettings); ++i)
-				if (!strcmp(defaultSettings[i].key, s.key))
-					goto skipKey;
-			fprintf(tmpConfig, "%s=%s\n", s.key, s.val);
-			skipKey:;
+				goto skip_key;
+			for(int i=0; i<LENGTH(default_settings); ++i)
+				if (!strcmp(default_settings[i].key, s.key))
+					goto skip_key;
+			fprintf(tmp_config, "%s=%s\n", s.key, s.val);
+			skip_key:;
 		}
-		fclose(oldConfig);
+		fclose(old_config);
 	}
 
 	if (key && *val)
-		fprintf(tmpConfig, "%s=%s\n", key, val);
+		fprintf(tmp_config, "%s=%s\n", key, val);
 
-	for (int i=0; i<LENGTH(defaultSettings); ++i) {
-		if (defaultSettings[i].isInt)
-			fprintf(tmpConfig, "%s=%d\n", defaultSettings[i].key, ((int *)&g_settings)[i]);
+	for (int i=0; i<LENGTH(default_settings); ++i) {
+		if (default_settings[i].is_int)
+			fprintf(tmp_config, "%s=%d\n", default_settings[i].key, ((int *)&g_settings)[i]);
 		else if (((void **)&g_settings)[i])
-			fprintf(tmpConfig, "%s=%s\n", defaultSettings[i].key, ((char **)&g_settings)[i]);
+			fprintf(tmp_config, "%s=%s\n", default_settings[i].key, ((char **)&g_settings)[i]);
 	}
 
-	fclose(tmpConfig);
+	fclose(tmp_config);
 
 	#ifdef NDEBUG
-		MoveFileEx(tmpConfigName, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
+		MoveFileEx(tmp_config_name, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
 	#else
-	if (!MoveFileEx(tmpConfigName, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
+	if (!MoveFileEx(tmp_config_name, config_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
 		printf("err = %ld\n", GetLastError());
 		assert(0);
 	}

@@ -85,15 +85,15 @@ set_map(const char *map_name)
 static void
 set_option(Option *opt, const char *val)
 {
-	Server_send("SAYPRIVATE %s !bSet %s %s",
+	Server_send("SAYPRIVATE %s !b_set %s %s",
 			g_my_battle->founder->name, opt->key, val);
 }
 
 static void
 set_split(int size, SplitType type)
 {
-	if (STARTPOS_CHOOSE_INGAME != g_battle_options.startPosType)
-		Server_send("SAYPRIVATE %s !bSet startpostype 2",
+	if (STARTPOS_CHOOSE_INGAME != g_battle_options.start_pos_type)
+		Server_send("SAYPRIVATE %s !b_set startpostype 2",
 				g_my_battle->founder->name);
 	Server_send("SAYPRIVATE %s !split %s %d",
 			g_my_battle->founder->name,

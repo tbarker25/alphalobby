@@ -25,7 +25,7 @@ enum ServerStatus {
 	CONNECTION_ONLINE,
 };
 
-void Server_connect(void (*onFinish)(void));
+void Server_connect(void (*on_finish)(void));
 void Server_disconnect(void);
 void Server_poll(void);
 void Server_send(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));

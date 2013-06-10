@@ -20,9 +20,9 @@
 #define USER_H
 
 typedef struct HWND__* HWND;
-extern char battleInfoFinished;
+extern bool g_battle_info_finished;
 
-enum modeType {
+enum ModeType {
 	MODE_SPECTATOR = 0,
 	MODE_PLAYER = 1,
 };
@@ -107,7 +107,7 @@ typedef struct Bot {
 	UserBot;
 
 	char *dll;
-	int nbOptions;
+	int option_count;
 	struct Option2 *options;
 	User *owner;
 	struct Bot *next;

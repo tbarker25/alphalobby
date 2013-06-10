@@ -39,15 +39,15 @@ const HostType g_host_relay = {
 };
 
 const char **g_relay_managers;
-int g_relay_managersCount;
+int g_relay_manager_count;
 
-static char relayCmd[1024];
-static char relayHoster[MAX_NAME_LENGTH_NUL];
-static char relayManager[MAX_NAME_LENGTH_NUL];
+static char relay_cmd[1024];
+static char relay_hoster[MAX_NAME_LENGTH_NUL];
+static char relay_manager[MAX_NAME_LENGTH_NUL];
 static char relay_password[1024];
 
 #define RelayMessage(format, ...) \
-	(Server_send("SAYPRIVATE %s " format, relayHoster, ## __VA_ARGS__))
+	(Server_send("SAYPRIVATE %s " format, relay_hoster, ## __VA_ARGS__))
 
 bool
 RelayHost_on_private_message(const char *username, char *command)
@@ -59,22 +59,22 @@ RelayHost_on_private_message(const char *username, char *command)
 	}
 
 	// If we are starting a relayhost game, then manager sends the name of the host to join:
-	if (!strcmp(username, relayManager)){
-		strcpy(relayHoster, command);
-		*relayManager = '\0';
+	if (!strcmp(username, relay_manager)){
+		strcpy(relay_hoster, command);
+		*relay_manager = '\0';
 		return true;
 
 	}
 
 	// Relayhoster sending a users script password:
-	if (!strcmp(username, relayHoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)){
+	if (!strcmp(username, relay_hoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)){
 		/* command += sizeof("JOINEDBATTLE ") - 1; */
 		/* size_t len = strcspn(command, " "); */
-		/* getNextWord(); */
-		/* User *u = Users_find(getNextWord()); */
+		/* get_next_word(); */
+		/* User *u = Users_find(get_next_word()); */
 		/* if (u) { */
 			/* free(u->script_password); */
-			/* u->script_password = _strdup(getNextWord()); */
+			/* u->script_password = _strdup(get_next_word()); */
 		/* } */
 		return true;
 	}
@@ -95,8 +95,8 @@ handle_manager_list(char *command)
 		User *u = Users_find(c);
 		if (u) {
 			g_relay_managers = realloc(g_relay_managers,
-					(g_relay_managersCount+1) * sizeof(*g_relay_managers));
-			g_relay_managers[g_relay_managersCount++] = u->name;
+					(g_relay_manager_count+1) * sizeof(*g_relay_managers));
+			g_relay_managers[g_relay_manager_count++] = u->name;
 		}
 	}
 }
@@ -105,35 +105,35 @@ void
 RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager)
 //OPENBATTLE type nat_type password port maxplayers hashcode rank maphash {map} {title} {modname}
 {
-	sprintf(relayCmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
+	sprintf(relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
 	strcpy(relay_password, password ?: "*");
-	strcpy(relayManager, manager);
-	Server_send("SAYPRIVATE %s !spawn", relayManager);
+	strcpy(relay_manager, manager);
+	Server_send("SAYPRIVATE %s !spawn", relay_manager);
 }
 
 void
 RelayHost_on_add_user(const char *username)
 {
-	if (!strcmp(username, relayHoster) && *relayCmd) {
-		Server_send(relayCmd);
-		*relayCmd = '\0';
+	if (!strcmp(username, relay_hoster) && *relay_cmd) {
+		Server_send(relay_cmd);
+		*relay_cmd = '\0';
 	}
 }
 
 void
 RelayHost_on_battle_opened(const Battle *b)
 {
-	if (!strcmp(b->founder->name, relayHoster))
+	if (!strcmp(b->founder->name, relay_hoster))
 		JoinBattle(b->id, relay_password);
 }
 
 /* void
-relayMessage() */
+relay_message() */
 		/* { */
-		/* extern char relayHoster[1024]; */
-		/* if (*relayHoster) */
+		/* extern char relay_hoster[1024]; */
+		/* if (*relay_hoster) */
 			/* command_start = sprintf(buf, "SAYPRIVATE %s ", */
-					/* relayHoster); */
+					/* relay_hoster); */
 		/* else */
 			/* ++format; */
 	/* } */
@@ -152,7 +152,7 @@ force_team(const char *name, int team)
 }
 
 /* static void
-forceColor(const char *name, uint32_t color)    */
+force_color(const char *name, uint32_t color)    */
 /* {                                                           */
 /*         RelayMessage("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
@@ -191,13 +191,13 @@ set_option(Option *opt, const char *val)
 }
 
 static void
-addStartBox(int i, int left, int top, int right, int bottom)
+add_start_box(int i, int left, int top, int right, int bottom)
 {
 	RelayMessage("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
 static void
-delStartBox(int i)
+del_start_box(int i)
 {
 	RelayMessage("REMOVESTARTRECT %d", i);
 }
@@ -207,28 +207,28 @@ set_split(int size, SplitType type)
 {
 	switch (type) {
 	case SPLIT_HORZ:
-		addStartBox(0, 0, 0, size, 200);
-		addStartBox(1, 200 - size, 0, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
+		add_start_box(0, 0, 0, size, 200);
+		add_start_box(1, 200 - size, 0, 200, 200);
+		del_start_box(2);
+		del_start_box(3);
 		break;
 	case SPLIT_VERT:
-		addStartBox(0, 0, 0, 200, size);
-		addStartBox(1, 0, 200 - size, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
+		add_start_box(0, 0, 0, 200, size);
+		add_start_box(1, 0, 200 - size, 200, 200);
+		del_start_box(2);
+		del_start_box(3);
 		break;
 	case SPLIT_CORNERS1:
-		addStartBox(0, 0, 0, size, size);
-		addStartBox(1, 200 - size, 200 - size, 200, 200);
-		addStartBox(2, 0, 200 - size, size, 200);
-		addStartBox(3, 200 - size, 0, 200, size);
+		add_start_box(0, 0, 0, size, size);
+		add_start_box(1, 200 - size, 200 - size, 200, 200);
+		add_start_box(2, 0, 200 - size, size, 200);
+		add_start_box(3, 200 - size, 0, 200, size);
 		break;
 	case SPLIT_CORNERS2:
-		addStartBox(0, 0, 200 - size, size, 200);
-		addStartBox(1, 200 - size, 0, 200, size);
-		addStartBox(2, 0, 0, size, size);
-		addStartBox(3, 200 - size, 200 - size, 200, 200);
+		add_start_box(0, 0, 200 - size, size, 200);
+		add_start_box(1, 200 - size, 0, 200, size);
+		add_start_box(2, 0, 0, size, size);
+		add_start_box(3, 200 - size, 200 - size, 200, 200);
 		break;
 	default:
 		assert(0);

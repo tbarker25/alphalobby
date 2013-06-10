@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -32,47 +33,47 @@
 #include "chat_window.h"
 #include "chat.h"
 
-static HWND userList;
+static HWND user_list;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 static void
 activate(int item_index)
 {
-	LVITEM itemInfo;
-	itemInfo.mask = LVIF_PARAM;
-	itemInfo.iItem = item_index;
-	itemInfo.iSubItem = 2;
-	ListView_GetItem(userList, &itemInfo);
-	ChatWindow_set_active_tab(Chat_get_private_window((User *)itemInfo.lParam));
+	LVITEM item_info;
+	item_info.mask = LVIF_PARAM;
+	item_info.iItem = item_index;
+	item_info.iSubItem = 2;
+	ListView_GetItem(user_list, &item_info);
+	ChatWindow_set_active_tab(Chat_get_private_window((User *)item_info.lParam));
 }
 
 static void
-onInit(HWND window)
+on_init(HWND window)
 {
 	RECT rect;
-	LVCOLUMN columnInfo;
+	LVCOLUMN column_info;
 
-	DestroyWindow(GetParent(userList));
-	userList = GetDlgItem(window, IDC_USERLIST_LIST);
+	DestroyWindow(GetParent(user_list));
+	user_list = GetDlgItem(window, IDC_USERLIST_LIST);
 
-	SetWindowLongPtr(userList, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
+	SetWindowLongPtr(user_list, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
 			| LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING |
 			LVS_NOCOLUMNHEADER);
 
-	ListView_SetExtendedListViewStyle(userList, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-	EnableIconList(userList);
+	ListView_SetExtendedListViewStyle(user_list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+	EnableIconList(user_list);
 
-	GetClientRect(userList, &rect);
-	columnInfo.mask = LVCF_SUBITEM | LVCF_WIDTH;
+	GetClientRect(user_list, &rect);
+	column_info.mask = LVCF_SUBITEM | LVCF_WIDTH;
 
-	columnInfo.cx = rect.right - ICON_SIZE - scroll_width;
-	columnInfo.iSubItem = 0;
-	ListView_InsertColumn(userList, 0, (LPARAM)&columnInfo);
+	column_info.cx = rect.right - ICON_SIZE - scroll_width;
+	column_info.iSubItem = 0;
+	ListView_InsertColumn(user_list, 0, (LPARAM)&column_info);
 
-	columnInfo.cx = ICON_SIZE;
-	columnInfo.iSubItem = 1;
-	ListView_InsertColumn(userList, 1, (LPARAM)&columnInfo);
+	column_info.cx = ICON_SIZE;
+	column_info.iSubItem = 1;
+	ListView_InsertColumn(user_list, 1, (LPARAM)&column_info);
 
 	for (const User *u; (u = Users_get_next());) {
 		if (!*u->name)
@@ -101,27 +102,27 @@ onInit(HWND window)
 		item.state = INDEXTOOVERLAYMASK(icon_index);
 		item.stateMask = LVIS_OVERLAYMASK;
 
-		item.iItem = ListView_InsertItem(userList, &item);
+		item.iItem = ListView_InsertItem(user_list, &item);
 
 		item.mask = LVIF_IMAGE;
 		item.iImage = ICONS_FIRST_FLAG + u->country;
 		item.iSubItem = 1;
-		ListView_SetItem(userList, &item);
+		ListView_SetItem(user_list, &item);
 	}
 }
 
 static BOOL CALLBACK
-user_list_proc(HWND window, UINT msg, WPARAM wParam,
-		LPARAM lParam)
+user_list_proc(HWND window, UINT msg, WPARAM w_param,
+		LPARAM l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		onInit(window);
+		on_init(window);
 		return 0;
 	case WM_COMMAND:
-		switch (wParam) {
+		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(userList, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(user_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
@@ -129,13 +130,13 @@ user_list_proc(HWND window, UINT msg, WPARAM wParam,
 		}
 		return 0;
 	case WM_NOTIFY:
-		if (((LPNMHDR)lParam)->code == LVN_ITEMACTIVATE) {
-			activate(((LPNMITEMACTIVATE)lParam)->iItem);
+		if (((LPNMHDR)l_param)->code == LVN_ITEMACTIVATE) {
+			activate(((LPNMITEMACTIVATE)l_param)->iItem);
 			DestroyWindow(window);
 		}
 		return 0;
 	case WM_DESTROY:
-		userList = NULL;
+		user_list = NULL;
 		return 0;
 	default:
 		return 0;

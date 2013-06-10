@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 {
 	setmode(STDIN_FILENO, O_BINARY);
 
-	puts("static const uint8_t iconData[] = {");
+	puts("static const uint8_t icon_data[] = {");
 	uint8_t buf[16384];
 	size_t len;
 	while ((len = fread(buf, 1, sizeof(buf), stdin))) {

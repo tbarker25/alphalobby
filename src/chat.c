@@ -21,6 +21,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -76,7 +77,7 @@ typedef struct ChatWindowData {
 
 typedef struct InputBoxData {
 	int last_index, end, last_pos, offset;
-	wchar_t buf[8192], *inputHint, *buffTail;
+	wchar_t buf[8192], *input_hint, *buffTail;
 }InputBoxData;
 
 static const char *chat_strings[] = {"SAYBATTLE", "SAYPRIVATE ", "SAY "};
@@ -86,7 +87,7 @@ static HWND channel_windows[128];
 static HWND server_chat_window;
 extern HWND tab_control;
 
-static const COLORREF chatColors[CHAT_LAST+1] = {
+static const COLORREF chat_colors[CHAT_LAST+1] = {
 	[CHAT_EX] = RGB(225,152,163),
 	[CHAT_INGAME] = RGB(90,122,150),
 	[CHAT_SELF] = RGB(50,170,230),
@@ -101,15 +102,15 @@ static const COLORREF chatColors[CHAT_LAST+1] = {
 static DialogItem dialog_items[] = {
 	[DLG_LOG] = {
 		.class = RICHEDIT_CLASS,
-		.exStyle = WS_EX_WINDOWEDGE,
+		.ex_style = WS_EX_WINDOWEDGE,
 		.style = WS_VISIBLE | WS_TABSTOP | ES_MULTILINE | ES_READONLY | WS_VSCROLL,
 	}, [DLG_INPUT] = {
 		.class = WC_EDIT,
-		.exStyle = WS_EX_CLIENTEDGE,
+		.ex_style = WS_EX_CLIENTEDGE,
 		.style = WS_VISIBLE | ES_AUTOHSCROLL,
 	}, [DLG_LIST] = {
 		.class = WC_LISTVIEW,
-		.exStyle = WS_EX_CLIENTEDGE,
+		.ex_style = WS_EX_CLIENTEDGE,
 		.style = WS_VISIBLE | LVS_SHAREIMAGELISTS | LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING | LVS_NOCOLUMNHEADER,
 	}
 };
@@ -124,7 +125,7 @@ Chat_on_left_battle(HWND window, User *u)
 }
 
 static void
-updateUser(HWND window, User *u, int index)
+update_user(HWND window, User *u, int index)
 {
 	char *name;
 	if (!strcmp(UNTAGGED_NAME(u->name), u->alias))
@@ -170,7 +171,7 @@ enum_child_proc(HWND window, LPARAM user)
 			(LPARAM)&find_info);
 
 	if (index >= 0)
-		updateUser(list, (User *)user, index);
+		update_user(list, (User *)user, index);
 
 	return 1;
 }
@@ -192,7 +193,7 @@ Chat_add_user(HWND window, User *u)
 	item.lParam = (LPARAM)u;
 
 	int index = SendMessage(list, LVM_INSERTITEMA, 0, (LPARAM)&item);
-	updateUser(list, u, index);
+	update_user(list, u, index);
 
 	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
 		.mask = LVIF_IMAGE, .iImage = ICONS_FIRST_FLAG + u->country,
@@ -206,7 +207,7 @@ Chat_add_user(HWND window, User *u)
 }
 
 static void
-onTab(HWND window, UINT_PTR type, InputBoxData *data)
+on_tab(HWND window, UINT_PTR type, InputBoxData *data)
 {
 	char text[MAX_TEXT_MESSAGE_LENGTH];
 	GetWindowTextA(window, text, LENGTH(text));
@@ -235,32 +236,32 @@ onTab(HWND window, UINT_PTR type, InputBoxData *data)
 		return;
 
 	data->last_index %= count;
-	LVITEM itemInfo = {LVIF_PARAM, data->last_index};
+	LVITEM item_info = {LVIF_PARAM, data->last_index};
 	do {
-		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&itemInfo);
-		const char *name = ((User *)itemInfo.lParam)->name;
+		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&item_info);
+		const char *name = ((User *)item_info.lParam)->name;
 		const char *s = NULL;
 		if (!_strnicmp(name, text+start, strlen(text+start))
 				|| ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
-			data->last_index = itemInfo.iItem + 1;
+			data->last_index = item_info.iItem + 1;
 			SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
 			data->offset = s ? s - name + 1 : 0;
 			SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
 			break;
 		}
-		itemInfo.iItem = (itemInfo.iItem + 1) % count;
-	} while (itemInfo.iItem != data->last_index);
+		item_info.iItem = (item_info.iItem + 1) % count;
+	} while (item_info.iItem != data->last_index);
 
 	data->last_pos = SendMessage(window, EM_GETSEL, 0, 0);
 }
 
 static void
-on_escape_command(char *s, UINT_PTR type, const wchar_t *destName, HWND window)
+on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 {
 	char *code = strsep(&s, " ");
 
 	if (!strcmp(code, "me"))
-		Server_send("%s%s %s", chat_ex_strings[type], utf16to8(destName), s + LENGTH("me ") - 1);
+		Server_send("%s%s %s", chat_ex_strings[type], utf16to8(dest_name), s + LENGTH("me ") - 1);
 	else if (!strcmp(code, "resync"))
 		Sync_reload();
 	else if (!strcmp(code, "dlmap"))
@@ -285,11 +286,11 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *destName, HWND window)
 	else if (!strcmp(code, "ingametime"))
 		Server_send("GETINGAMETIME");
 	else if (!strcmp(code, "split")) {
-		char *splitType = strsep(&s, " ");
-		SplitType type = !strcmp(splitType, "h") ? SPLIT_HORZ
-			: !strcmp(splitType, "v") ? SPLIT_VERT
-			: !strcmp(splitType, "c1") ? SPLIT_CORNERS1
-			: !strcmp(splitType, "c2") ? SPLIT_CORNERS2
+		char *split_type = strsep(&s, " ");
+		SplitType type = !strcmp(split_type, "h") ? SPLIT_HORZ
+			: !strcmp(split_type, "v") ? SPLIT_VERT
+			: !strcmp(split_type, "c1") ? SPLIT_CORNERS1
+			: !strcmp(split_type, "c2") ? SPLIT_CORNERS2
 			: SPLIT_LAST+1;
 		if (type <= SPLIT_LAST)
 			MyBattle_set_split(type, atoi(s));
@@ -299,39 +300,39 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *destName, HWND window)
 }
 
 static LRESULT CALLBACK
-input_box_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam,
+input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 		UINT_PTR type, InputBoxData *data)
 {
 	if (msg != WM_KEYDOWN)
 		goto done;
 
-	if (wParam != VK_TAB)
+	if (w_param != VK_TAB)
 		data->end = -1;
 
-	switch (wParam) {
+	switch (w_param) {
 	case VK_TAB:
-		onTab(window, type, data);
+		on_tab(window, type, data);
 		return 0;
 	case VK_DOWN:
-		if (!data->inputHint)
+		if (!data->input_hint)
 			return 0;
-		while (++data->inputHint != data->buf
-				&& data->inputHint != data->buffTail
-				&& ((data->inputHint)[-1] || !*data->inputHint))
-			if (data->inputHint >= data->buf+LENGTH(data->buf)-1)
-				data->inputHint = data->buf - 1;
+		while (++data->input_hint != data->buf
+				&& data->input_hint != data->buffTail
+				&& ((data->input_hint)[-1] || !*data->input_hint))
+			if (data->input_hint >= data->buf+LENGTH(data->buf)-1)
+				data->input_hint = data->buf - 1;
 
-		SetWindowText(window, data->inputHint);
+		SetWindowText(window, data->input_hint);
 		return 0;
 	case VK_UP: {
-		if (!data->inputHint)
+		if (!data->input_hint)
 			return 0;
-		while ((--data->inputHint != data->buf)
-				&& data->inputHint != data->buffTail
-				&& ((data->inputHint)[-1] || !*data->inputHint))
-			if (data->inputHint < data->buf)
-				data->inputHint = data->buf + LENGTH(data->buf) - 1;
-		SetWindowText(window, data->inputHint);
+		while ((--data->input_hint != data->buf)
+				&& data->input_hint != data->buffTail
+				&& ((data->input_hint)[-1] || !*data->input_hint))
+			if (data->input_hint < data->buf)
+				data->input_hint = data->buf + LENGTH(data->buf) - 1;
+		SetWindowText(window, data->input_hint);
 	}	return 0;
 	case '\r': {
 		if (LENGTH(data->buf) - (data->buffTail - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
@@ -345,33 +346,33 @@ input_box_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam,
 		WideCharToMultiByte(CP_UTF8, 0, data->buffTail, -1, text_a, sizeof(text_a), NULL, NULL);
 
 		SetWindowText(window, NULL);
-		wchar_t destName[128];
-		GetWindowText(GetParent(window), destName, sizeof(destName));
+		wchar_t dest_name[128];
+		GetWindowText(GetParent(window), dest_name, sizeof(dest_name));
 		if (text_a[0] == '/') {
-			on_escape_command(text_a + 1, type, destName, window);
+			on_escape_command(text_a + 1, type, dest_name, window);
 		} else if (type == DEST_SERVER)
 			Server_send("%s", text_a);
 		else
-			Server_send("%s%s %s", chat_strings[type], utf16to8(destName), text_a);
+			Server_send("%s%s %s", chat_strings[type], utf16to8(dest_name), text_a);
 
 		SetWindowLongPtr(GetDlgItem(GetParent(window), DLG_LOG), GWLP_USERDATA, 0);
 		data->buffTail += len+1;
-		data->inputHint = data->buffTail;
+		data->input_hint = data->buffTail;
 	}	return 0;
 	}
 	done:
-	return DefSubclassProc(window, msg, wParam, lParam);
+	return DefSubclassProc(window, msg, w_param, l_param);
 }
 
 
 static LRESULT CALLBACK
-log_proc(HWND window, UINT msg, WPARAM wParam, LPARAM
-		lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+log_proc(HWND window, UINT msg, WPARAM w_param, LPARAM
+		l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	if (msg == WM_VSCROLL)
 		SetWindowLongPtr(window, GWLP_USERDATA, GetTickCount());
 
-	return DefSubclassProc(window, msg, wParam, lParam);
+	return DefSubclassProc(window, msg, w_param, l_param);
 }
 
 static void
@@ -393,26 +394,26 @@ on_size(HWND window, int width, int height)
 }
 
 static LRESULT CALLBACK
-chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
     switch (msg) {
 	case WM_CREATE: {
-		static ChatWindowData battleRoomData = {NULL, DEST_BATTLE};
-		ChatWindowData *data = ((CREATESTRUCT *)lParam)->lpCreateParams ?: &battleRoomData;
+		static ChatWindowData battle_room_data = {NULL, DEST_BATTLE};
+		ChatWindowData *data = ((CREATESTRUCT *)l_param)->lpCreateParams ?: &battle_room_data;
 		SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
 		if (data->name)
 			SetWindowTextA(window, data->name);
-		HWND logWindow = CreateDlgItem(window, &dialog_items[DLG_LOG], DLG_LOG);
-		SendMessage(logWindow, EM_EXLIMITTEXT, 0, INT_MAX);
-		SendMessage(logWindow, EM_AUTOURLDETECT, TRUE, 0);
-		SendMessage(logWindow, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-		SetWindowSubclass(logWindow, log_proc, 0, 0);
+		HWND log_window = CreateDlgItem(window, &dialog_items[DLG_LOG], DLG_LOG);
+		SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
+		SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
+		SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
+		SetWindowSubclass(log_window, log_proc, 0, 0);
 
-		HWND inputBox = CreateDlgItem(window, &dialog_items[DLG_INPUT], DLG_INPUT);
-		InputBoxData *inputBoxData = calloc(1, sizeof(*inputBoxData));
-		inputBoxData->buffTail = inputBoxData->buf;
+		HWND input_box = CreateDlgItem(window, &dialog_items[DLG_INPUT], DLG_INPUT);
+		InputBoxData *input_box_data = calloc(1, sizeof(*input_box_data));
+		input_box_data->buffTail = input_box_data->buf;
 
-		SetWindowSubclass(inputBox, (void *)input_box_proc, (UINT_PTR)data->type, (DWORD_PTR)inputBoxData);
+		SetWindowSubclass(input_box, (void *)input_box_proc, (UINT_PTR)data->type, (DWORD_PTR)input_box_data);
 
 		if (data->type >= DEST_CHANNEL) {
 			HWND list = CreateDlgItem(window, &dialog_items[DLG_LIST], DLG_LIST);
@@ -430,23 +431,23 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 		ChatWindow_remove_tab(window);
 	}	return 0;
 	case WM_SIZE:
-		on_size(window, LOWORD(lParam), HIWORD(lParam));
+		on_size(window, LOWORD(l_param), HIWORD(l_param));
 		return 1;
 	case WM_COMMAND:
-		if (wParam == MAKEWPARAM(DLG_LOG, EN_VSCROLL))
-			SetWindowLongPtr((HWND)lParam, GWLP_USERDATA, GetTickCount());
+		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL))
+			SetWindowLongPtr((HWND)l_param, GWLP_USERDATA, GetTickCount());
 		return 0;
 	case WM_NOTIFY: {
-		NMHDR *note = (NMHDR *)lParam;
+		NMHDR *note = (NMHDR *)l_param;
 		if (note->idFrom == DLG_LIST) {
 			LVITEM item = {
 					.mask = LVIF_PARAM,
 					.iItem = -1,
 				};
 			if (note->code == NM_RCLICK)
-				item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0, (LPARAM)&(LVHITTESTINFO){.pt = ((LPNMITEMACTIVATE)lParam)->ptAction});
+				item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0, (LPARAM)&(LVHITTESTINFO){.pt = ((LPNMITEMACTIVATE)l_param)->ptAction});
 			else if (note->code == LVN_ITEMACTIVATE)
-				item.iItem = ((LPNMITEMACTIVATE)lParam)->iItem;
+				item.iItem = ((LPNMITEMACTIVATE)l_param)->iItem;
 
 			if (item.iItem < 0)
 				break;
@@ -462,8 +463,8 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 			AppendMenu(menu, u->ignore * MF_CHECKED, 2, L"Ignore");
 			AppendMenu(menu, 0, 3, L"Set alias");
 			SetMenuDefaultItem(menu, 1, 0);
-			ClientToScreen(note->hwndFrom, &((LPNMITEMACTIVATE)lParam)->ptAction);
-			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, ((LPNMITEMACTIVATE)lParam)->ptAction.x, ((LPNMITEMACTIVATE)lParam)->ptAction.y, window, NULL);
+			ClientToScreen(note->hwndFrom, &((LPNMITEMACTIVATE)l_param)->ptAction);
+			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, ((LPNMITEMACTIVATE)l_param)->ptAction.x, ((LPNMITEMACTIVATE)l_param)->ptAction.y, window, NULL);
 			DestroyMenu(menu);
 			if (clicked == 1)
 				addtab:
@@ -481,7 +482,7 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 			return 0;
 
 		} else if (note->idFrom == DLG_LOG && note->code == EN_MSGFILTER) {
-			MSGFILTER *s = (void *)lParam;
+			MSGFILTER *s = (void *)l_param;
 			if (s->msg != WM_RBUTTONUP)
 				break;
 
@@ -507,12 +508,12 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 			case 1: {
 				CHARRANGE s;
 				SendMessage(note->hwndFrom, EM_EXGETSEL, 0, (LPARAM)&s);
-				HGLOBAL *memBuff = GlobalAlloc(GMEM_MOVEABLE, sizeof(wchar_t) * (s.cpMax - s.cpMin + 1));
-				SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)GlobalLock(memBuff));
-				GlobalUnlock(memBuff);
+				HGLOBAL *mem_buff = GlobalAlloc(GMEM_MOVEABLE, sizeof(wchar_t) * (s.cpMax - s.cpMin + 1));
+				SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)GlobalLock(mem_buff));
+				GlobalUnlock(mem_buff);
 				OpenClipboard(window);
 				EmptyClipboard();
-				SetClipboardData(CF_UNICODETEXT, memBuff);
+				SetClipboardData(CF_UNICODETEXT, mem_buff);
 				CloseClipboard();
 				break;
 			}
@@ -522,10 +523,10 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 			case 3: case 4: {
 				MENUITEMINFO info = {.cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_STATE};
 				GetMenuItemInfo(menu, index, 0, &info);
-				int newVal = !(info.fState & MFS_CHECKED);
+				int new_val = !(info.fState & MFS_CHECKED);
 				if (index == 3)
 					data->type = DEST_LAST + 1;
-				g_settings.flags = (g_settings.flags & ~(1<<data->type)) | newVal<<data->type;
+				g_settings.flags = (g_settings.flags & ~(1<<data->type)) | new_val<<data->type;
 			}	break;
 			case 6: {
 				User *u = Users_find(data->name);
@@ -538,7 +539,7 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 
 		} else if (note->idFrom == DLG_LOG && note->code == EN_LINK) {
-			ENLINK *s = (void *)lParam;
+			ENLINK *s = (void *)l_param;
 			if (s->msg != WM_LBUTTONUP)
 				break;
 			SendMessage(note->hwndFrom, EM_EXSETSEL, 0, (LPARAM)&s->chrg);
@@ -551,7 +552,7 @@ chatBox_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 	}	break;
 	}
-	return DefWindowProc(window, msg, wParam, lParam);
+	return DefWindowProc(window, msg, w_param, l_param);
 }
 
 static void
@@ -583,7 +584,7 @@ Chat_said(HWND window, const char *username, ChatType type, const char *text)
 		put_text(window, buf, COLOR_TIMESTAMP, 0);
 	}
 
-	COLORREF color = chatColors[type];
+	COLORREF color = chat_colors[type];
 	if (type == CHAT_SERVERIN || type == CHAT_SERVEROUT)
 		put_text(window, type == CHAT_SERVERIN ? "> " : "< ", color, 0);
 
@@ -658,7 +659,7 @@ Chat_save_windows(void)
 	autojoin_channels[0] = 0;
 	size_t len = 0;
 	for (int i=0; i<LENGTH(channel_windows); ++i) {
-		extern int get_tab_index(HWND tabItem);
+		extern int get_tab_index(HWND tab_item);
 		if (get_tab_index(channel_windows[i]) >= 0) {
 			ChatWindowData *data = (void *)GetWindowLongPtr(
 					channel_windows[i], GWLP_USERDATA);
@@ -675,7 +676,7 @@ init (void)
 {
 	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATBOX,
-		.lpfnWndProc   = chatBox_proc,
+		.lpfnWndProc   = chat_box_proc,
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};

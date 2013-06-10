@@ -17,6 +17,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 
@@ -72,25 +73,25 @@ static const DialogItem dialog_items[] = {
 static const wchar_t *const columns[] = {L"host", L"description", L"mod", L"map", L"Players"};
 
 static void
-sort_listview(int newOrder)
+sort_listview(int new_order)
 {
 	static int
-sortOrder = 5, reverseSort = 0;
-	reverseSort = newOrder == sortOrder && !reverseSort;
+sort_order = 5, reverse_sort = 0;
+	reverse_sort = new_order == sort_order && !reverse_sort;
 
-	sortOrder = newOrder ?: sortOrder;
+	sort_order = new_order ?: sort_order;
 
 	int CALLBACK CompareFunc(const Battle *b1, const Battle *b2, int unused)
 	{
-		if (reverseSort) {
+		if (reverse_sort) {
 			const Battle *swap = b1;
 			b1 = b2;
 			b2 = swap;
 		}
-		if (sortOrder == 5)
+		if (sort_order == 5)
 			return GetNumPlayers(b2) - GetNumPlayers(b1);
 		char *s1, *s2;
-		if (sortOrder == 1) {
+		if (sort_order == 1) {
 			s1 = b1->founder->name;
 			s2 = b2->founder->name;
 		} else {
@@ -99,8 +100,8 @@ sortOrder = 5, reverseSort = 0;
 				[3] = offsetof(Battle, mod_name),
 				[4] = offsetof(Battle, map_name),
 			};
-			s1 = (void *)b1 + offsets[sortOrder];
-			s2 = (void *)b2 + offsets[sortOrder];
+			s1 = (void *)b1 + offsets[sort_order];
+			s2 = (void *)b2 + offsets[sort_order];
 		}
 		return _stricmp(s1, s2);
 	}
@@ -115,14 +116,15 @@ resize_columns(void)
 	HWND list = GetDlgItem(g_battle_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int columnRem = rect.right % LENGTH(columns);
-	int columnWidth = rect.right / LENGTH(columns);
+	int column_rem = rect.right % LENGTH(columns);
+	int column_width = rect.right / LENGTH(columns);
 
 	for (int i=0, n = LENGTH(columns); i < n; ++i)
-		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
+		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
-static Battle * getBattleFromIndex(int index) {
+static Battle *
+get_battle_from_index(int index) {
 	LVITEM item = {
 		.mask = LVIF_PARAM,
 		.iItem = index
@@ -132,7 +134,7 @@ static Battle * getBattleFromIndex(int index) {
 }
 
 static void
-onItemRightClick(POINT pt)
+on_item_right_click(POINT pt)
 {
 	int index = SendDlgItemMessage(g_battle_list, DLG_LIST,
 			LVM_SUBITEMHITTEST, 0,
@@ -141,7 +143,7 @@ onItemRightClick(POINT pt)
 	if (index < 0)
 		return;
 
-	Battle *b = getBattleFromIndex(index);
+	Battle *b = get_battle_from_index(index);
 
 	enum {
 		JOIN = 1, DL_MAP, DL_MOD,
@@ -150,8 +152,8 @@ onItemRightClick(POINT pt)
 	HMENU menu = CreatePopupMenu();
 	AppendMenu(menu, 0, JOIN, L"Join battle");
 	SetMenuDefaultItem(menu, JOIN, 0);
-	HMENU userMenu = CreatePopupMenu();
-	AppendMenu(menu, MF_POPUP, (UINT_PTR )userMenu, L"Chat with ...");
+	HMENU user_menu = CreatePopupMenu();
+	AppendMenu(menu, MF_POPUP, (UINT_PTR )user_menu, L"Chat with ...");
 	if (!Sync_map_hash(b->map_name))
 		AppendMenu(menu, 0, DL_MAP, L"Download map");
 	if (!Sync_mod_hash(b->mod_name))
@@ -159,9 +161,9 @@ onItemRightClick(POINT pt)
 
 
 	FOR_EACH_USER(u, b)
-		AppendMenuA(userMenu, 0, (UINT_PTR)u, u->name);
+		AppendMenuA(user_menu, 0, (UINT_PTR)u, u->name);
 
-	InsertMenu(userMenu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 	ClientToScreen(g_battle_list, &pt);
 
 	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
@@ -183,73 +185,74 @@ onItemRightClick(POINT pt)
 		break;
 	}
 
-	DestroyMenu(userMenu);
+	DestroyMenu(user_menu);
 	DestroyMenu(menu);
 }
 
 static void
-onGetInfoTip(NMLVGETINFOTIP *info)
+on_get_info_tip(NMLVGETINFOTIP *info)
 {
-	Battle *b = getBattleFromIndex(info->iItem);
+	Battle *b = get_battle_from_index(info->iItem);
 	_swprintf(info->pszText,
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->mod_name, b->map_name,
 			utf8to16(b->title), GetNumPlayers(b), b->max_players,
-			b->nbParticipants);
+			b->participant_count);
 }
 
 static void
-onCreate(HWND window)
+on_create(HWND window)
 {
 	g_battle_list = window;
 	CreateDlgItems(window, dialog_items, DLG_LAST + 1);
 
-	HWND listDlg = GetDlgItem(g_battle_list, DLG_LIST);
+	HWND list_dlg = GetDlgItem(g_battle_list, DLG_LIST);
 
-	LVCOLUMN columnInfo = { LVCF_TEXT | LVCF_SUBITEM };
+	LVCOLUMN column_info = { LVCF_TEXT | LVCF_SUBITEM };
 	for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
-		columnInfo.pszText = (wchar_t *)columns[i];
-		columnInfo.iSubItem = i;
-		ListView_InsertColumn(listDlg, i, &columnInfo);
+		column_info.pszText = (wchar_t *)columns[i];
+		column_info.iSubItem = i;
+		ListView_InsertColumn(list_dlg, i, &column_info);
 	}
 
-	EnableIconList(listDlg);
-	ListView_SetExtendedListViewStyle(listDlg,
+	EnableIconList(list_dlg);
+	ListView_SetExtendedListViewStyle(list_dlg,
 			LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP
 			| LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
 }
 
-static LRESULT CALLBACK battleList_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK
+battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch(msg) {
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		onCreate(window);
+		on_create(window);
 		return 0;
 	case WM_SIZE:
-		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam), TRUE);
+		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(l_param), HIWORD(l_param), TRUE);
 		resize_columns();
 		return 0;
 	case WM_NOTIFY:
-		switch (((LPNMHDR)lParam)->code) {
+		switch (((LPNMHDR)l_param)->code) {
 
 		case LVN_COLUMNCLICK:
-			sort_listview(((NMLISTVIEW *)lParam)->iSubItem + 1);
+			sort_listview(((NMLISTVIEW *)l_param)->iSubItem + 1);
 			return 0;
 		case LVN_ITEMACTIVATE:
-			JoinBattle(getBattleFromIndex(((LPNMITEMACTIVATE)lParam)->iItem)->id, NULL);
+			JoinBattle(get_battle_from_index(((LPNMITEMACTIVATE)l_param)->iItem)->id, NULL);
 			return 0;
 		case NM_RCLICK:
-			onItemRightClick(((LPNMITEMACTIVATE)lParam)->ptAction);
+			on_item_right_click(((LPNMITEMACTIVATE)l_param)->ptAction);
 			return 1;
 		case LVN_GETINFOTIP:
-			onGetInfoTip((void *)lParam);
+			on_get_info_tip((void *)l_param);
 			return 0;
 		}
 		break;
 	}
-	return DefWindowProc(window, msg, wParam, lParam);
+	return DefWindowProc(window, msg, w_param, l_param);
 }
 
 
@@ -285,14 +288,14 @@ BattleList_UpdateBattle(Battle *b)
 	item.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
 	item.stateMask = LVIS_OVERLAYMASK;
 
-	size_t iconIndex = 0;
+	size_t icon_index = 0;
 	if (b->founder->client_status & CS_INGAME)
-		iconIndex |= INGAME_MASK;
+		icon_index |= INGAME_MASK;
 	if (b->passworded)
-		iconIndex |= PW_MASK;
+		icon_index |= PW_MASK;
 	if (!b->locked && b->max_players == GetNumPlayers(b))
-		iconIndex |= FULL_MASK;
-	item.state = INDEXTOOVERLAYMASK(iconIndex);
+		icon_index |= FULL_MASK;
+	item.state = INDEXTOOVERLAYMASK(icon_index);
 
 	ListView_SetItem(list, &item);
 
@@ -308,7 +311,7 @@ BattleList_UpdateBattle(Battle *b)
 	ADD_STRING(utf8to16(b->map_name));
 	wchar_t buf[16];
 	_swprintf(buf, L"%d / %d +%d",
-			GetNumPlayers(b), b->max_players, b->nbSpectators);
+			GetNumPlayers(b), b->max_players, b->spectator_count);
 	ADD_STRING(buf);
 
 #undef ADD_STRING
@@ -323,17 +326,16 @@ BattleList_OnEndLoginInfo(void)
 	resize_columns();
 }
 
-static void
-__attribute__((constructor))
+static void __attribute__((constructor))
 init (void)
 {
-	WNDCLASSEX classInfo = {
+	WNDCLASSEX class_info = {
 		.lpszClassName = WC_BATTLELIST,
 		.cbSize        = sizeof(WNDCLASSEX),
-		.lpfnWndProc   = battleList_proc,
+		.lpfnWndProc   = battlelist_proc,
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
-	RegisterClassEx(&classInfo);
+	RegisterClassEx(&class_info);
 }
 
 void

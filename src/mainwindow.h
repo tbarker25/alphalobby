@@ -42,7 +42,7 @@ enum {
 	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)
 
 extern HWND g_main_window;
-void MainWindow_set_active_tab(HWND newTab);
+void MainWindow_set_active_tab(HWND new_tab);
 
 #endif
 

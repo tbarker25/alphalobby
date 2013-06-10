@@ -18,8 +18,9 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdio.h>
 #include <malloc.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 #include <windows.h>
 
@@ -38,14 +39,14 @@
 static DWORD WINAPI
 spring_proc(LPVOID path)
 {
-	PROCESS_INFORMATION processInfo = {};
-	STARTUPINFO startupInfo = {.cb = sizeof(startupInfo)};
+	PROCESS_INFORMATION process_info = {};
+	STARTUPINFO startup_info = {.cb = sizeof(startup_info)};
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
-				&startupInfo, &processInfo)) {
+				&startup_info, &process_info)) {
 		SetClientStatus(CS_INGAME, CS_INGAME);
 		#ifdef NDEBUG
-		WaitForSingleObject(processInfo.h_process, INFINITE);
+		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
 		SetClientStatus(0, CS_INGAME);
 	} else
@@ -87,9 +88,9 @@ Spring_launch(void)
 }
 
 void
-Spring_launch_replay(const wchar_t *replayName)
+Spring_launch_replay(const wchar_t *replay_name)
 {
 	wchar_t path[256];
-	_swprintf(path, L"%hs demos/%s", g_settings.spring_path, replayName);
+	_swprintf(path, L"%hs demos/%s", g_settings.spring_path, replay_name);
 	LAUNCH_SPRING(path);
 }

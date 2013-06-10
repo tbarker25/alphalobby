@@ -94,67 +94,67 @@ static uint8_t PADDING[64] = {0x80};
   }
 
 static void
-update(MD5_CTX *restrict mdContext, const void *restrict inBuf, unsigned int in_len)
+update(MD5_CTX *restrict md_context, const void *restrict in_buf, unsigned int in_len)
 {
 	uint32_t in[16];
-	const uint8_t *inBuff = inBuf;
-	int mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
+	const uint8_t *in_buff = in_buf;
+	int mdi = (int)((md_context->i[0] >> 3) & 0x3F);
 
 	/* update number of bits */
-	if ((mdContext->i[0] + ((uint32_t)in_len << 3)) < mdContext->i[0])
-		mdContext->i[1]++;
-	mdContext->i[0] += ((uint32_t)in_len << 3);
-	mdContext->i[1] += ((uint32_t)in_len >> 29);
+	if ((md_context->i[0] + ((uint32_t)in_len << 3)) < md_context->i[0])
+		md_context->i[1]++;
+	md_context->i[0] += ((uint32_t)in_len << 3);
+	md_context->i[1] += ((uint32_t)in_len >> 29);
 
 	while (in_len--) {
 		/* add new character to buf, increment mdi */
-		mdContext->in[mdi++] = *inBuff++;
+		md_context->in[mdi++] = *in_buff++;
 
 		/* transform if necessary */
 		if (mdi == 0x40) {
 			for (int i = 0, ii = 0; i < 16; i++, ii += 4)
-				in[i] = (((uint32_t)mdContext->in[ii+3]) << 24) |
-					(((uint32_t)mdContext->in[ii+2]) << 16) |
-					(((uint32_t)mdContext->in[ii+1]) << 8) |
-					((uint32_t)mdContext->in[ii]);
-			transform (mdContext->buf, in);
+				in[i] = (((uint32_t)md_context->in[ii+3]) << 24) |
+					(((uint32_t)md_context->in[ii+2]) << 16) |
+					(((uint32_t)md_context->in[ii+1]) << 8) |
+					((uint32_t)md_context->in[ii]);
+			transform (md_context->buf, in);
 			mdi = 0;
 		}
 	}
 }
 
 static void
-final(MD5_CTX *mdContext)
+final(MD5_CTX *md_context)
 {
 	uint32_t in[16] = {
-		[14]=mdContext->i[0],
-		[15] = mdContext->i[1],
+		[14]=md_context->i[0],
+		[15] = md_context->i[1],
 	};
 
 	/* compute number of bytes mod 64 */
-	int mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
+	int mdi = (int)((md_context->i[0] >> 3) & 0x3F);
 
 	/* pad out to 56 mod 64 */
 	unsigned int pad_len = (mdi < 56) ? (56 - mdi) : (120 - mdi);
-	update (mdContext, PADDING, pad_len);
+	update (md_context, PADDING, pad_len);
 
 	/* append length in bits and transform */
 	for (int i = 0, ii = 0; i < 14; i++, ii += 4)
-		in[i] = (((uint32_t)mdContext->in[ii+3]) << 24) |
-			(((uint32_t)mdContext->in[ii+2]) << 16) |
-			(((uint32_t)mdContext->in[ii+1]) << 8) |
-			((uint32_t)mdContext->in[ii]);
-	transform (mdContext->buf, in);
+		in[i] = (((uint32_t)md_context->in[ii+3]) << 24) |
+			(((uint32_t)md_context->in[ii+2]) << 16) |
+			(((uint32_t)md_context->in[ii+1]) << 8) |
+			((uint32_t)md_context->in[ii]);
+	transform (md_context->buf, in);
 
 	/* store buf in digest */
 	for (int i=0, ii=0; i<4; i++, ii+=4) {
-		mdContext->digest[ii] = (uint8_t)(mdContext->buf[i] & 0xFF);
-		mdContext->digest[ii+1] =
-			(uint8_t)((mdContext->buf[i] >> 8) & 0xFF);
-		mdContext->digest[ii+2] =
-			(uint8_t)((mdContext->buf[i] >> 16) & 0xFF);
-		mdContext->digest[ii+3] =
-			(uint8_t)((mdContext->buf[i] >> 24) & 0xFF);
+		md_context->digest[ii] = (uint8_t)(md_context->buf[i] & 0xFF);
+		md_context->digest[ii+1] =
+			(uint8_t)((md_context->buf[i] >> 8) & 0xFF);
+		md_context->digest[ii+2] =
+			(uint8_t)((md_context->buf[i] >> 16) & 0xFF);
+		md_context->digest[ii+3] =
+			(uint8_t)((md_context->buf[i] >> 24) & 0xFF);
 	}
 }
 
@@ -276,12 +276,12 @@ MD5_to_base_64(const uint8_t *s)
 void
 MD5_calc_checksum(const void *restrict bytes, size_t len, uint8_t *restrict buf)
 {
-	MD5_CTX mdContext = {
+	MD5_CTX md_context = {
 		.buf = MD5_INITIAL_BUFF,
 		.digest = buf,
 	};
-	update(&mdContext, bytes, len);
-	final(&mdContext);
+	update(&md_context, bytes, len);
+	final(&md_context);
 }
 
 void

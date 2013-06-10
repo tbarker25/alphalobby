@@ -23,9 +23,9 @@
 void JoinBattle(uint32_t id, const char *password);
 
 union UserOrBot;
-void SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, uint32_t color);
-#define SetBattleStatus(_s, _orMask, _nandMask)\
-	SetBattleStatusAndColor((union UserOrBot *)(_s), (_orMask), (_nandMask), -1)
+void SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask, uint32_t nand_mask, uint32_t color);
+#define SetBattleStatus(_s, _or_mask, _nand_mask)\
+	SetBattleStatusAndColor((union UserOrBot *)(_s), (_or_mask), (_nand_mask), -1)
 #define SetColor(_s, color)\
 	SetBattleStatusAndColor((union UserOrBot *)(_s), 0, 0, (color))
 void Kick(union UserOrBot *);

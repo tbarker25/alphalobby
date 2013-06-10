@@ -48,8 +48,8 @@ typedef struct Option {
 	char *key, *name, *val, *def, *desc;
 	struct Option *section;
 
-	size_t nbListItems;
-	OptionListItem *listItems;
+	size_t list_item_count;
+	OptionListItem *list_items;
 } Option;
 
 #define START_RECT_MAX 200
@@ -67,7 +67,7 @@ typedef enum StartPosType {
 #define HOST_FLAG  0x01
 
 #define INVALID_STARTPOS (StartPos){-1, -1}
-#define GET_STARTPOS(_team) (g_battle_options.startPosType == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&g_battle_options.positions[_team] != -1\
+#define GET_STARTPOS(_team) (g_battle_options.start_pos_type == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&g_battle_options.positions[_team] != -1\
 		? g_battle_options.positions[_team]\
 		: g_map_info.positions[_team])
 
@@ -76,8 +76,8 @@ typedef struct StartRect {
 } StartRect;
 
 typedef struct HostType {
-	void (*force_ally)(const char *name, int allyId);
-	void (*force_team)(const char *name, int teamId);
+	void (*force_ally)(const char *name, int ally_id);
+	void (*force_team)(const char *name, int team_id);
 	void (*kick)(const char *name);
 	void (*said_battle)(const char *username, char *text);
 	void (*set_map)(const char *map_name);
@@ -87,15 +87,15 @@ typedef struct HostType {
 } HostType;
 
 typedef struct BattleOptions {
-	StartPosType startPosType;
-	StartRect startRects[NUM_ALLIANCES];
+	StartPosType start_pos_type;
+	StartRect start_rects[NUM_ALLIANCES];
 	StartPos positions[NUM_ALLIANCES];
-	uint32_t modHash;
+	uint32_t mod_hash;
 } BattleOption;
 
 
 struct _LargeMapInfo {
-	MapInfo mapInfo;
+	MapInfo map_info;
 	char description[256];
 	char author[201];
 };
@@ -103,8 +103,8 @@ struct _LargeMapInfo {
 union UserOrBot;
 struct Battle;
 
-extern struct _LargeMapInfo _gLargeMapInfo;
-#define g_map_info (_gLargeMapInfo.mapInfo)
+extern struct _LargeMapInfo _g_largeMapInfo;
+#define g_map_info (_g_largeMapInfo.map_info)
 
 struct Battle;
 extern struct Battle *g_my_battle;
@@ -129,7 +129,7 @@ void MyBattle_append_script(char *restrict script);
 void MyBattle_change_option(struct Option *restrict opt);
 uint32_t MyBattle_new_battle_status(void)
 	__attribute__((pure));
-void MyBattle_joined_battle(struct Battle *restrict b, uint32_t modHash);
+void MyBattle_joined_battle(struct Battle *restrict b, uint32_t mod_hash);
 void MyBattle_left_battle(void);
 void Rebalance(void);
 void ResetBattleOptions(void);

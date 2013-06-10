@@ -57,11 +57,11 @@ resize_columns(void)
 	HWND list = GetDlgItem(g_download_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int columnRem = rect.right % LENGTH(columns);
-	int columnWidth = rect.right / LENGTH(columns);
+	int column_rem = rect.right % LENGTH(columns);
+	int column_width = rect.right / LENGTH(columns);
 
 	for (int i=0, n = LENGTH(columns); i < n; ++i)
-		ListView_SetColumnWidth(list, i, columnWidth + !i * columnRem);
+		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
 void
@@ -93,7 +93,7 @@ DownloadList_update(const wchar_t *name, const wchar_t *text)
 }
 
 static LRESULT CALLBACK
-download_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch(msg) {
 	case WM_CLOSE:
@@ -102,31 +102,31 @@ download_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 		g_download_list = window;
 		CreateDlgItems(window, dialog_items, DLG_LAST + 1);
 
-		HWND listDlg = GetDlgItem(g_download_list, DLG_LIST);
+		HWND list_dlg = GetDlgItem(g_download_list, DLG_LIST);
 
 		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
-			ListView_InsertColumn(listDlg, i, (&(LVCOLUMN){
+			ListView_InsertColumn(list_dlg, i, (&(LVCOLUMN){
 				.mask = LVCF_TEXT | LVCF_SUBITEM,
 				.pszText = (wchar_t *)columns[i],
 				.iSubItem = i,
 			}));
 		}
-		ListView_SetExtendedListViewStyle(listDlg, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP | LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
+		ListView_SetExtendedListViewStyle(list_dlg, LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP | LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
 	case WM_SIZE: {
-		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(lParam), HIWORD(lParam) - MAP_Y(14 + 7 + 4), TRUE);
-		MoveWindow(GetDlgItem(window, DLG_RAPID), LOWORD(lParam) - MAP_X(50 + 7), HIWORD(lParam) - MAP_Y(14 + 7), MAP_X(50), MAP_Y(14), TRUE);
+		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(l_param), HIWORD(l_param) - MAP_Y(14 + 7 + 4), TRUE);
+		MoveWindow(GetDlgItem(window, DLG_RAPID), LOWORD(l_param) - MAP_X(50 + 7), HIWORD(l_param) - MAP_Y(14 + 7), MAP_X(50), MAP_Y(14), TRUE);
 		resize_columns();
 		return 0;
 	}
 	case WM_COMMAND:
-		switch (wParam) {
+		switch (w_param) {
 		case MAKEWPARAM(DLG_RAPID, BN_CLICKED):
 			CreateRapidDlg();
 			return 0;
 		}
 		return 0;
 	}
-	return DefWindowProc(window, msg, wParam, lParam);
+	return DefWindowProc(window, msg, w_param, l_param);
 }
 
 

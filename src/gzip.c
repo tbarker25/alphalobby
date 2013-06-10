@@ -21,10 +21,10 @@
 #include <zlib.h>
 
 void
-Gzip_inflate(void *restrict src, size_t src_len, void *restrict dst, size_t dst_len)
+Gzip_inflate(void *restrict src, size_t srcLen, void *restrict dst, size_t dst_len)
 {
 	z_stream stream = {
-		.avail_in = src_len,
+		.avail_in = srcLen,
 		.next_in = src,
 		.avail_out = dst_len,
 		.next_out =  dst,

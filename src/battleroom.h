@@ -38,9 +38,9 @@ void BattleRoom_show(void);
 void BattleRoom_hide(void);
 bool BattleRoom_is_auto_unspec(void);
 void BattleRoom_resize_columns(void);
-void BattleRoom_change_minimap_bitmap(const uint16_t *mapPixels,
-		uint16_t metalMapWidth, uint16_t metalMapHeight, const uint8_t *metalMapPixels,
-		uint16_t heightMapWidth, uint16_t heightMapHeight, const uint8_t *heightMapPixels);
+void BattleRoom_change_minimap_bitmap(const uint16_t *map_pixels,
+		uint16_t metal_map_width, uint16_t metal_map_height, const uint8_t *metal_map_pixels,
+		uint16_t height_map_width, uint16_t height_map_height, const uint8_t *height_map_pixels);
 void BattleRoom_on_start_position_change(void);
 void BattleRoom_redraw_minimap(void);
 void BattleRoom_on_change_mod(void);

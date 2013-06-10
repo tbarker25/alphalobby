@@ -17,6 +17,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include <windows.h>
@@ -49,13 +50,13 @@ int IconList_get_user_color(const union UserOrBot *s)
 		doit:
 		colors[i] = s;
 		HDC dc = GetDC(NULL);
-		HDC bitmapDC = CreateCompatibleDC(dc);
+		HDC bitmap_dc = CreateCompatibleDC(dc);
 		HBITMAP bitmap = CreateCompatibleBitmap(dc, 16, 16);
 		ReleaseDC(NULL, dc);
-		SelectObject(bitmapDC, bitmap);
+		SelectObject(bitmap_dc, bitmap);
 		for (int i=0; i<16*16; ++i)
-			SetPixelV(bitmapDC, i%16, i/16, s->color);
-		DeleteDC(bitmapDC);
+			SetPixelV(bitmap_dc, i%16, i/16, s->color);
+		DeleteDC(bitmap_dc);
 
 		ImageList_Replace(g_icon_list, ICONS_FIRST_COLOR + i, bitmap, NULL);
 		DeleteObject(bitmap);
@@ -68,16 +69,16 @@ int IconList_get_user_color(const union UserOrBot *s)
 
 #define ICONS_BBP (4)
 #define ICONS_HEIGHT (16)
-#define ICONS_WIDTH (sizeof(iconData) / ICONS_BBP / ICONS_HEIGHT)
+#define ICONS_WIDTH (sizeof(icon_data) / ICONS_BBP / ICONS_HEIGHT)
 
 static void __attribute__((constructor))
 init(void)
 {
 	g_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
 
-	HBITMAP iconsBitmap = CreateBitmap(ICONS_WIDTH, ICONS_HEIGHT, 1, ICONS_BBP*8, iconData);
-	ImageList_Add(g_icon_list, iconsBitmap, NULL);
-	DeleteObject(iconsBitmap);
+	HBITMAP icons_bitmap = CreateBitmap(ICONS_WIDTH, ICONS_HEIGHT, 1, ICONS_BBP*8, icon_data);
+	ImageList_Add(g_icon_list, icons_bitmap, NULL);
+	DeleteObject(icons_bitmap);
 
 	for (int i=1; i<=ICONS_MASK; ++i)
 		if (i & ~ USER_MASK)
