@@ -516,7 +516,7 @@ static const char *country_names[242] = {
 uint8_t
 Country_get_id(const char *code)
 {
-	for (int i=0; i < LENGTH(country_codes); ++i) {
+	for (size_t i=0; i < LENGTH(country_codes); ++i) {
 		if (code[0] == country_codes[i][0]
 				&& code[1] == country_codes[i][1]) {
 			return i;

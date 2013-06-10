@@ -26,7 +26,7 @@
 
 struct Option;
 
-int          Sync_ai_option_count(const char *name);
+int          Sync_ai_option_len(const char *name);
 void         Sync_cleanup(void);
 void         Sync_for_each_ai(void (*func)(const char *, void *), void *arg);
 uint32_t     Sync_get_status(void) __attribute__((pure));

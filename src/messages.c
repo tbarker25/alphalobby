@@ -210,7 +210,7 @@ add_bot(void)
 	// ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL}
 	__attribute__((unused))
 	char *battle_id = get_next_word();
-	assert(atoi(battle_id) == g_my_battle->id);
+	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
 	char *name = get_next_word();
 	User *owner = Users_find(get_next_word());
 	assert(owner);
@@ -280,7 +280,7 @@ battle_opened(void)
 	copy_next_word(founder_name);
 	b->founder = Users_find(founder_name);
 	assert(b->founder);
-	b->participant_count = 1;
+	b->participant_len = 1;
 	b->founder->battle = b;
 
 	copy_next_word(b->ip);
@@ -312,7 +312,7 @@ battle_closed(void)
 		MyBattle_left_battle();
 	}
 
-	for (int i=0; i<b->participant_count; ++i)
+	for (int i=0; i<b->participant_len; ++i)
 		b->users[i]->user.battle = NULL;
 
 	BattleList_CloseBattle(b);
@@ -461,12 +461,12 @@ joined_battle(void)
 	u->script_password = _strdup(get_next_word());
 
 	int i=1; //Start at 1 so founder is first
-	while (i<b->participant_count - b->bot_count && _stricmp(b->users[i]->name, u->name) < 0)
+	while (i<b->participant_len - b->bot_len && _stricmp(b->users[i]->name, u->name) < 0)
 		++i;
-	for (int j=b->participant_count; j>i; --j)
+	for (int j=b->participant_len; j>i; --j)
 		b->users[j] = b->users[j-1];
 	b->users[i] = (void *)u;
-	++b->participant_count;
+	++b->participant_len;
 	u->battle_status = 0;
 	BattleList_UpdateBattle(b);
 	Chat_update_user(u);
@@ -508,14 +508,14 @@ left_battle(void)
 
 	u->battle = NULL;
 	int i=1; //Start at 1, we won't remove founder here
-	for (; i < b->participant_count; ++i)
+	for (; i < b->participant_len; ++i)
 		if (&b->users[i]->user == u)
 			break;
-	assert(i < b->participant_count);
-	if (i >= b->participant_count)
+	assert(i < b->participant_len);
+	if (i >= b->participant_len)
 		return;
-	--b->participant_count;
-	for (;i < b->participant_count; ++i)
+	--b->participant_len;
+	for (;i < b->participant_len; ++i)
 		b->users[i] = b->users[i + 1];
 
 	if (u == &g_my_user)
@@ -572,7 +572,7 @@ remove_bot(void)
 	// REMOVEBOT BATTLE_ID name
 	__attribute__((unused))
 	char *battle_id = get_next_word();
-	assert(atoi(battle_id) == g_my_battle->id);
+	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
 	Users_del_bot(get_next_word());
 }
 
@@ -791,7 +791,7 @@ update_battle_info(void)
 
 	uint32_t last_map_hash = b->map_hash;
 
-	b->spectator_count = get_next_int();
+	b->spectator_len = get_next_int();
 	b->locked = get_next_int();
 	b->map_hash = get_next_int();
 	copy_next_sentence(b->map_name);
@@ -808,9 +808,9 @@ update_bot(void)
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
 	__attribute__((unused))
 		char *battle_id = get_next_word();
-	assert(atoi(battle_id) == g_my_battle->id);
+	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
 	char *name = get_next_word();
-	for (int i=g_my_battle->participant_count - g_my_battle->bot_count; i<g_my_battle->participant_count; ++i){
+	for (int i=g_my_battle->participant_len - g_my_battle->bot_len; i<g_my_battle->participant_len; ++i){
 		struct Bot *s = &g_my_battle->users[i]->bot;
 		if (!strcmp(name, s->name)){
 			uint32_t bs = get_next_int() | BS_AI | BS_MODE;

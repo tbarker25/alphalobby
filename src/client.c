@@ -45,10 +45,10 @@ void
 Server_poll(void)
 {
 	//Static since incomplete commands overflow for next call:
-	static size_t bufLen = 0;
+	static size_t buf_len = 0;
 	static char buf[RECV_SIZE+MAX_MESSAGE_LENGTH];
 
-	int bytes_received = recv(sock, buf + bufLen, RECV_SIZE, 0);
+	int bytes_received = recv(sock, buf + buf_len, RECV_SIZE, 0);
 	if (bytes_received <= 0) {
 		printf("bytes recv = %d, err = %d\n", bytes_received,
 				WSAGetLastError());
@@ -57,10 +57,10 @@ Server_poll(void)
 		return;
 	}
 
-	bufLen += bytes_received;
+	buf_len += bytes_received;
 
 	char *s = buf;
-	for (int i=0; i<bufLen; ++i) {
+	for (size_t i=0; i<buf_len; ++i) {
 		if (buf[i] != '\n')
 			continue;
 		buf[i] = '\0';
@@ -73,9 +73,9 @@ Server_poll(void)
 
 		s = buf + i + 1;
 	}
-	bufLen -= s - buf;
+	buf_len -= s - buf;
 
-	memmove(buf, s, bufLen);
+	memmove(buf, s, buf_len);
 }
 
 void
@@ -132,7 +132,8 @@ Server_disconnect(void)
 }
 
 void CALLBACK
-Server_ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
+Server_ping(__attribute__((unused)) HWND window, __attribute__((unused)) UINT msg,
+		__attribute__((unused)) UINT_PTR idEvent, __attribute__((unused)) DWORD dwTime)
 {
 	Server_send("PING");
 }
@@ -144,7 +145,8 @@ connect_proc(void (*on_finish)(void))
 		Server_disconnect();
 	MainWindow_change_connect(CONNECTION_CONNECTING);
 
-	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
+	WSADATA wsa_data;
+	if (WSAStartup(MAKEWORD(2,2), &wsa_data)) {
 		MainWindow_msg_box("Could not connect to server.",
 				"WSAStartup failed.\n_please check your internet connection.");
 		return 1;

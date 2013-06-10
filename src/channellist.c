@@ -100,7 +100,7 @@ channel_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 void
-ChannelList_add_channel(const char *name, const char *user_count, const char *desc)
+ChannelList_add_channel(const char *name, const char *user_len, const char *desc)
 {
 	int item_index;
 	LVITEM item;
@@ -112,7 +112,7 @@ ChannelList_add_channel(const char *name, const char *user_count, const char *de
 
 	assert(item_index != -1);
 
-	ListView_SetItemText(channel_list, item_index, 1, utf8to16(user_count));
+	ListView_SetItemText(channel_list, item_index, 1, utf8to16(user_len));
 	ListView_SetItemText(channel_list, item_index, 2, utf8to16(desc));
 }
 

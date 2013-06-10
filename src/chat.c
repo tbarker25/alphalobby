@@ -236,21 +236,23 @@ on_tab(HWND window, UINT_PTR type, InputBoxData *data)
 		return;
 
 	data->last_index %= count;
-	LVITEM item_info = {LVIF_PARAM, data->last_index};
+	LVITEM info;
+	info.mask = LVIF_PARAM;
+	info.iItem = data->last_index;
 	do {
-		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&item_info);
-		const char *name = ((User *)item_info.lParam)->name;
+		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&info);
+		const char *name = ((User *)info.lParam)->name;
 		const char *s = NULL;
 		if (!_strnicmp(name, text+start, strlen(text+start))
 				|| ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
-			data->last_index = item_info.iItem + 1;
+			data->last_index = info.iItem + 1;
 			SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
 			data->offset = s ? s - name + 1 : 0;
 			SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
 			break;
 		}
-		item_info.iItem = (item_info.iItem + 1) % count;
-	} while (item_info.iItem != data->last_index);
+		info.iItem = (info.iItem + 1) % count;
+	} while (info.iItem != data->last_index);
 
 	data->last_pos = SendMessage(window, EM_GETSEL, 0, 0);
 }
@@ -366,8 +368,9 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 
 
 static LRESULT CALLBACK
-log_proc(HWND window, UINT msg, WPARAM w_param, LPARAM
-		l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+log_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
+		__attribute__((unused)) UINT_PTR uIdSubclass,
+		__attribute__((unused)) DWORD_PTR dwRefData)
 {
 	if (msg == WM_VSCROLL)
 		SetWindowLongPtr(window, GWLP_USERDATA, GetTickCount());
@@ -393,37 +396,45 @@ on_size(HWND window, int width, int height)
 	SendMessage(list, LVM_SETCOLUMNWIDTH, 1, ICON_SIZE);
 }
 
+static void on_create(HWND window, LPARAM l_param)
+{
+	static ChatWindowData battle_room_data = {NULL, DEST_BATTLE};
+	ChatWindowData *data = ((CREATESTRUCT *)l_param)->lpCreateParams ?: &battle_room_data;
+	SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
+	if (data->name)
+		SetWindowTextA(window, data->name);
+	HWND log_window = CreateDlgItem(window, &dialog_items[DLG_LOG], DLG_LOG);
+	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
+	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
+	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
+	SetWindowSubclass(log_window, log_proc, 0, 0);
+
+	HWND input_box = CreateDlgItem(window, &dialog_items[DLG_INPUT], DLG_INPUT);
+	InputBoxData *input_box_data = calloc(1, sizeof(*input_box_data));
+	input_box_data->buffTail = input_box_data->buf;
+
+	SetWindowSubclass(input_box, (void *)input_box_proc, (UINT_PTR)data->type, (DWORD_PTR)input_box_data);
+
+	if (data->type >= DEST_CHANNEL) {
+		HWND list = CreateDlgItem(window, &dialog_items[DLG_LIST], DLG_LIST);
+		for (int i=0; i<=COLUMN_LAST; ++i) {
+			LVCOLUMN info;
+			info.mask = 0;
+			SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&info);
+		}
+		ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+		EnableIconList(list);
+	}
+	// return 0;
+}
+
 static LRESULT CALLBACK
 chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
     switch (msg) {
-	case WM_CREATE: {
-		static ChatWindowData battle_room_data = {NULL, DEST_BATTLE};
-		ChatWindowData *data = ((CREATESTRUCT *)l_param)->lpCreateParams ?: &battle_room_data;
-		SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
-		if (data->name)
-			SetWindowTextA(window, data->name);
-		HWND log_window = CreateDlgItem(window, &dialog_items[DLG_LOG], DLG_LOG);
-		SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
-		SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
-		SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-		SetWindowSubclass(log_window, log_proc, 0, 0);
-
-		HWND input_box = CreateDlgItem(window, &dialog_items[DLG_INPUT], DLG_INPUT);
-		InputBoxData *input_box_data = calloc(1, sizeof(*input_box_data));
-		input_box_data->buffTail = input_box_data->buf;
-
-		SetWindowSubclass(input_box, (void *)input_box_proc, (UINT_PTR)data->type, (DWORD_PTR)input_box_data);
-
-		if (data->type >= DEST_CHANNEL) {
-			HWND list = CreateDlgItem(window, &dialog_items[DLG_LIST], DLG_LIST);
-			for (int i=0; i<=COLUMN_LAST; ++i)
-				SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&(LVCOLUMN){});
-			ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-			EnableIconList(list);
-		}
-		// return 0;
-	}	break;
+	case WM_CREATE:
+		on_create(window, l_param);
+		break;
 	case WM_CLOSE: {
 		ChatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 		if (data->type == DEST_CHANNEL)
@@ -611,7 +622,7 @@ Chat_said(HWND window, const char *username, ChatType type, const char *text)
 HWND
 Chat_get_channel_window(const char *name)
 {
-	for (int i=0; i<LENGTH(channel_windows); ++i) {
+	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
 		if (!channel_windows[i]) {
 			ChatWindowData *data = malloc(sizeof(*data));
 			*data = (ChatWindowData){_strdup(name), DEST_CHANNEL};
@@ -658,7 +669,7 @@ Chat_save_windows(void)
 	char autojoin_channels[10000];
 	autojoin_channels[0] = 0;
 	size_t len = 0;
-	for (int i=0; i<LENGTH(channel_windows); ++i) {
+	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
 		extern int get_tab_index(HWND tab_item);
 		if (get_tab_index(channel_windows[i]) >= 0) {
 			ChatWindowData *data = (void *)GetWindowLongPtr(
@@ -688,7 +699,7 @@ void
 Chat_on_disconnect(void)
 {
 	SendDlgItemMessage(server_chat_window, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
-	for (int i=0; i<LENGTH(channel_windows); ++i) {
+	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
 		if (!channel_windows[i])
 			continue;
 		SendDlgItemMessage(channel_windows[i], DLG_LIST,

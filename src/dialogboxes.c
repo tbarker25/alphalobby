@@ -123,7 +123,8 @@ retry:
 }
 
 static BOOL CALLBACK
-login_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+login_proc(HWND window, UINT msg, WPARAM w_param,
+		__attribute__((unused)) LPARAM l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -161,7 +162,7 @@ on_host_init(HWND window)
 	const char *def; int defIndex;
 
 	def = Settings_load_str("last_host_mod"); defIndex=0;
-	for (int i=0; i<g_mod_count; ++i) {
+	for (size_t i=0; i<g_mod_len; ++i) {
 		if (def && !strcmp(def, g_mods[i]))
 			defIndex = i;
 		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (LPARAM)g_mods[i]);
@@ -169,7 +170,7 @@ on_host_init(HWND window)
 	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, defIndex, 0);
 
 	def = Settings_load_str("last_host_map"); defIndex=0;
-	for (int i=0; i<g_map_count; ++i) {
+	for (size_t i=0; i<g_map_len; ++i) {
 		if (def && !strcmp(def, g_maps[i]))
 			defIndex = i;
 		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)g_maps[i]);
@@ -180,7 +181,7 @@ on_host_init(HWND window)
 	SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_SETCHECK, 1, 0);
 
 	def = Settings_load_str("last_host_manager"); defIndex=0;
-	for (int i=1; i<g_relay_manager_count; ++i) {
+	for (int i=1; i<g_relay_manager_len; ++i) {
 		if (def && !strcmp(def, g_relay_managers[i]))
 			defIndex = i;
 		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (LPARAM)utf8to16(g_relay_managers[i]));
@@ -344,7 +345,8 @@ get_text_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 
 static BOOL CALLBACK
-change_password_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+change_password_proc(HWND window, UINT msg, WPARAM w_param,
+		__attribute__((unused)) LPARAM l_param)
 {
 	switch (msg) {
 	case WM_COMMAND:
@@ -376,7 +378,8 @@ change_password_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 static BOOL CALLBACK
-preferences_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+preferences_proc(HWND window, UINT msg, WPARAM w_param,
+		__attribute__((unused)) LPARAM l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -418,7 +421,9 @@ agreement_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
-		DWORD CALLBACK edit_stream_callback(DWORD_PTR dwCookie, LPBYTE lp_buff, LONG cb, PLONG pcb)
+		DWORD CALLBACK edit_stream_callback(
+				__attribute__((unused)) DWORD_PTR dwCookie,
+				LPBYTE lp_buff, LONG cb, PLONG pcb)
 		{
 			*pcb = fread(lp_buff, 1, cb, (FILE *)l_param);
 			return 0;
@@ -448,7 +453,8 @@ about_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		HWND edit_box = GetDlgItem(window, IDC_ABOUT_EDIT);
 		SendMessage(edit_box, EM_AUTOURLDETECT, 1, 0);
 		SendMessage(edit_box, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-		SendMessage(edit_box, EM_SETTEXTEX, (WPARAM)&(SETTEXTEX){},
+		SETTEXTEX set_text_info = {0, 0};
+		SendMessage(edit_box, EM_SETTEXTEX, (WPARAM)&set_text_info,
 				(LPARAM)"{\\rtf {\\b Alphalobby} {\\i " STRINGIFY(VERSION) "}\\par\\par "
 				"{\\b Author:}\\par Tom Barker (Axiomatic)\\par \\par "
 				"{\\b Homepage:}\\par http://code.google.com/p/alphalobby/\\par \\par "
@@ -556,7 +562,7 @@ rapidAdd_available(HWND window, char download_only)
 }
 
 static void
-rapidOn_init(HWND window)
+rapid_on_init(HWND window)
 {
 #ifdef NDEBUG
 	ShowWindow(GetDlgItem(window, IDC_RAPID_ERRORCHECK), 0);
@@ -568,7 +574,7 @@ rapidOn_init(HWND window)
 		char buf[len + 1];
 		buf[len] = '\0';
 		char *start = buf;
-		for (int i=0; i<len; ++i) {
+		for (size_t i=0; i<len; ++i) {
 			buf[i] = g_settings.selected_packages[i];
 			if (buf[i] != ';')
 				continue;
@@ -615,8 +621,13 @@ rapidOn_init(HWND window)
 					continue;
 				root[i] = '\0';
 
-				TVINSERTSTRUCTA info = {root_items[root_level], buf[i] ? TVI_SORT : 0};
-				info.item = (TVITEMA){TVIF_TEXT, .pszText = &root[start], .cChildren = !buf[i]};
+				TVINSERTSTRUCTA info;
+				info.hParent = root_items[root_level];
+				info.hInsertAfter = buf[i] ? TVI_SORT : 0;
+				info.item.mask = TVIF_TEXT | TVIF_CHILDREN;
+				info.item.pszText = &root[start];
+				info.item.cChildren = !buf[i];
+
 				root_items[++root_level] = (HTREEITEM)SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_INSERTITEMA, 0, (LPARAM)&info);
 
 				if (!buf[i])
@@ -633,11 +644,11 @@ rapidOn_init(HWND window)
 
 
 static BOOL CALLBACK
-rapidProc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+rapid_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
-		rapidOn_init(window);
+		rapid_on_init(window);
 		return 0;
 	case WM_NOTIFY:
 	{
@@ -653,10 +664,10 @@ rapidProc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
 			HWND list_box = GetDlgItem(window, IDC_RAPID_SELECTED);
-			int package_count = SendMessageA(list_box, LB_GETCOUNT, 0, 0);
+			int package_len = SendMessageA(list_box, LB_GETCOUNT, 0, 0);
 			char text[1024];
 			char *s = text;
-			for (int i=0; i<package_count; ++i) {
+			for (int i=0; i<package_len; ++i) {
 				*s++ = ';';
 				s += SendMessageA(list_box, LB_GETTEXT, i, (LPARAM)s);
 			}
@@ -704,15 +715,15 @@ CreatePreferencesDlg(void)
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_PREFERENCES), g_main_window, preferences_proc);
 }
 
-LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t bufLen)
+LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len)
 {
-	const char *param[] = {title, buf, (void *)bufLen};
+	const char *param[] = {title, buf, (void *)buf_len};
 	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), window, get_text_proc, (LPARAM)param);
 }
 
-LPARAM GetTextDlg(const char *title, char *buf, size_t bufLen)
+LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len)
 {
-	const char *param[] = {title, buf, (void *)bufLen};
+	const char *param[] = {title, buf, (void *)buf_len};
 	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), g_main_window, get_text_proc, (LPARAM)param);
 }
 
@@ -755,5 +766,5 @@ CreateReplayDlg(void)
 void
 CreateRapidDlg(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), g_main_window, rapidProc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), g_main_window, rapid_proc);
 }

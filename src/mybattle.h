@@ -48,7 +48,7 @@ typedef struct Option {
 	char *key, *name, *val, *def, *desc;
 	struct Option *section;
 
-	size_t list_item_count;
+	size_t list_item_len;
 	OptionListItem *list_items;
 } Option;
 
@@ -110,17 +110,17 @@ struct Battle;
 extern struct Battle *g_my_battle;
 extern uint32_t g_battle_to_join;
 
-extern ssize_t g_mod_option_count, g_map_option_count;
+extern size_t g_mod_option_len, g_map_option_len;
 extern Option *g_mod_options, *g_map_options;
 extern uint32_t g_map_hash, g_mod_hash;
 
 extern char **g_maps, **g_mods;
-extern ssize_t g_map_count, g_mod_count;
+extern size_t g_map_len, g_mod_len;
 
 extern BattleOption g_battle_options;
 extern const HostType *g_host_type;
 
-extern uint8_t g_side_count;
+extern uint8_t g_side_len;
 extern char g_side_names[16][32];
 
 extern uint32_t g_udp_help_port;

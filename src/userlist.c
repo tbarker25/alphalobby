@@ -78,7 +78,7 @@ on_init(HWND window)
 	for (const User *u; (u = Users_get_next());) {
 		if (!*u->name)
 			continue;
-		LVITEM item = {};
+		LVITEM item;
 		item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
 		item.iItem = INT_MAX;
 		item.iSubItem = 0;

@@ -39,7 +39,7 @@ const HostType g_host_relay = {
 };
 
 const char **g_relay_managers;
-int g_relay_manager_count;
+int g_relay_manager_len;
 
 static char relay_cmd[1024];
 static char relay_hoster[MAX_NAME_LENGTH_NUL];
@@ -95,8 +95,8 @@ handle_manager_list(char *command)
 		User *u = Users_find(c);
 		if (u) {
 			g_relay_managers = realloc(g_relay_managers,
-					(g_relay_manager_count+1) * sizeof(*g_relay_managers));
-			g_relay_managers[g_relay_manager_count++] = u->name;
+					(g_relay_manager_len+1) * sizeof(*g_relay_managers));
+			g_relay_managers[g_relay_manager_len++] = u->name;
 		}
 	}
 }
@@ -179,11 +179,11 @@ set_map(const char *map_name)
 static void
 set_option(Option *opt, const char *val)
 {
-	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_count)
-		RelayMessage("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
+	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_len)
+		RelayMessage("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, val);
 
-	else if (opt >= g_map_options && opt < g_map_options + g_map_option_count)
-		RelayMessage("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
+	else if (opt >= g_map_options && opt < g_map_options + g_map_option_len)
+		RelayMessage("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, val);
 
 	else
 		assert(0);

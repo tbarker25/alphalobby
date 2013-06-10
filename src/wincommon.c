@@ -40,7 +40,7 @@ CreateDlgItem(HWND parent, const DialogItem *item, int dialog_id)
 void
 CreateDlgItems(HWND parent, const DialogItem items[], size_t n)
 {
-	for (int i=0; i < n; ++i)
+	for (size_t i=0; i < n; ++i)
 		CreateDlgItem(parent, &items[i], i);
 }
 

@@ -34,7 +34,7 @@ void   CreatePreferencesDlg(void);
 void   CreateRapidDlg(void);
 void   CreateReplayDlg(void);
 void   CreateSinglePlayerDlg(void);
-LPARAM GetTextDlg(const char *title, char *buf, size_t bufLen);
-LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t bufLen);
+LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len);
+LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len);
 
 #endif /* end of include guard: DIALOGBOXES_H */

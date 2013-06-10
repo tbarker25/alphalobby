@@ -107,7 +107,7 @@ typedef struct Bot {
 	UserBot;
 
 	char *dll;
-	int option_count;
+	int option_len;
 	struct Option2 *options;
 	User *owner;
 	struct Bot *next;

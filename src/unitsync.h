@@ -57,7 +57,7 @@ typedef struct MapInfo
 	// 0.61b1+
 	int width;              ///< Width of the map
 	int height;             ///< Height of the map
-	int pos_count;           ///< Number of defined start positions
+	int pos_len;           ///< Number of defined start positions
 	StartPos positions[16]; ///< Start positions defined by the map (max 16)
 
 	// VERSION>=1

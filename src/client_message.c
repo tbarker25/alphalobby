@@ -99,11 +99,12 @@ JoinBattle(uint32_t id, const char *password)
 
 
 void
-SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask, uint32_t nand_mask, uint32_t color)
+SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask,
+		uint32_t nand_mask, uint32_t color)
 {
 	if (!s)
 		return;
-	if (color == -1)
+	if (color == (uint32_t)-1)
 		color = s->color;
 	uint32_t bs = ((or_mask & nand_mask) | (s->battle_status & ~nand_mask)) & ~BS_INTERNAL;
 
