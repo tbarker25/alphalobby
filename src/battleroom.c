@@ -777,7 +777,7 @@ get_tooltip(const User *u)
 		APPEND(L" (%hs)", u->alias);
 
 	if (!(u->battle_status & BS_AI))
-		APPEND(L"\n_rank %d - %hs - %.2fGHz\n",
+		APPEND(L"\nRank %d - %hs - %.2fGHz\n",
 				FROM_RANK_MASK(u->client_status),
 				Country_get_name(u->country),
 				(float)u->cpu / 1000);
@@ -796,10 +796,10 @@ get_tooltip(const User *u)
 		APPEND(L" - %hs", side_name);
 
 	if (u->skill)
-		APPEND(L"\n_skill: %hs", u->skill);
+		APPEND(L"\nSkill: %hs", u->skill);
 
 	if (u->battle_status & BS_HANDICAP)
-		APPEND(L"\n_handicap: %d",
+		APPEND(L"\nHandicap: %d",
 				FROM_BS_HANDICAP(u->battle_status));
 	return buf;
 #undef APPEND
