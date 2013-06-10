@@ -47,17 +47,17 @@ typedef struct StartPos
 typedef struct MapInfo
 {
 	char* description;   ///< Description (max 255 chars)
-	int tidalStrength;   ///< Tidal strength
+	int tidal_strength;   ///< Tidal strength
 	int gravity;         ///< Gravity
-	float maxMetal;      ///< Metal scale factor
-	int extractorRadius; ///< Extractor radius (of metal extractors)
-	int minWind;         ///< Minimum wind speed
-	int maxWind;         ///< Maximum wind speed
+	float max_metal;      ///< Metal scale factor
+	int extractor_radius; ///< Extractor radius (of metal extractors)
+	int min_wind;         ///< Minimum wind speed
+	int max_wind;         ///< Maximum wind speed
 
 	// 0.61b1+
 	int width;              ///< Width of the map
 	int height;             ///< Height of the map
-	int posCount;           ///< Number of defined start positions
+	int pos_count;           ///< Number of defined start positions
 	StartPos positions[16]; ///< Start positions defined by the map (max 16)
 
 	// VERSION>=1
@@ -66,7 +66,7 @@ typedef struct MapInfo
 
 
 /**
- * @brief Available bitmap typeHints
+ * @brief Available bitmap type_hints
  * @sa GetInfoMap
  */
 enum BitmapType {

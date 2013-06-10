@@ -20,6 +20,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <malloc.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys\stat.h>
 
@@ -63,15 +64,15 @@ resize_active_tab(void)
 }
 
 int
-get_tab_index(HWND tabItem)
+get_tab_index(HWND tab_item)
 {
 	TCITEM info;
 	info.mask = TCIF_PARAM;
 
-	int nbTabs = TabCtrl_GetItemCount(tab_control);
-	for (int i=0; i<nbTabs; ++i) {
+	int tab_count = TabCtrl_GetItemCount(tab_control);
+	for (int i=0; i<tab_count; ++i) {
 		TabCtrl_GetItem(tab_control, i, &info);
-		if ((HWND)info.lParam == tabItem)
+		if ((HWND)info.lParam == tab_item)
 			return i;
 	}
 	return -1;
@@ -83,12 +84,12 @@ int ChatWindow_add_tab(HWND tab)
 	if  (item_index >= 0)
 		return item_index;
 
-	wchar_t windowTitle[MAX_NAME_LENGTH_NUL];
-	GetWindowText(tab, windowTitle, MAX_NAME_LENGTH_NUL);
+	wchar_t window_title[MAX_NAME_LENGTH_NUL];
+	GetWindowText(tab, window_title, MAX_NAME_LENGTH_NUL);
 
 	TCITEM info;
 	info.mask = TCIF_TEXT | TCIF_PARAM;
-	info.pszText = windowTitle;
+	info.pszText = window_title;
 	info.lParam = (LPARAM)tab;
 
 	item_index = TabCtrl_InsertItem(tab_control, 1000, &info);
@@ -102,15 +103,15 @@ int ChatWindow_add_tab(HWND tab)
 }
 
 void
-ChatWindow_remove_tab(HWND tabItem)
+ChatWindow_remove_tab(HWND tab_item)
 {
-	int index = get_tab_index(tabItem);
+	int index = get_tab_index(tab_item);
 	TabCtrl_DeleteItem(tab_control, index);
 
-	if (tabItem != active_tab)
+	if (tab_item != active_tab)
 		return;
 
-	ShowWindow(tabItem, 0);
+	ShowWindow(tab_item, 0);
 
 	if (index > 0)
 		--index;
@@ -137,7 +138,7 @@ ChatWindow_set_active_tab(HWND tab)
 }
 
 static LRESULT CALLBACK
-chat_window_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch (msg) {
 	case WM_CREATE:
@@ -148,24 +149,24 @@ chat_window_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 		return 0;
 	case WM_SIZE:
 		SetWindowPos(tab_control, HWND_BOTTOM, 0, 0,
-				LOWORD(lParam), HIWORD(lParam), SWP_NOMOVE);
+				LOWORD(l_param), HIWORD(l_param), SWP_NOMOVE);
 		resize_active_tab();
 		break;
 	case WM_CLOSE:
 		ShowWindow(window, 0);
 		return 0;
 	case WM_NOTIFY: {
-		NMHDR *info = (void *)lParam;
+		NMHDR *info = (void *)l_param;
 		if (info->hwndFrom == tab_control && info->code == TCN_SELCHANGE) {
-			int tabIndex = TabCtrl_GetCurSel(info->hwndFrom);
+			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
 			TCITEM info = {TCIF_PARAM};
-			TabCtrl_GetItem(tab_control, tabIndex, &info);
+			TabCtrl_GetItem(tab_control, tab_index, &info);
 			ChatWindow_set_active_tab((HWND)info.lParam);
 			return 0;
 		}
 	}	break;
 	}
-	return DefWindowProc(window, msg, wParam, lParam);
+	return DefWindowProc(window, msg, w_param, l_param);
 }
 
 static void __attribute__((constructor))

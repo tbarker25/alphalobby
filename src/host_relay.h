@@ -20,7 +20,7 @@
 #define HOST_RELAY_H
 
 extern const char **g_relay_managers;
-extern int g_relay_managersCount;
+extern int g_relay_manager_count;
 
 void RelayHost_on_add_user(const char *username);
 void RelayHost_on_battle_opened(const Battle *);

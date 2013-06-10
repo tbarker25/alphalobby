@@ -43,40 +43,40 @@ static void
 on_init(HWND window)
 {
 	RECT rect;
-	LVCOLUMN columnInfo;
+	LVCOLUMN column_info;
 
 	channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
 	GetClientRect(channel_list, &rect);
-	columnInfo .mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH;
+	column_info .mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH;
 
-	columnInfo.pszText = L"name";
-	columnInfo.cx = MAP_X(50);
-	columnInfo.iSubItem = 0;
-	ListView_InsertColumn(channel_list, 0, (LPARAM)&columnInfo);
+	column_info.pszText = L"name";
+	column_info.cx = MAP_X(50);
+	column_info.iSubItem = 0;
+	ListView_InsertColumn(channel_list, 0, (LPARAM)&column_info);
 
-	columnInfo.pszText = L"users";
-	columnInfo.cx = MAP_X(20);
-	columnInfo.iSubItem = 1;
-	ListView_InsertColumn(channel_list, 1, (LPARAM)&columnInfo);
+	column_info.pszText = L"users";
+	column_info.cx = MAP_X(20);
+	column_info.iSubItem = 1;
+	ListView_InsertColumn(channel_list, 1, (LPARAM)&column_info);
 
-	columnInfo.pszText = L"description";
-	columnInfo.cx = rect.right - MAP_X(70) - scroll_width;
-	columnInfo.iSubItem = 2;
-	ListView_InsertColumn(channel_list, 2, (LPARAM)&columnInfo);
+	column_info.pszText = L"description";
+	column_info.cx = rect.right - MAP_X(70) - scroll_width;
+	column_info.iSubItem = 2;
+	ListView_InsertColumn(channel_list, 2, (LPARAM)&column_info);
 
 	ListView_SetExtendedListViewStyleEx(channel_list,
 			LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 }
 
 static BOOL CALLBACK
-channel_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+channel_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
 		on_init(window);
 		return 0;
 	case WM_COMMAND:
-		switch (wParam) {
+		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 			activate(ListView_GetNextItem(channel_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
@@ -86,8 +86,8 @@ channel_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		return 0;
 	case WM_NOTIFY:
-		if (((LPNMHDR)lParam)->code == LVN_ITEMACTIVATE) {
-			activate(((LPNMITEMACTIVATE)lParam)->iItem);
+		if (((LPNMHDR)l_param)->code == LVN_ITEMACTIVATE) {
+			activate(((LPNMITEMACTIVATE)l_param)->iItem);
 			DestroyWindow(window);
 		}
 		return 0;
@@ -100,7 +100,7 @@ channel_list_proc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 void
-ChannelList_add_channel(const char *name, const char *userCount, const char *desc)
+ChannelList_add_channel(const char *name, const char *user_count, const char *desc)
 {
 	int item_index;
 	LVITEM item;
@@ -112,7 +112,7 @@ ChannelList_add_channel(const char *name, const char *userCount, const char *des
 
 	assert(item_index != -1);
 
-	ListView_SetItemText(channel_list, item_index, 1, utf8to16(userCount));
+	ListView_SetItemText(channel_list, item_index, 1, utf8to16(user_count));
 	ListView_SetItemText(channel_list, item_index, 2, utf8to16(desc));
 }
 

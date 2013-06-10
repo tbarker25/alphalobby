@@ -18,12 +18,12 @@
 
 #include <inttypes.h>
 
-#include "countryCodes.h"
+#include "countrycodes.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 __attribute__((aligned(2)))
-static const char countryCodes[242][2] = {
+static const char country_codes[242][2] = {
 	{'?', '?'},
 	{'A', 'D'},
 	{'A', 'E'},
@@ -268,7 +268,7 @@ static const char countryCodes[242][2] = {
 	{'Z', 'W'},
 };
 
-static const char *countryNames[242] = {
+static const char *country_names[242] = {
 	"Unknown Country",
 	"Andorra",
 	"United Arab Emirates",
@@ -516,9 +516,9 @@ static const char *countryNames[242] = {
 uint8_t
 Country_get_id(const char *code)
 {
-	for (int i=0; i < LENGTH(countryCodes); ++i) {
-		if (code[0] == countryCodes[i][0]
-				&& code[1] == countryCodes[i][1]) {
+	for (int i=0; i < LENGTH(country_codes); ++i) {
+		if (code[0] == country_codes[i][0]
+				&& code[1] == country_codes[i][1]) {
 			return i;
 		}
 	}
@@ -528,5 +528,5 @@ Country_get_id(const char *code)
 const char *
 Country_get_name(uint8_t id)
 {
-	return countryNames[id];
+	return country_names[id];
 }

@@ -99,19 +99,19 @@ JoinBattle(uint32_t id, const char *password)
 
 
 void
-SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, uint32_t color)
+SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask, uint32_t nand_mask, uint32_t color)
 {
 	if (!s)
 		return;
 	if (color == -1)
 		color = s->color;
-	uint32_t bs = ((orMask & nandMask) | (s->battle_status & ~nandMask)) & ~BS_INTERNAL;
+	uint32_t bs = ((or_mask & nand_mask) | (s->battle_status & ~nand_mask)) & ~BS_INTERNAL;
 
 	if (&s->user == &g_my_user) {
-		uint32_t bs = (orMask & nandMask) | (g_last_battle_status & ~nandMask & ~BS_SYNC) | Sync_get_status() | BS_READY;
+		uint32_t bs = (or_mask & nand_mask) | (g_last_battle_status & ~nand_mask & ~BS_SYNC) | Sync_get_status() | BS_READY;
 		if (bs != g_last_battle_status || color != g_my_user.color) {
 			g_last_battle_status=bs;
-			if (battleInfoFinished)
+			if (g_battle_info_finished)
 				Server_send("MYBATTLESTATUS %d %d", bs & ~BS_INTERNAL, color);
 		}
 		return;
@@ -125,13 +125,13 @@ SetBattleStatusAndColor(union UserOrBot *s, uint32_t orMask, uint32_t nandMask, 
 		return;
 	}
 
-	if (nandMask & BS_TEAM)
+	if (nand_mask & BS_TEAM)
 		if (g_host_type && g_host_type->force_team)
-			g_host_type->force_team(s->name, FROM_BS_TEAM(orMask));
+			g_host_type->force_team(s->name, FROM_BS_TEAM(or_mask));
 
-	if (nandMask & BS_ALLY)
+	if (nand_mask & BS_ALLY)
 		if (g_host_type && g_host_type->force_ally)
-			g_host_type->force_ally(s->name, FROM_BS_ALLY(orMask));
+			g_host_type->force_ally(s->name, FROM_BS_ALLY(or_mask));
 }
 
 void
@@ -222,7 +222,7 @@ Change_password(const char *old_password, const char *new_password)
 void
 login(void)
 {
-/* LOGIN username password cpu localIP {lobby name and version} [userID] [{compFlags}] */
+/* LOGIN username password cpu local_i_p {lobby name and version} [user_id] [{comp_flags}] */
 	Server_send("LOGIN %s %s 0 * AlphaLobby"
 	#ifdef VERSION
 	" " STRINGIFY(VERSION)
@@ -231,7 +231,7 @@ login(void)
 }
 
 static void
-registerAccount(void)
+register_account(void)
 {
 	Server_send("REGISTER %s %s", my_username, my_password);
 }
@@ -241,7 +241,7 @@ RegisterAccount(const char *username, const char *password)
 {
 	strcpy(my_username, username);
 	strcpy(my_password, password);
-	Server_connect(registerAccount);
+	Server_connect(register_account);
 }
 
 char Autologin(void)
@@ -261,7 +261,7 @@ char Autologin(void)
 
 void
 Login(const char *username, const char *password)
-// LOGIN username password cpu localIP {lobby name and version} [{userID}] [{compFlags}]
+// LOGIN username password cpu local_i_p {lobby name and version} [{user_id}] [{comp_flags}]
 {
 	strcpy(my_username, username);
 	strcpy(my_password, password);

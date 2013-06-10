@@ -64,7 +64,7 @@ force_team(const char *name, int team)
 }
 
 /* static void
-forceColor(const char *name, uint32_t color)    */
+force_color(const char *name, uint32_t color)    */
 /* {                                                           */
 /*         Server_send("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
@@ -101,13 +101,13 @@ set_option(Option *opt, const char *val)
 }
 
 static void
-addStartBox(int i, int left, int top, int right, int bottom)
+add_start_box(int i, int left, int top, int right, int bottom)
 {
 	Server_send("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
 static void
-delStartBox(int i)
+del_start_box(int i)
 {
 	Server_send("REMOVESTARTRECT %d", i);
 }
@@ -117,28 +117,28 @@ set_split(int size, SplitType type)
 {
 	switch (type) {
 	case SPLIT_HORZ:
-		addStartBox(0, 0, 0, size, 200);
-		addStartBox(1, 200 - size, 0, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
+		add_start_box(0, 0, 0, size, 200);
+		add_start_box(1, 200 - size, 0, 200, 200);
+		del_start_box(2);
+		del_start_box(3);
 		break;
 	case SPLIT_VERT:
-		addStartBox(0, 0, 0, 200, size);
-		addStartBox(1, 0, 200 - size, 200, 200);
-		delStartBox(2);
-		delStartBox(3);
+		add_start_box(0, 0, 0, 200, size);
+		add_start_box(1, 0, 200 - size, 200, 200);
+		del_start_box(2);
+		del_start_box(3);
 		break;
 	case SPLIT_CORNERS1:
-		addStartBox(0, 0, 0, size, size);
-		addStartBox(1, 200 - size, 200 - size, 200, 200);
-		addStartBox(2, 0, 200 - size, size, 200);
-		addStartBox(3, 200 - size, 0, 200, size);
+		add_start_box(0, 0, 0, size, size);
+		add_start_box(1, 200 - size, 200 - size, 200, 200);
+		add_start_box(2, 0, 200 - size, size, 200);
+		add_start_box(3, 200 - size, 0, 200, size);
 		break;
 	case SPLIT_CORNERS2:
-		addStartBox(0, 0, 200 - size, size, 200);
-		addStartBox(1, 200 - size, 0, 200, size);
-		addStartBox(2, 0, 0, size, size);
-		addStartBox(3, 200 - size, 200 - size, 200, 200);
+		add_start_box(0, 0, 200 - size, size, 200);
+		add_start_box(1, 200 - size, 0, 200, size);
+		add_start_box(2, 0, 0, size, size);
+		add_start_box(3, 200 - size, 200 - size, 200, 200);
 		break;
 	default:
 		assert(0);

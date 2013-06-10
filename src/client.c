@@ -45,10 +45,10 @@ void
 Server_poll(void)
 {
 	//Static since incomplete commands overflow for next call:
-	static size_t buf_len = 0;
+	static size_t bufLen = 0;
 	static char buf[RECV_SIZE+MAX_MESSAGE_LENGTH];
 
-	int bytes_received = recv(sock, buf + buf_len, RECV_SIZE, 0);
+	int bytes_received = recv(sock, buf + bufLen, RECV_SIZE, 0);
 	if (bytes_received <= 0) {
 		printf("bytes recv = %d, err = %d\n", bytes_received,
 				WSAGetLastError());
@@ -57,25 +57,25 @@ Server_poll(void)
 		return;
 	}
 
-	buf_len += bytes_received;
+	bufLen += bytes_received;
 
 	char *s = buf;
-	for (int i=0; i<buf_len; ++i) {
+	for (int i=0; i<bufLen; ++i) {
 		if (buf[i] != '\n')
 			continue;
 		buf[i] = '\0';
 		#ifndef NDEBUG
 		printf("> %s\n", s);
 		#endif
-		/* HWND serverWindow = Chat_get_server_window(); */
-		/* Chat_said(serverWindow, NULL, CHAT_SERVERIN, s); */
+		/* HWND server_window = Chat_get_server_window(); */
+		/* Chat_said(server_window, NULL, CHAT_SERVERIN, s); */
 		Messages_handle(s);
 
 		s = buf + i + 1;
 	}
-	buf_len -= s - buf;
+	bufLen -= s - buf;
 
-	memmove(buf, s, buf_len);
+	memmove(buf, s, bufLen);
 }
 
 void
@@ -100,9 +100,9 @@ Server_send(const char *format, ...)
 	printf("< %s\n", buf);
 	#endif
 
-	/* HWND serverWindow = Chat_get_server_window(); */
-	/* if (GetTabIndex(serverWindow) >= 0) */
-		/* Chat_said(serverWindow, NULL, CHAT_SERVEROUT, buf); */
+	/* HWND server_window = Chat_get_server_window(); */
+	/* if (GetTabIndex(server_window) >= 0) */
+		/* Chat_said(server_window, NULL, CHAT_SERVEROUT, buf); */
 	buf[len] = '\n';
 
 	if (send(sock, buf, len+1, 0) == SOCKET_ERROR) {
@@ -132,13 +132,13 @@ Server_disconnect(void)
 }
 
 void CALLBACK
-Server_ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dw_time)
+Server_ping(HWND window, UINT msg, UINT_PTR idEvent, DWORD dwTime)
 {
 	Server_send("PING");
 }
 
 static DWORD WINAPI
-connect_proc(void (*onFinish)(void))
+connect_proc(void (*on_finish)(void))
 {
 	if (sock != INVALID_SOCKET)
 		Server_disconnect();
@@ -146,14 +146,14 @@ connect_proc(void (*onFinish)(void))
 
 	if (WSAStartup(MAKEWORD(2,2), &(WSADATA){})) {
 		MainWindow_msg_box("Could not connect to server.",
-				"WSAStartup failed.\nPlease check your internet connection.");
+				"WSAStartup failed.\n_please check your internet connection.");
 		return 1;
 	}
 
 	struct hostent *host = gethostbyname("lobby.springrts.com");
 	if (!host) {
 		MainWindow_msg_box("Could not connect to server.",
-				"Could not retrieve host information.\nPlease check your internet connection.");
+				"Could not retrieve host information.\n_please check your internet connection.");
 		return 1;
 	}
 	#define HTONS(x) (uint16_t)((x) << 8 | (x) >> 8)
@@ -166,13 +166,13 @@ connect_proc(void (*onFinish)(void))
 
 	if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
 		MainWindow_msg_box("Could not connect to server.",
-				"Could not finalize connection.\nPlease check your internet connection.");
+				"Could not finalize connection.\n_please check your internet connection.");
 		closesocket(sock);
 		sock = INVALID_SOCKET;
 	}
 
 	WSAAsyncSelect(sock, g_main_window, WM_POLL_SERVER, FD_READ|FD_CLOSE);
-	onFinish();
+	on_finish();
 
 	SetTimer(g_main_window, 1, 30000 / 2, Server_ping);
 	return 0;
@@ -184,7 +184,7 @@ enum ServerStatus Server_status(void)
 }
 
 void
-Server_connect(void (*onFinish)(void))
+Server_connect(void (*on_finish)(void))
 {
-	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE )connect_proc, (LPVOID)onFinish, 0, 0);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE )connect_proc, (LPVOID)on_finish, 0, 0);
 }

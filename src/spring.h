@@ -20,6 +20,6 @@
 #define SPRING_H
 
 void Spring_launch(void);
-void Spring_launch_replay(const wchar_t *replayName);
+void Spring_launch_replay(const wchar_t *replay_name);
 
 #endif /* end of include guard: SPRING_H */

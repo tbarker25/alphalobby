@@ -58,11 +58,11 @@ char g_side_names[16][32];
 char **g_maps, **g_mods;
 ssize_t g_map_count = -1, g_mod_count = -1;
 
-static char *currentScript;
+static char *current_script;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-struct _LargeMapInfo _gLargeMapInfo = {.mapInfo = {.description = _gLargeMapInfo.description, .author = _gLargeMapInfo.author}};
+struct _LargeMapInfo _g_largeMapInfo = {.map_info = {.description = _g_largeMapInfo.description, .author = _g_largeMapInfo.author}};
 
 void
 MyBattle_set_split(SplitType type, int size)
@@ -81,31 +81,31 @@ MyBattle_set_map(const char *restrict name)
 uint32_t
 MyBattle_new_battle_status(void)
 {
-	int teamBitField=0, ally=0;
+	int team_bit_field=0, ally=0;
 	FOR_EACH_PLAYER(s, g_my_battle) {
 		ally += ((s->battle_status & BS_ALLY) == 0) - ((s->battle_status & BS_ALLY) == TO_BS_ALLY_MASK(1));
-		teamBitField |= 1 << FROM_BS_TEAM(s->battle_status);
+		team_bit_field |= 1 << FROM_BS_TEAM(s->battle_status);
 	}
-	int teamMask = 0;
+	int team_mask = 0;
 	for (int i=0; i<16; ++i) {
-		if (!(teamBitField & 1 << i)) {
-			teamMask = TO_BS_TEAM_MASK(i);
+		if (!(team_bit_field & 1 << i)) {
+			team_mask = TO_BS_TEAM_MASK(i);
 			break;
 		}
 	}
-	return BS_MODE | BS_READY | teamMask | TO_BS_ALLY_MASK(ally > 0);
+	return BS_MODE | BS_READY | team_mask | TO_BS_ALLY_MASK(ally > 0);
 }
 
 void
-MyBattle_joined_battle(Battle *restrict b, uint32_t modHash)
+MyBattle_joined_battle(Battle *restrict b, uint32_t mod_hash)
 {
 	g_my_battle = b;
-	g_battle_options.modHash = modHash;
+	g_battle_options.mod_hash = mod_hash;
 
 	g_my_user.battle_status = 0;
 	g_last_battle_status = 0;
 
-	if (g_mod_hash !=modHash)
+	if (g_mod_hash !=mod_hash)
 		Sync_on_changed_mod(b->mod_name);
 	if (g_map_hash != b->map_hash || !g_map_hash)
 		Sync_on_changed_map(b->map_name);
@@ -122,33 +122,33 @@ MyBattle_left_battle(void)
 	for (int i=0; i<LENGTH(g_battle_options.positions); ++i)
 		g_battle_options.positions[i] = INVALID_STARTPOS;
 
-	free(currentScript);
-	currentScript = NULL;
+	free(current_script);
+	current_script = NULL;
 
 	BattleRoom_on_set_mod_details();
 
-	while (g_my_battle->nbBots)
-		Users_del_bot(g_my_battle->users[g_my_battle->nbParticipants - 1]->bot.name);
+	while (g_my_battle->bot_count)
+		Users_del_bot(g_my_battle->users[g_my_battle->participant_count - 1]->bot.name);
 
 	g_my_user.battle_status = 0;
 	g_last_battle_status = 0;
-	battleInfoFinished = 0;
+	g_battle_info_finished = 0;
 
 	g_my_battle = NULL;
 	if (g_battle_to_join)
 		JoinBattle(g_battle_to_join, NULL);
 
 	/* TODO: */
-	/* *relayHoster = '\0'; */
+	/* *relay_hoster = '\0'; */
 }
 
 
 void
 MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color)
 {
-	uint32_t lastBS = s->battle_status;
+	uint32_t last_b_s = s->battle_status;
 	s->battle_status = bs;
-	uint32_t lastColor = s->color;
+	uint32_t last_color = s->color;
 	s->color = color;
 
 	#ifdef NDEBUG
@@ -161,26 +161,26 @@ MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color
 	if (&s->user == &g_my_user)
 		g_last_battle_status = bs;
 
-	if ((lastBS ^ bs) & BS_MODE) {
+	if ((last_b_s ^ bs) & BS_MODE) {
 
 		if (!(bs & BS_MODE)
 				&& (User *)s != &g_my_user
 				&& BattleRoom_is_auto_unspec())
 			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
 
-		g_my_battle->nbSpectators = 0;
-		for (int i=0; i < g_my_battle->nbParticipants; ++i)
-			g_my_battle->nbSpectators += !(g_my_battle->users[i]->battle_status & BS_MODE);
+		g_my_battle->spectator_count = 0;
+		for (int i=0; i < g_my_battle->participant_count; ++i)
+			g_my_battle->spectator_count += !(g_my_battle->users[i]->battle_status & BS_MODE);
 		BattleList_UpdateBattle(g_my_battle);
 		/* Rebalance(); */
 	} else if (bs & BS_MODE
-			&& ((lastBS ^ bs) & (BS_TEAM | BS_ALLY)
-			   ||  lastColor != color)) {
+			&& ((last_b_s ^ bs) & (BS_TEAM | BS_ALLY)
+			   ||  last_color != color)) {
 		/* FixPlayerStatus((void *)s); */
 	} else
 		return;
-	if ((lastBS ^ bs) & BS_MODE
-			|| ((lastBS ^ bs) & BS_ALLY && &s->user == &g_my_user))
+	if ((last_b_s ^ bs) & BS_MODE
+			|| ((last_b_s ^ bs) & BS_ALLY && &s->user == &g_my_user))
 		BattleRoom_on_start_position_change();
 }
 
@@ -201,8 +201,8 @@ MyBattle_change_option(Option *restrict opt)
 		break;
 	case opt_list:
 		menu = CreatePopupMenu();
-		for (int j=0; j < opt->nbListItems; ++j)
-			AppendMenuA(menu, 0, j+1, opt->listItems[j].name);
+		for (int j=0; j < opt->list_item_count; ++j)
+			AppendMenuA(menu, 0, j+1, opt->list_items[j].name);
 		SetLastError(0);
 		POINT point;
 		GetCursorPos(&point);
@@ -214,7 +214,7 @@ func(int *i) {
 		SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)func, (LPARAM)&clicked);
 		if (!clicked)
 			return;
-		strcpy(val, opt->listItems[clicked - 1].key);
+		strcpy(val, opt->list_items[clicked - 1].key);
 		DestroyMenu(menu);
 		break;
 	default:
@@ -237,11 +237,11 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 	const char *section = strsep(&key, "/");
 
 	if (!strcmp(section, "startpostype")) {
-		StartPosType startPosType = atoi(val);
-		if (startPosType != g_battle_options.startPosType) {
-			;// taskSetMinimap = 1;
+		StartPosType start_pos_type = atoi(val);
+		if (start_pos_type != g_battle_options.start_pos_type) {
+			;// task_set_minimap = 1;
 		}
-		g_battle_options.startPosType = startPosType;
+		g_battle_options.start_pos_type = start_pos_type;
 		// PostMessage(g_battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
@@ -313,29 +313,29 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 static void
 set_options_from_script(void)
 {
-	char *script = _strdup(currentScript);
-	char *toFree = script;
+	char *script = _strdup(current_script);
+	char *to_free = script;
 
 	char *key, *val;
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
 		set_option_from_tag(key, val);
 
-	free(toFree);
+	free(to_free);
 }
 
 void
 MyBattle_append_script(char *restrict s)
 {
-	if (!currentScript) {
-		currentScript = _strdup(s);
+	if (!current_script) {
+		current_script = _strdup(s);
 
 	} else {
-		size_t current_len = strlen(currentScript) + 1;
+		size_t current_len = strlen(current_script) + 1;
 		size_t extra_len = strlen(s) + 1;
-		currentScript = realloc(currentScript,
+		current_script = realloc(current_script,
 				current_len + extra_len);
-		currentScript[current_len - 1] = '\t';
-		memcpy(currentScript + current_len, s, extra_len);
+		current_script[current_len - 1] = '\t';
+		memcpy(current_script + current_len, s, extra_len);
 	}
 
 	if (g_mod_hash)
@@ -347,7 +347,7 @@ MyBattle_update_mod_options(void)
 {
 	BattleRoom_on_set_mod_details();
 
-	if (!currentScript)
+	if (!current_script)
 		return;
 
 	set_options_from_script();

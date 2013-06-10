@@ -17,8 +17,9 @@
  */
 
 #include <assert.h>
-#include <malloc.h>
 #include <inttypes.h>
+#include <malloc.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 #include <windows.h>
@@ -31,12 +32,12 @@
 #define ALLOC_STEP 10
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static size_t nbBattles;
+static size_t battle_count;
 static Battle **battles;
 
 Battle * Battles_find(uint32_t id)
 {
-	for (int i=0; i<nbBattles; ++i)
+	for (int i=0; i<battle_count; ++i)
 		if (battles[i] && battles[i]->id == id)
 			return battles[i];
 	return NULL;
@@ -45,14 +46,14 @@ Battle * Battles_find(uint32_t id)
 Battle *Battles_new(void)
 {
 	int i=0;
-	for (; i<nbBattles; ++i) {
+	for (; i<battle_count; ++i) {
 		if (battles[i] == NULL)
 			break;
 	}
-	if (i == nbBattles) {
-		if (nbBattles % ALLOC_STEP == 0)
-			battles = realloc(battles, (nbBattles + ALLOC_STEP) * sizeof(Battle *));
-		++nbBattles;
+	if (i == battle_count) {
+		if (battle_count % ALLOC_STEP == 0)
+			battles = realloc(battles, (battle_count + ALLOC_STEP) * sizeof(Battle *));
+		++battle_count;
 	}
 	battles[i] = calloc(1, sizeof(Battle));
 	return battles[i];
@@ -62,7 +63,7 @@ void
 Battles_del(Battle *b)
 {
 	free(b);
-	for (int i=0; i<nbBattles; ++i) {
+	for (int i=0; i<battle_count; ++i) {
 		if (battles[i] == b) {
 			battles[i] = NULL;
 			return;
@@ -74,9 +75,9 @@ Battles_del(Battle *b)
 void
 Battles_reset(void)
 {
-	for (int i=0; i<nbBattles; ++i)
+	for (int i=0; i<battle_count; ++i)
 		free(battles[i]);
-	nbBattles = 0;
+	battle_count = 0;
 	free(battles);
 	battles = NULL;
 }

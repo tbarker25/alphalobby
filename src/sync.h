@@ -39,7 +39,7 @@ void         Sync_reload(void);
 const char * Sync_spring_version(void);
 
 #ifdef _WINDOWS_
-void CALLBACK Sync_add_replays_to_listview(HWND listViewWindow);
+void CALLBACK Sync_add_replays_to_listview(HWND list_view_window);
 #endif
 
 #define RUN_IN_SYNC_THREAD(_func, _param) {\

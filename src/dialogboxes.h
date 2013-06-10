@@ -26,7 +26,7 @@ typedef struct _iobuf FILE;
 
 void   CreateAboutDlg(void);
 void   CreateAgreementDlg(FILE *text);
-void   CreateChange_passwordDlg(void);
+void   CreateChange_password_dlg(void);
 void   CreateColorDlg(union UserOrBot *);
 void   CreateHostBattleDlg(void);
 void   CreateLoginBox(void);
@@ -34,7 +34,7 @@ void   CreatePreferencesDlg(void);
 void   CreateRapidDlg(void);
 void   CreateReplayDlg(void);
 void   CreateSinglePlayerDlg(void);
-LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len);
-LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len);
+LPARAM GetTextDlg(const char *title, char *buf, size_t bufLen);
+LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t bufLen);
 
 #endif /* end of include guard: DIALOGBOXES_H */
