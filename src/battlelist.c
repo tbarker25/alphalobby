@@ -16,6 +16,7 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,7 +41,6 @@
 HWND g_battle_list;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
-
 
 enum DLG_ID {
 	DLG_LIST,
@@ -70,109 +70,134 @@ static const DialogItem dialog_items[] = {
 	},
 };
 
-static const wchar_t *const columns[] = {L"host", L"description", L"mod", L"map", L"Players"};
+static const wchar_t *const column_titles[] = {L"host", L"description", L"mod", L"map", L"Players"};
+
+static int CALLBACK
+compare_battle(const Battle *b1, const Battle *b2, int sort_order)
+{
+	if (sort_order < 0) {
+		const Battle *swap = b1;
+
+		b1 = b2;
+		b2 = swap;
+
+		sort_order = -sort_order;
+	}
+
+	switch (sort_order) {
+
+	case 1:
+		return _stricmp(b1->founder->name, b2->founder->name);
+
+	case 2:
+		return _stricmp(b1->title, b2->title);
+
+	case 3:
+		return _stricmp(b1->mod_name, b2->mod_name);
+
+	case 4:
+		return _stricmp(b1->map_name, b2->map_name);
+
+	case 5:
+		return GetNumPlayers(b2) - GetNumPlayers(b1);
+
+	default:
+		assert(0);
+		return 0;
+	}
+}
 
 static void
 sort_listview(int new_order)
 {
-	static int
-sort_order = 5, reverse_sort = 0;
-	reverse_sort = new_order == sort_order && !reverse_sort;
+	static int sort_order = 5;
 
-	sort_order = new_order ?: sort_order;
+	if (new_order)
+		sort_order = new_order == sort_order ? -sort_order : new_order;
 
-	int CALLBACK CompareFunc(const Battle *b1, const Battle *b2,
-			__attribute__((unused)) int unused)
-	{
-		if (reverse_sort) {
-			const Battle *swap = b1;
-			b1 = b2;
-			b2 = swap;
-		}
-		if (sort_order == 5)
-			return GetNumPlayers(b2) - GetNumPlayers(b1);
-		char *s1, *s2;
-		if (sort_order == 1) {
-			s1 = b1->founder->name;
-			s2 = b2->founder->name;
-		} else {
-			const size_t offsets[] = {
-				[2] = offsetof(Battle, title),
-				[3] = offsetof(Battle, mod_name),
-				[4] = offsetof(Battle, map_name),
-			};
-			s1 = (void *)b1 + offsets[sort_order];
-			s2 = (void *)b2 + offsets[sort_order];
-		}
-		return _stricmp(s1, s2);
-	}
-
-	ListView_SortItems(GetDlgItem(g_battle_list, DLG_LIST), CompareFunc, 0);
+	ListView_SortItems(GetDlgItem(g_battle_list, DLG_LIST), compare_battle, sort_order);
 }
 
 static void
 resize_columns(void)
 {
+	HWND list;
 	RECT rect;
-	HWND list = GetDlgItem(g_battle_list, DLG_LIST);
+	int column_rem;
+	int column_width;
+
+	list = GetDlgItem(g_battle_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int column_rem = rect.right % LENGTH(columns);
-	int column_width = rect.right / LENGTH(columns);
+	column_rem = rect.right % LENGTH(column_titles);
+	column_width = rect.right / LENGTH(column_titles);
 
-	for (int i=0, n = LENGTH(columns); i < n; ++i)
+	for (int i=0, n = LENGTH(column_titles); i < n; ++i)
 		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
 static Battle *
-get_battle_from_index(int index) {
-	LVITEM item = {
-		.mask = LVIF_PARAM,
-		.iItem = index
-	};
-	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_GETITEM, 0, (LPARAM)&item);
-	return (Battle *)item.lParam;
+get_battle_from_index(int index)
+{
+	LVITEM info;
+
+	info.mask = LVIF_PARAM;
+	info.iItem = index;
+	info.iSubItem = 0;
+
+	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_GETITEM, 0, (LPARAM)&info);
+	return (Battle *)info.lParam;
 }
 
 static void
 on_item_right_click(POINT pt)
 {
-	int index = SendDlgItemMessage(g_battle_list, DLG_LIST,
+	enum MenuId {
+		FAIL, JOIN, DL_MAP, DL_MOD,
+	};
+
+	Battle *b;
+	int index;
+	HMENU menu;
+	HMENU user_menu;
+	enum MenuId item_clicked;
+
+	index = SendDlgItemMessage(g_battle_list, DLG_LIST,
 			LVM_SUBITEMHITTEST, 0,
 			(LPARAM)&(LVHITTESTINFO){.pt = pt});
 
 	if (index < 0)
 		return;
 
-	Battle *b = get_battle_from_index(index);
+	b = get_battle_from_index(index);
 
-	enum {
-		JOIN = 1, DL_MAP, DL_MOD,
-	};
+	menu = CreatePopupMenu();
+	user_menu = CreatePopupMenu();
 
-	HMENU menu = CreatePopupMenu();
 	AppendMenu(menu, 0, JOIN, L"Join battle");
 	SetMenuDefaultItem(menu, JOIN, 0);
-	HMENU user_menu = CreatePopupMenu();
 	AppendMenu(menu, MF_POPUP, (UINT_PTR )user_menu, L"Chat with ...");
+
 	if (!Sync_map_hash(b->map_name))
 		AppendMenu(menu, 0, DL_MAP, L"Download map");
+
 	if (!Sync_mod_hash(b->mod_name))
 		AppendMenu(menu, 0, DL_MOD, L"Download mod");
-
 
 	FOR_EACH_USER(u, b)
 		AppendMenuA(user_menu, 0, (UINT_PTR)u, u->name);
 
 	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+
 	ClientToScreen(g_battle_list, &pt);
 
-	int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
+	item_clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
 			g_battle_list, NULL);
-	switch (clicked) {
-	case 0:
+
+	switch (item_clicked) {
+	case FAIL:
 		break;
-	case 1:
+	case JOIN:
 		JoinBattle(b->id, NULL);
 		break;
 	case DL_MAP:
@@ -182,7 +207,7 @@ on_item_right_click(POINT pt)
 		DownloadMod(b->mod_name);
 		break;
 	default:
-		ChatWindow_set_active_tab(Chat_get_private_window((User *)clicked));
+		ChatWindow_set_active_tab(Chat_get_private_window((User *)item_clicked));
 		break;
 	}
 
@@ -193,7 +218,9 @@ on_item_right_click(POINT pt)
 static void
 on_get_info_tip(NMLVGETINFOTIP *info)
 {
-	Battle *b = get_battle_from_index(info->iItem);
+	Battle *b;
+
+	b = get_battle_from_index(info->iItem);
 	_swprintf(info->pszText,
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->mod_name, b->map_name,
@@ -204,21 +231,22 @@ on_get_info_tip(NMLVGETINFOTIP *info)
 static void
 on_create(HWND window)
 {
+	HWND list;
+
 	g_battle_list = window;
 	CreateDlgItems(window, dialog_items, DLG_LAST + 1);
+	list = GetDlgItem(g_battle_list, DLG_LIST);
 
-	HWND list_dlg = GetDlgItem(g_battle_list, DLG_LIST);
-
-	for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
+	for (int i=0, n=sizeof(column_titles) / sizeof(char *); i < n; ++i) {
 		LVCOLUMN info;
 		info.mask = LVCF_TEXT | LVCF_SUBITEM;
-		info.pszText = (wchar_t *)columns[i];
+		info.pszText = (wchar_t *)column_titles[i];
 		info.iSubItem = i;
-		ListView_InsertColumn(list_dlg, i, &info);
+		ListView_InsertColumn(list, i, &info);
 	}
 
-	EnableIconList(list_dlg);
-	ListView_SetExtendedListViewStyle(list_dlg,
+	EnableIconList(list);
+	ListView_SetExtendedListViewStyle(list,
 			LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP
 			| LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
 }
@@ -257,69 +285,94 @@ battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	return DefWindowProc(window, msg, w_param, l_param);
 }
 
-
-void
-BattleList_CloseBattle(Battle *b)
+static int
+get_index_from_battle(const Battle *b)
 {
-	LVFINDINFO find_info = {.flags = LVFI_PARAM, .lParam = (LPARAM)b};
-	HWND list = GetDlgItem(g_battle_list, DLG_LIST);
-	int index = ListView_FindItem(list, -1, &find_info);
-	ListView_DeleteItem(list, index);
+	LVFINDINFO info;
+
+	info.flags = LVFI_PARAM;
+	info.lParam = (LPARAM)b;
+
+	return SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_FINDITEM, -1,
+			(LPARAM)&info);
 }
 
 void
-BattleList_UpdateBattle(Battle *b)
+BattleList_CloseBattle(const Battle *b)
 {
-	HWND list = GetDlgItem(g_battle_list, DLG_LIST);
-	LVFINDINFO find_info = {LVFI_PARAM, .lParam = (LPARAM)b};
-	LVITEM item;
-	item.iItem = ListView_FindItem(list, -1, &find_info);
-	item.iSubItem = 0;
+	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_DELETEITEM,
+			get_index_from_battle(b), 0);
+}
 
-	if (item.iItem == -1) {
-		item.iItem = 0;
+void
+BattleList_UpdateBattle(const Battle *b)
+
+{
+	HWND list;
+	int index;
+	size_t icon_index;
+
+	list = GetDlgItem(g_battle_list, DLG_LIST);
+
+	index = get_index_from_battle(b);
+	if (index == -1) {
+		LVITEM item;
+
 		item.mask = LVIF_PARAM | LVIF_TEXT;
+		item.iItem = 0;
+		item.iSubItem = 0;
 		item.lParam = (LPARAM)b;
 		item.pszText = utf8to16(b->founder->name);
 
-		item.iItem = SendMessage(list, LVM_INSERTITEM, 0, (LPARAM)&item);
+		index = SendMessage(list, LVM_INSERTITEM, 0, (LPARAM)&item);
 	}
 
-	item.mask = LVIF_STATE | LVIF_IMAGE;
 
-	item.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
-	item.stateMask = LVIS_OVERLAYMASK;
-
-	size_t icon_index = 0;
+	icon_index = 0;
 	if (b->founder->client_status & CS_INGAME)
 		icon_index |= INGAME_MASK;
 	if (b->passworded)
 		icon_index |= PW_MASK;
 	if (!b->locked && b->max_players == GetNumPlayers(b))
 		icon_index |= FULL_MASK;
-	item.state = INDEXTOOVERLAYMASK(icon_index);
 
-	ListView_SetItem(list, &item);
+	{
+		LVITEM item;
 
-	item.mask = LVIF_TEXT;
+		item.mask = LVIF_STATE | LVIF_IMAGE;
+		item.iItem = index;
+		item.iSubItem = 0;
+		item.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
+			item.stateMask = LVIS_OVERLAYMASK;
+		item.state = INDEXTOOVERLAYMASK(icon_index);
+		ListView_SetItem(list, &item);
+	}
 
-#define ADD_STRING(s) \
-	++item.iSubItem; \
-	item.pszText = s; \
-	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&item); \
 
-	ADD_STRING(utf8to16(b->title));
-	ADD_STRING(utf8to16(b->mod_name));
-	ADD_STRING(utf8to16(b->map_name));
-	wchar_t buf[16];
-	_swprintf(buf, L"%d / %d +%d",
+	char buf[16];
+	sprintf(buf, "%d / %d +%d",
 			GetNumPlayers(b), b->max_players, b->spectator_len);
-	ADD_STRING(buf);
 
-#undef ADD_STRING
+	const char * column_text[] = {
+		b->title,
+		b->mod_name,
+		b->map_name,
+		buf,
+	};
+
+	for (size_t i = 0; i < LENGTH(column_text); ++i) {
+		LVITEM item;
+
+		item.mask = LVIF_TEXT;
+		item.iItem = index;
+		item.iSubItem = i + 1;
+		item.pszText = utf8to16(column_text[i]);
+		SendMessage(list, LVM_SETITEM, 0, (LPARAM)&item);
+	}
 
 	sort_listview(0);
 }
+
 
 void
 BattleList_OnEndLoginInfo(void)
@@ -337,6 +390,7 @@ init (void)
 		.lpfnWndProc   = battlelist_proc,
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
+
 	RegisterClassEx(&class_info);
 }
 
