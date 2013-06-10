@@ -276,6 +276,7 @@ void
 BattleRoom_show(void)
 {
 	RECT rect;
+
 	GetClientRect(g_battle_room, &rect);
 	SendMessage(g_battle_room, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
 	MainWindow_enable_battleroom_button();
@@ -292,6 +293,7 @@ static int
 find_user(const void *u)
 {
 	LVFINDINFO find_info;
+
 	find_info.flags = LVFI_PARAM;
 	find_info.lParam = (LPARAM)u;
 	return SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_FINDITEM,
@@ -309,6 +311,7 @@ get_effective_name(const union UserOrBot *s)
 {
 	if (s->battle_status & BS_AI)
 		return s->bot.owner->name;
+
 	return s->name;
 }
 
@@ -322,16 +325,18 @@ sort_listview(const union UserOrBot *u1, const union UserOrBot *u2,
 static void
 update_group(uint8_t group_id)
 {
+	wchar_t buf[64];
+	uint8_t players_on_team;
+	LVGROUP group_info;
+
 	if (group_id >= 16)
 		return;
 
-	wchar_t buf[256];
-	int players_on_team = 0;
+	players_on_team = 0;
 	FOR_EACH_PLAYER(p, g_my_battle)
 		players_on_team += FROM_BS_ALLY(p->battle_status) == group_id;
-	_swprintf(buf, L"Team %d :: %d Player%c", group_id + 1, players_on_team, players_on_team > 1 ? 's' : '\0');
+	_swprintf(buf, L"Team %d :: %hu Player%c", group_id + 1, players_on_team, players_on_team > 1 ? 's' : '\0');
 
-	LVGROUP group_info;
 	group_info.cbSize = sizeof(group_info);
 	group_info.mask = LVGF_HEADER;
 	group_info.pszHeader = buf;

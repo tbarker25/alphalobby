@@ -46,6 +46,7 @@ Battle * Battles_find(uint32_t id)
 Battle *Battles_new(void)
 {
 	size_t i=0;
+
 	for (; i<battle_len; ++i) {
 		if (battles[i] == NULL)
 			break;
