@@ -23,8 +23,8 @@
 
 struct Battle;
 
-void BattleList_UpdateBattle(struct Battle *);
-void BattleList_CloseBattle(struct Battle *);
+void BattleList_UpdateBattle(const struct Battle *);
+void BattleList_CloseBattle(const struct Battle *);
 void BattleList_OnEndLoginInfo(void);
 void BattleList_reset(void);
 
