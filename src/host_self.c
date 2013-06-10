@@ -91,11 +91,11 @@ set_map(const char *map_name)
 static void
 set_option(Option *opt, const char *val)
 {
-	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_count)
-		Server_send("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, opt->val);
+	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_len)
+		Server_send("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, val);
 
-	else if (opt >= g_map_options && opt < g_map_options + g_map_option_count)
-		Server_send("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, opt->val);
+	else if (opt >= g_map_options && opt < g_map_options + g_map_option_len)
+		Server_send("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, val);
 	else
 		assert(0);
 }

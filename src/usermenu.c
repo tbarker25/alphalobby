@@ -55,14 +55,14 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 
 	uint32_t battle_status = s->battle_status;
 
-	for (int i=0; i<16; ++i) {
+	for (uint8_t i=0; i<16; ++i) {
 		wchar_t buf[3];
 		_swprintf(buf, L"%d", i+1);
 		AppendMenu(menus[TEAM_MENU], MF_CHECKED * (i == FROM_BS_TEAM(battle_status)), FLAG_TEAM | i, buf);
 		AppendMenu(menus[ALLY_MENU], MF_CHECKED * (i == FROM_BS_ALLY(battle_status)), FLAG_ALLY | i, buf);
 	}
 
-	for (int i=0; *g_side_names[i]; ++i)
+	for (size_t i=0; *g_side_names[i]; ++i)
 		AppendMenuA(menus[SIDE_MENU], MF_CHECKED * (i == FROM_BS_SIDE(battle_status)), FLAG_SIDE | i, g_side_names[i]);
 
 
@@ -134,9 +134,9 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 			// s->bot.dll = malloc(len+1);
 			// GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
 			// free(s->bot.options);
-			// s->bot.option_count = Sync_ai_option_count(s->bot.dll);
-			// s->bot.options = calloc(s->bot.option_count, sizeof(*s->bot.options));
-			// UnitSync_GetOptions(s->bot.options, s->bot.option_count);
+			// s->bot.option_len = Sync_ai_option_len(s->bot.dll);
+			// s->bot.options = calloc(s->bot.option_len, sizeof(*s->bot.options));
+			// UnitSync_GetOptions(s->bot.options, s->bot.option_len);
 		// } else if (clicked & AI_OPTIONS_FLAG) {
 			// Option2 *opt= &s->bot.options[clicked & 0xFF];
 			// switch (opt->type) {

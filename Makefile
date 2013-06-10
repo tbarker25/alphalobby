@@ -8,12 +8,13 @@ ifdef VERSION
 	CFLAGS+= -s -Os -mwindows
 else
 	BUILD_DIR:=debug
-	CFLAGS+= -g3 -O0 -Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute
 	LDFLAGS+= -lmsvcrtd
+	CFLAGS+= -g3 -O0
 endif
 
+WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra
 WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DNO_STRICT -DNO_OLDNAMES
-CFLAGS+= -Iinclude -I$(BUILD_DIR) $(WIN_CFLAGS)
+CFLAGS+= -Iinclude -I$(BUILD_DIR) $(WIN_CFLAGS) $(WARNINGS)
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:

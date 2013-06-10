@@ -286,11 +286,14 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_SPRING_SETTINGS:
-		CreateProcess(L"springsettings.exe", L"springsettings.exe",
+		{
+			STARTUPINFO startup_info = {0};
+			PROCESS_INFORMATION process_info;
+			startup_info.cb= sizeof(startup_info);
+			CreateProcess(L"springsettings.exe", L"springsettings.exe",
 				NULL, NULL, 0, 0, NULL,NULL,
-				&(STARTUPINFO){.cb=sizeof(STARTUPINFO)},
-				&(PROCESS_INFORMATION){}
-			     );
+				&startup_info, &process_info);
+		}
 		return 0;
 
 	case ID_LOBBY_PREFERENCES:
@@ -456,17 +459,21 @@ MainWindow_change_connect(enum ServerStatus state)
 	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
 	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
 
-	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETBUTTONINFO, ID_CONNECT,
-			(LPARAM)&(TBBUTTONINFO){
-			.cbSize = sizeof(TBBUTTONINFO),
-			.dwMask = TBIF_IMAGE | TBIF_TEXT,
-			.iImage = (enum ICONS []){ICONS_OFFLINE, ICONS_CONNECTING, ICONS_ONLINE}[state],
-			.pszText = (wchar_t *)(const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state],
-			});
+	TBBUTTONINFO info;
+	info.cbSize = sizeof(TBBUTTONINFO);
+	info.dwMask = TBIF_IMAGE | TBIF_TEXT;
+	info.iImage = (enum ICONS []){ICONS_OFFLINE, ICONS_CONNECTING, ICONS_ONLINE}[state];
+	info.pszText = (wchar_t *)(const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state];
+
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETBUTTONINFO,
+			ID_CONNECT, (LPARAM)&info);
 }
 
 int WINAPI
-WinMain(HINSTANCE hInstance, HINSTANCE hPrev_instance, LPSTR lp_cmd_line, int n_cmd_show)
+WinMain(__attribute__((unused)) HINSTANCE instance,
+		__attribute__((unused)) HINSTANCE prev_instance,
+		__attribute__((unused)) PSTR cmd_line,
+		__attribute__((unused)) int cmd_show)
 {
 	Settings_init();
 

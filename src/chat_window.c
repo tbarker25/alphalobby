@@ -69,8 +69,8 @@ get_tab_index(HWND tab_item)
 	TCITEM info;
 	info.mask = TCIF_PARAM;
 
-	int tab_count = TabCtrl_GetItemCount(tab_control);
-	for (int i=0; i<tab_count; ++i) {
+	int tab_len = TabCtrl_GetItemCount(tab_control);
+	for (int i=0; i<tab_len; ++i) {
 		TabCtrl_GetItem(tab_control, i, &info);
 		if ((HWND)info.lParam == tab_item)
 			return i;
@@ -159,7 +159,8 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		NMHDR *info = (void *)l_param;
 		if (info->hwndFrom == tab_control && info->code == TCN_SELCHANGE) {
 			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
-			TCITEM info = {TCIF_PARAM};
+			TCITEM info;
+			info.mask = TCIF_PARAM;
 			TabCtrl_GetItem(tab_control, tab_index, &info);
 			ChatWindow_set_active_tab((HWND)info.lParam);
 			return 0;

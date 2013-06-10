@@ -81,7 +81,8 @@ sort_order = 5, reverse_sort = 0;
 
 	sort_order = new_order ?: sort_order;
 
-	int CALLBACK CompareFunc(const Battle *b1, const Battle *b2, int unused)
+	int CALLBACK CompareFunc(const Battle *b1, const Battle *b2,
+			__attribute__((unused)) int unused)
 	{
 		if (reverse_sort) {
 			const Battle *swap = b1;
@@ -197,7 +198,7 @@ on_get_info_tip(NMLVGETINFOTIP *info)
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->mod_name, b->map_name,
 			utf8to16(b->title), GetNumPlayers(b), b->max_players,
-			b->participant_count);
+			b->participant_len);
 }
 
 static void
@@ -208,11 +209,12 @@ on_create(HWND window)
 
 	HWND list_dlg = GetDlgItem(g_battle_list, DLG_LIST);
 
-	LVCOLUMN column_info = { LVCF_TEXT | LVCF_SUBITEM };
 	for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
-		column_info.pszText = (wchar_t *)columns[i];
-		column_info.iSubItem = i;
-		ListView_InsertColumn(list_dlg, i, &column_info);
+		LVCOLUMN info;
+		info.mask = LVCF_TEXT | LVCF_SUBITEM;
+		info.pszText = (wchar_t *)columns[i];
+		info.iSubItem = i;
+		ListView_InsertColumn(list_dlg, i, &info);
 	}
 
 	EnableIconList(list_dlg);
@@ -311,7 +313,7 @@ BattleList_UpdateBattle(Battle *b)
 	ADD_STRING(utf8to16(b->map_name));
 	wchar_t buf[16];
 	_swprintf(buf, L"%d / %d +%d",
-			GetNumPlayers(b), b->max_players, b->spectator_count);
+			GetNumPlayers(b), b->max_players, b->spectator_len);
 	ADD_STRING(buf);
 
 #undef ADD_STRING

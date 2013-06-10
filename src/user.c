@@ -33,14 +33,14 @@
 
 User g_my_user;
 static User **users;
-static size_t user_count;
+static size_t user_len;
 bool g_battle_info_finished;
 
 User * Users_find(const char *name)
 {
 	if (!strcmp(name, g_my_user.name))
 		return &g_my_user;
-	for (int i=0; i<user_count; ++i)
+	for (size_t i=0; i<user_len; ++i)
 		if (!strcmp(users[i]->name, name))
 			return &(*users[i]);
 	return NULL;
@@ -48,9 +48,8 @@ User * Users_find(const char *name)
 
 User *Users_get_next(void)
 {
-	static int
-last;
-	return last < user_count ? users[last++] : (last = 0, NULL);
+	static size_t last;
+	return last < user_len ? users[last++] : (last = 0, NULL);
 }
 
 User * Users_new(uint32_t id, const char *name)
@@ -59,15 +58,15 @@ User * Users_new(uint32_t id, const char *name)
 		g_my_user.id = id;
 		return &g_my_user;
 	}
-	int i=0;
-	for (; i<user_count; ++i)
+	size_t i=0;
+	for (; i<user_len; ++i)
 		if (users[i]->id == id)
 			break;
 
-	if (i == user_count) {
-		if (user_count % ALLOC_STEP == 0)
-			users = realloc(users, (user_count + ALLOC_STEP) * sizeof(User *));
-		++user_count;
+	if (i == user_len) {
+		if (user_len % ALLOC_STEP == 0)
+			users = realloc(users, (user_len + ALLOC_STEP) * sizeof(User *));
+		++user_len;
 		users[i] = calloc(1, sizeof(User));
 		users[i]->id = id;
 		strcpy(users[i]->alias, UNTAGGED_NAME(name));
@@ -94,15 +93,15 @@ Users_add_bot(const char *name, User *owner, uint32_t battle_status,
 	bot->dll = _strdup(aiDll);
 
 	Battle *b = g_my_battle;
-	int i=b->participant_count - b->bot_count;
-	while (i<b->participant_count
+	int i=b->participant_len - b->bot_len;
+	while (i<b->participant_len
 			&& _stricmp(b->users[i]->name, bot->name) < 0)
 		++i;
-	for (int j=b->participant_count; j>i; --j)
+	for (int j=b->participant_len; j>i; --j)
 		b->users[j] = b->users[j-1];
 	b->users[i] = (UserOrBot *)bot;
-	++b->participant_count;
-	++b->bot_count;
+	++b->participant_len;
+	++b->bot_len;
 
 	/* Rebalance(); */
 	BattleRoom_on_start_position_change();
@@ -112,18 +111,18 @@ Users_add_bot(const char *name, User *owner, uint32_t battle_status,
 void
 Users_del_bot(const char *name)
 {
-	int i = g_my_battle->participant_count - g_my_battle->bot_count;
-	while (i < g_my_battle->participant_count
+	int i = g_my_battle->participant_len - g_my_battle->bot_len;
+	while (i < g_my_battle->participant_len
 			&& _stricmp(g_my_battle->users[i]->name, name) < 0)
 		++i;
 	BattleRoom_on_left_battle(g_my_battle->users[i]);
 	free(g_my_battle->users[i]->bot.dll);
 	free(g_my_battle->users[i]->bot.options);
 	free(g_my_battle->users[i]);
-	while (++i < g_my_battle->participant_count)
+	while (++i < g_my_battle->participant_len)
 		g_my_battle->users[i - 1] = g_my_battle->users[i];
-	--g_my_battle->participant_count;
-	--g_my_battle->bot_count;
+	--g_my_battle->participant_len;
+	--g_my_battle->bot_len;
 	/* Rebalance(); */
 	BattleRoom_on_start_position_change();
 }
@@ -131,6 +130,6 @@ Users_del_bot(const char *name)
 void
 Users_reset(void)
 {
-	for (int i=0; i<user_count; ++i)
+	for (size_t i=0; i<user_len; ++i)
 		*users[i]->name = '\0';
 }

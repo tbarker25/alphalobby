@@ -39,8 +39,9 @@
 static DWORD WINAPI
 spring_proc(LPVOID path)
 {
-	PROCESS_INFORMATION process_info = {};
-	STARTUPINFO startup_info = {.cb = sizeof(startup_info)};
+	PROCESS_INFORMATION process_info;
+	STARTUPINFO startup_info = {0};
+	startup_info.cb = sizeof(startup_info);
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {

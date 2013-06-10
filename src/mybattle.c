@@ -47,16 +47,19 @@ Battle *g_my_battle;
 extern uint32_t g_last_battle_status;
 
 uint32_t g_map_hash, g_mod_hash;
-ssize_t g_mod_option_count, g_map_option_count;
+size_t g_mod_option_len, g_map_option_len;
 Option *g_mod_options, *g_map_options;
 BattleOption g_battle_options;
 const HostType *g_host_type;
 
-uint8_t g_side_count;
+uint8_t g_side_len;
 char g_side_names[16][32];
 
-char **g_maps, **g_mods;
-ssize_t g_map_count = -1, g_mod_count = -1;
+char **g_maps;
+size_t g_map_len = 0;
+
+char **g_mods;
+size_t g_mod_len = 0;
 
 static char *current_script;
 
@@ -119,7 +122,7 @@ MyBattle_left_battle(void)
 	BattleRoom_hide();
 
 	memset(&g_battle_options, 0, sizeof(g_battle_options));
-	for (int i=0; i<LENGTH(g_battle_options.positions); ++i)
+	for (size_t i=0; i<LENGTH(g_battle_options.positions); ++i)
 		g_battle_options.positions[i] = INVALID_STARTPOS;
 
 	free(current_script);
@@ -127,8 +130,8 @@ MyBattle_left_battle(void)
 
 	BattleRoom_on_set_mod_details();
 
-	while (g_my_battle->bot_count)
-		Users_del_bot(g_my_battle->users[g_my_battle->participant_count - 1]->bot.name);
+	while (g_my_battle->bot_len)
+		Users_del_bot(g_my_battle->users[g_my_battle->participant_len - 1]->bot.name);
 
 	g_my_user.battle_status = 0;
 	g_last_battle_status = 0;
@@ -168,9 +171,9 @@ MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color
 				&& BattleRoom_is_auto_unspec())
 			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
 
-		g_my_battle->spectator_count = 0;
-		for (int i=0; i < g_my_battle->participant_count; ++i)
-			g_my_battle->spectator_count += !(g_my_battle->users[i]->battle_status & BS_MODE);
+		g_my_battle->spectator_len = 0;
+		for (int i=0; i < g_my_battle->participant_len; ++i)
+			g_my_battle->spectator_len += !(g_my_battle->users[i]->battle_status & BS_MODE);
 		BattleList_UpdateBattle(g_my_battle);
 		/* Rebalance(); */
 	} else if (bs & BS_MODE
@@ -201,7 +204,7 @@ MyBattle_change_option(Option *restrict opt)
 		break;
 	case opt_list:
 		menu = CreatePopupMenu();
-		for (int j=0; j < opt->list_item_count; ++j)
+		for (size_t j=0; j < opt->list_item_len; ++j)
 			AppendMenuA(menu, 0, j+1, opt->list_items[j].name);
 		SetLastError(0);
 		POINT point;
@@ -282,7 +285,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 	}
 
 	if (!strcmp(section, "modoptions")) {
-		for (int i=0; i<g_mod_option_count; ++i) {
+		for (size_t i=0; i<g_mod_option_len; ++i) {
 			if (strcmp(g_mod_options[i].key, key))
 				continue;
 			free(g_mod_options[i].val);
@@ -295,7 +298,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 	}
 
 	if (!strcmp(section, "mapoptions")) {
-		for (int i=0; i<g_map_option_count; ++i) {
+		for (size_t i=0; i<g_map_option_len; ++i) {
 			if (strcmp(g_map_options[i].key, key))
 				continue;
 			free(g_map_options[i].val);
@@ -353,11 +356,11 @@ MyBattle_update_mod_options(void)
 	set_options_from_script();
 
 	/* Set default values */
-	for (int i=0; i<g_mod_option_count; ++i)
+	for (size_t i=0; i<g_mod_option_len; ++i)
 		if (!g_mod_options[i].val)
 			BattleRoom_on_set_option(&g_mod_options[i]);
 
-	for (int i=0; i<g_map_option_count; ++i)
+	for (size_t i=0; i<g_map_option_len; ++i)
 		if (!g_map_options[i].val)
 			BattleRoom_on_set_option(&g_map_options[i]);
 }
