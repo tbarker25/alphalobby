@@ -148,14 +148,14 @@ connect_proc(void (*on_finish)(void))
 	WSADATA wsa_data;
 	if (WSAStartup(MAKEWORD(2,2), &wsa_data)) {
 		MainWindow_msg_box("Could not connect to server.",
-				"WSAStartup failed.\n_please check your internet connection.");
+				"WSAStartup failed.\nPlease check your internet connection.");
 		return 1;
 	}
 
 	struct hostent *host = gethostbyname("lobby.springrts.com");
 	if (!host) {
 		MainWindow_msg_box("Could not connect to server.",
-				"Could not retrieve host information.\n_please check your internet connection.");
+				"Could not retrieve host information.\nPlease check your internet connection.");
 		return 1;
 	}
 	#define HTONS(x) (uint16_t)((x) << 8 | (x) >> 8)
@@ -168,7 +168,7 @@ connect_proc(void (*on_finish)(void))
 
 	if (connect(sock, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
 		MainWindow_msg_box("Could not connect to server.",
-				"Could not finalize connection.\n_please check your internet connection.");
+				"Could not finalize connection.\nPlease check your internet connection.");
 		closesocket(sock);
 		sock = INVALID_SOCKET;
 	}

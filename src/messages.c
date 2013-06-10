@@ -667,7 +667,7 @@ said_battle_ex(void)
 				g_host_type = &g_host_springie;
 			} else {
 				g_last_auto_message = GetTickCount();
-				Server_send("SAYPRIVATE %s !version\n_s_aYPRIVA_t_e %s !springie", username, username);
+				Server_send("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
 			}
 		}
 	}
