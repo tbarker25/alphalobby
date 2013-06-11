@@ -62,7 +62,7 @@ on_init(HWND window)
 			LVS_NOCOLUMNHEADER);
 
 	ListView_SetExtendedListViewStyle(user_list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-	EnableIconList(user_list);
+	IconList_enable_for_listview(user_list);
 
 	GetClientRect(user_list, &rect);
 	column_info.mask = LVCF_SUBITEM | LVCF_WIDTH;
@@ -90,7 +90,7 @@ on_init(HWND window)
 				u->name, u->alias);
 		item.pszText = name;
 
-		item.iImage = u->client_status & CS_INGAME ? ICONS_INGAME
+		item.iImage = u->client_status & CS_INGAME ? ICON_INGAME
 			: u->battle ? INGAME_MASK
 			: -1;
 
@@ -105,7 +105,7 @@ on_init(HWND window)
 		item.iItem = ListView_InsertItem(user_list, &item);
 
 		item.mask = LVIF_IMAGE;
-		item.iImage = ICONS_FIRST_FLAG + u->country;
+		item.iImage = ICON_FIRST_FLAG + u->country;
 		item.iSubItem = 1;
 		ListView_SetItem(user_list, &item);
 	}

@@ -23,9 +23,10 @@
 
 struct Battle;
 
-void BattleList_UpdateBattle(const struct Battle *);
-void BattleList_CloseBattle(const struct Battle *);
-void BattleList_OnEndLoginInfo(void);
+void BattleList_add_battle(struct Battle *);
+void BattleList_update_battle(const struct Battle *);
+void BattleList_close_battle(const struct Battle *);
+void BattleList_on_end_login_info(void);
 void BattleList_reset(void);
 
 extern HWND g_battle_list;

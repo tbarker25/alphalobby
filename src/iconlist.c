@@ -30,57 +30,126 @@
 #include "mybattle.h"
 #include "user.h"
 
-HIMAGELIST g_icon_list;
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-int IconList_get_user_color(const union UserOrBot *s)
+#define ICON_BBP (4)
+#define ICON_HEIGHT (16)
+#define ICON_WIDTH (sizeof(icon_data) / ICON_BBP / ICON_HEIGHT)
+
+static int get_player_color_index(const union UserOrBot *u);
+static void __attribute__((constructor)) init(void);
+static void set_icon_as_color(int index, uint32_t color);
+
+static HIMAGELIST icon_list;
+
+void
+IconList_replace_icon(IconIndex index, HBITMAP bitmap)
 {
-	if (!(s->battle_status & BS_MODE))
+	ImageList_Replace(icon_list, index, bitmap, NULL);
+}
+
+HICON
+IconList_get_icon(IconIndex icon_index)
+{
+	return ImageList_GetIcon(icon_list, icon_index, 0);
+}
+
+static int
+get_player_color_index(const union UserOrBot *u)
+{
+	static const UserOrBot *player_colors[ICON_LAST_COLOR - ICON_FIRST_COLOR + 1];
+
+	if (!(u->battle_status & BS_MODE))
 		return -1;
 
-	static const UserOrBot *colors[ICONS_LAST_COLOR - ICONS_FIRST_COLOR + 1];
-	int i;
-	for (i=0; i <= ICONS_LAST_COLOR - ICONS_FIRST_COLOR; ++i)
-		if (colors[i] == s)
-			goto doit;
+	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
+		if (player_colors[i] == u) {
+			player_colors[i] = u;
+			return i;
+		}
+	}
 
-	for (i=0; i <= ICONS_LAST_COLOR - ICONS_FIRST_COLOR; ++i) {
-		FOR_EACH_PLAYER(p, g_my_battle)
-			if (p == colors[i])
-				goto end;
-		doit:
-		colors[i] = s;
-		HDC dc = GetDC(NULL);
-		HDC bitmap_dc = CreateCompatibleDC(dc);
-		HBITMAP bitmap = CreateCompatibleBitmap(dc, 16, 16);
-		ReleaseDC(NULL, dc);
-		SelectObject(bitmap_dc, bitmap);
-		for (int i=0; i<16*16; ++i)
-			SetPixelV(bitmap_dc, i%16, i/16, s->color);
-		DeleteDC(bitmap_dc);
-
-		ImageList_Replace(g_icon_list, ICONS_FIRST_COLOR + i, bitmap, NULL);
-		DeleteObject(bitmap);
-		return ICONS_FIRST_COLOR + i;
-
-		end:;
+	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
+		for (size_t j = 0; j < g_my_battle->participant_len; ++j) {
+			if (g_my_battle->users[j]->battle_status & BS_MODE
+					&& g_my_battle->users[j] == player_colors[i])
+				goto color_already_used;
+		}
+		player_colors[i] = u;
+		return i;
+color_already_used:;
 	}
 	return -1;
 }
 
-#define ICONS_BBP (4)
-#define ICONS_HEIGHT (16)
-#define ICONS_WIDTH (sizeof(icon_data) / ICONS_BBP / ICONS_HEIGHT)
+static void
+set_icon_as_color(int index, uint32_t color)
+{
+	HDC dc;
+	HDC bitmap_dc;
+	HBITMAP bitmap;
+
+	dc = GetDC(NULL);
+	bitmap_dc = CreateCompatibleDC(dc);
+	bitmap = CreateCompatibleBitmap(dc, 16, 16);
+	ReleaseDC(NULL, dc);
+	SelectObject(bitmap_dc, bitmap);
+
+	for (size_t i=0; i<16*16; ++i)
+		SetPixelV(bitmap_dc, i%16, i/16, color);
+
+	DeleteDC(bitmap_dc);
+
+	ImageList_Replace(icon_list, index, bitmap, NULL);
+	DeleteObject(bitmap);
+}
+
+int
+IconList_get_user_color(const union UserOrBot *u)
+{
+	int color_index;
+
+	color_index = get_player_color_index(u);
+	if (color_index < 0)
+		return -1;
+
+	set_icon_as_color(ICON_FIRST_COLOR + color_index, u->color);
+
+	return ICON_FIRST_COLOR + color_index;
+}
+
+void
+IconList_set_window_image(HWND window, IconIndex icon_index)
+{
+	HICON icon;
+
+	icon = ImageList_GetIcon(icon_list, icon_index, 0);
+	SendMessage(window, BM_SETIMAGE, IMAGE_ICON, (WPARAM)icon);
+}
+
+void
+IconList_enable_for_listview(HWND window)
+{
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)icon_list);
+}
+
+void
+IconList_enable_for_toolbar(HWND window)
+{
+	SendMessage(window, TB_SETIMAGELIST, 0, (LPARAM)icon_list);
+}
 
 static void __attribute__((constructor))
 init(void)
 {
-	g_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICONS_LAST+1);
+	HBITMAP icons_bitmap;
 
-	HBITMAP icons_bitmap = CreateBitmap(ICONS_WIDTH, ICONS_HEIGHT, 1, ICONS_BBP*8, icon_data);
-	ImageList_Add(g_icon_list, icons_bitmap, NULL);
+	icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
+	icons_bitmap = CreateBitmap(ICON_WIDTH, ICON_HEIGHT, 1, ICON_BBP*8, icon_data);
+	ImageList_Add(icon_list, icons_bitmap, NULL);
 	DeleteObject(icons_bitmap);
 
-	for (int i=1; i<=ICONS_MASK; ++i)
+	for (IconIndex i=1; i<=ICON_MASK; ++i)
 		if (i & ~ USER_MASK)
-			ImageList_SetOverlayImage(g_icon_list, i, i);
+			ImageList_SetOverlayImage(icon_list, i, i);
 }

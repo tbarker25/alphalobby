@@ -29,7 +29,7 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-enum DLG_ID {
+enum DialogId {
 	DLG_LIST,
 	DLG_RAPID,
 	DLG_LAST = DLG_RAPID,

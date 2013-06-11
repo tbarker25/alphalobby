@@ -296,6 +296,8 @@ battle_opened(void)
 	RelayHost_on_battle_opened(b);
 
 	Chat_update_user(b->founder);
+
+	BattleList_add_battle(b);
 }
 
 static void
@@ -315,7 +317,7 @@ battle_closed(void)
 	for (int i=0; i<b->participant_len; ++i)
 		b->users[i]->user.battle = NULL;
 
-	BattleList_CloseBattle(b);
+	BattleList_close_battle(b);
 	Battles_del(b);
 }
 
@@ -390,7 +392,7 @@ client_status(void)
 			| (g_last_client_status & CS_INGAME);
 
 	if (diff & CS_INGAME && u == u->battle->founder)
-		BattleList_UpdateBattle(u->battle);
+		BattleList_update_battle(u->battle);
 
 	if (g_my_battle == u->battle
 			&& diff & CS_INGAME
@@ -468,7 +470,7 @@ joined_battle(void)
 	b->users[i] = (void *)u;
 	++b->participant_len;
 	u->battle_status = 0;
-	BattleList_UpdateBattle(b);
+	BattleList_update_battle(b);
 	Chat_update_user(u);
 
 	if (b == g_my_battle){
@@ -522,7 +524,7 @@ left_battle(void)
 		MyBattle_left_battle();
 
 	Chat_update_user(u);
-	BattleList_UpdateBattle(b);
+	BattleList_update_battle(b);
 
 	if (b == g_my_battle){
 		if (u->battle_status & BS_MODE && BattleRoom_is_auto_unspec())
@@ -538,7 +540,7 @@ static void
 login_info_end(void)
 {
 	Settings_open_default_channels();
-	BattleList_OnEndLoginInfo();
+	BattleList_on_end_login_info();
 	MainWindow_change_connect(CONNECTION_ONLINE);
 	/* Server_send("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
 }
@@ -799,7 +801,7 @@ update_battle_info(void)
 	if (b == g_my_battle && (b->map_hash != last_map_hash || !g_map_hash))
 		Sync_on_changed_map(b->map_name);
 
-	BattleList_UpdateBattle(b);
+	BattleList_update_battle(b);
 }
 
 static void

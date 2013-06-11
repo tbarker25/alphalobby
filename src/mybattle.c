@@ -174,7 +174,7 @@ MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color
 		g_my_battle->spectator_len = 0;
 		for (int i=0; i < g_my_battle->participant_len; ++i)
 			g_my_battle->spectator_len += !(g_my_battle->users[i]->battle_status & BS_MODE);
-		BattleList_UpdateBattle(g_my_battle);
+		BattleList_update_battle(g_my_battle);
 		/* Rebalance(); */
 	} else if (bs & BS_MODE
 			&& ((last_b_s ^ bs) & (BS_TEAM | BS_ALLY)

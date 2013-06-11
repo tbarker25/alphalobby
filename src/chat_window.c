@@ -41,7 +41,7 @@ HWND g_chat_window;
 static HWND active_tab;
 HWND tab_control;
 
-enum DLG_ID {
+enum DialogId {
 	DLG_TAB,
 	DLG_LAST = DLG_TAB,
 };
