@@ -42,7 +42,7 @@ HWND g_battle_list;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-enum DLG_ID {
+enum DialogId {
 	DLG_LIST,
 	DLG_MAP,
 	DLG_BATTLE_INFO,
@@ -71,6 +71,19 @@ static const DialogItem dialog_items[] = {
 };
 
 static const wchar_t *const column_titles[] = {L"host", L"description", L"mod", L"map", L"Players"};
+
+static LRESULT CALLBACK battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static int CALLBACK compare_battle(const Battle *b1, const Battle *b2, int sort_order);
+static int get_icon_index(const Battle *b);
+static int get_index_from_battle(const Battle *b);
+static Battle * get_battle_from_index(int index);
+static void __attribute__((constructor)) init(void);
+static void on_create(HWND window);
+static void on_get_info_tip(NMLVGETINFOTIP *info);
+static void on_item_right_click(POINT pt);
+static void resize_columns(void);
+static void set_item_text(int index, int column, const char *text);
+static void sort_listview(int new_order);
 
 static int CALLBACK
 compare_battle(const Battle *b1, const Battle *b2, int sort_order)
@@ -245,7 +258,7 @@ on_create(HWND window)
 		ListView_InsertColumn(list, i, &info);
 	}
 
-	EnableIconList(list);
+	IconList_enable_for_listview(list);
 	ListView_SetExtendedListViewStyle(list,
 			LVS_EX_DOUBLEBUFFER | LVS_EX_HEADERDRAGDROP
 			| LVS_EX_INFOTIP | LVS_EX_FULLROWSELECT);
@@ -298,37 +311,49 @@ get_index_from_battle(const Battle *b)
 }
 
 void
-BattleList_CloseBattle(const Battle *b)
+BattleList_close_battle(const Battle *b)
 {
 	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_DELETEITEM,
 			get_index_from_battle(b), 0);
 }
 
 void
-BattleList_UpdateBattle(const Battle *b)
-
+BattleList_add_battle(Battle *b)
 {
-	HWND list;
-	int index;
-	size_t icon_index;
+	LVITEM item;
 
-	list = GetDlgItem(g_battle_list, DLG_LIST);
+	assert(get_index_from_battle(b) < 0);
 
-	index = get_index_from_battle(b);
-	if (index == -1) {
-		LVITEM item;
+	item.mask = LVIF_PARAM | LVIF_TEXT;
+	item.iItem = 0;
+	item.iSubItem = 0;
+	item.lParam = (LPARAM)b;
+	item.pszText = utf8to16(b->founder->name);
 
-		item.mask = LVIF_PARAM | LVIF_TEXT;
-		item.iItem = 0;
-		item.iSubItem = 0;
-		item.lParam = (LPARAM)b;
-		item.pszText = utf8to16(b->founder->name);
+	int index = SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_INSERTITEM,
+			0, (LPARAM)&item);
 
-		index = SendMessage(list, LVM_INSERTITEM, 0, (LPARAM)&item);
-	}
+	assert(index >= 0);
+}
 
+static void
+set_item_text(int index, int column, const char *text)
+{
+	LVITEM item;
 
-	icon_index = 0;
+	item.mask = LVIF_TEXT;
+	item.iItem = index;
+	item.iSubItem = column;
+	item.pszText = utf8to16(text);
+	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_SETITEM, 0,
+			(LPARAM)&item);
+}
+
+static int
+get_icon_index(const Battle *b)
+{
+	int icon_index = 0;
+
 	if (b->founder->client_status & CS_INGAME)
 		icon_index |= INGAME_MASK;
 	if (b->passworded)
@@ -336,53 +361,49 @@ BattleList_UpdateBattle(const Battle *b)
 	if (!b->locked && b->max_players == GetNumPlayers(b))
 		icon_index |= FULL_MASK;
 
-	{
-		LVITEM item;
+	return icon_index;
+}
 
-		item.mask = LVIF_STATE | LVIF_IMAGE;
-		item.iItem = index;
-		item.iSubItem = 0;
-		item.iImage = b->locked ? ICONS_CLOSED : ICONS_OPEN,
-			item.stateMask = LVIS_OVERLAYMASK;
-		item.state = INDEXTOOVERLAYMASK(icon_index);
-		ListView_SetItem(list, &item);
-	}
-
-
+void
+BattleList_update_battle(const Battle *b)
+{
+	int index;
+	LVITEM item;
 	char buf[16];
+
+	index = get_index_from_battle(b);
+	assert(index >= 0);
+
+	item.mask = LVIF_STATE | LVIF_IMAGE;
+	item.iItem = index;
+	item.iSubItem = 0;
+	item.iImage = b->locked ? ICON_CLOSED : ICON_OPEN;
+	item.stateMask = LVIS_OVERLAYMASK;
+	item.state = INDEXTOOVERLAYMASK(get_icon_index(b));
+	SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_SETITEM, 0,
+			(LPARAM)&item);
+
+	set_item_text(index, 1, b->title);
+	set_item_text(index, 2, b->mod_name);
+	set_item_text(index, 3, b->map_name);
+
 	sprintf(buf, "%d / %d +%d",
 			GetNumPlayers(b), b->max_players, b->spectator_len);
-
-	const char * column_text[] = {
-		b->title,
-		b->mod_name,
-		b->map_name,
-		buf,
-	};
-
-	for (size_t i = 0; i < LENGTH(column_text); ++i) {
-		LVITEM item;
-
-		item.mask = LVIF_TEXT;
-		item.iItem = index;
-		item.iSubItem = i + 1;
-		item.pszText = utf8to16(column_text[i]);
-		SendMessage(list, LVM_SETITEM, 0, (LPARAM)&item);
-	}
+	set_item_text(index, 4, buf);
 
 	sort_listview(0);
 }
 
 
 void
-BattleList_OnEndLoginInfo(void)
+BattleList_on_end_login_info(void)
 {
 	sort_listview(0);
 	resize_columns();
 }
 
 static void __attribute__((constructor))
-init (void)
+init(void)
 {
 	WNDCLASSEX class_info = {
 		.lpszClassName = WC_BATTLELIST,

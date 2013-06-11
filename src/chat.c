@@ -140,7 +140,7 @@ update_user(HWND window, User *u, int index)
 	item.iItem = index;
 	item.iSubItem = 0;
 	item.pszText = name;
-	item.iImage = u->client_status & CS_INGAME ? ICONS_INGAME
+	item.iImage = u->client_status & CS_INGAME ? ICON_INGAME
 		    : u->battle ? INGAME_MASK
 		    : -1;
 	item.stateMask = LVIS_OVERLAYMASK;
@@ -196,7 +196,7 @@ Chat_add_user(HWND window, User *u)
 	update_user(list, u, index);
 
 	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
-		.mask = LVIF_IMAGE, .iImage = ICONS_FIRST_FLAG + u->country,
+		.mask = LVIF_IMAGE, .iImage = ICON_FIRST_FLAG + u->country,
 		.iItem = index, .iSubItem = COLUMN_COUNTRY,
 	});
 
@@ -423,7 +423,7 @@ static void on_create(HWND window, LPARAM l_param)
 			SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&info);
 		}
 		ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-		EnableIconList(list);
+		IconList_enable_for_listview(list);
 	}
 	// return 0;
 }

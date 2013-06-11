@@ -175,20 +175,20 @@ MainWindow_enable_battleroom_button(void)
 }
 
 static const TBBUTTON tb_buttons[] = {
-	{ ICONS_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
+	{ ICON_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
 	{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
-	{ ICONS_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
+	{ ICON_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
 
-	{ ICONS_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
+	{ ICON_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
 #ifndef NDEBUG
-	{ ICONS_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
-	{ ICONS_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
-	{ ICONS_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
+	{ ICON_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
+	{ ICON_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
+	{ ICON_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
 #endif
-	{ ICONS_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
+	{ ICON_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
 	// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
-	{ ICONS_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
-	{ ICONS_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
+	{ ICON_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+	{ ICON_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
 };
 
 static void
@@ -224,7 +224,8 @@ on_create(HWND window)
 
 	HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
 	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-	SendMessage(toolbar, TB_SETIMAGELIST, 0, (LPARAM)g_icon_list);
+
+	IconList_enable_for_toolbar(toolbar);
 
 	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tb_buttons), 0);
 	SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tb_buttons) / sizeof(*tb_buttons), (LPARAM)&tb_buttons);
@@ -462,7 +463,7 @@ MainWindow_change_connect(enum ServerStatus state)
 	TBBUTTONINFO info;
 	info.cbSize = sizeof(TBBUTTONINFO);
 	info.dwMask = TBIF_IMAGE | TBIF_TEXT;
-	info.iImage = (enum ICONS []){ICONS_OFFLINE, ICONS_CONNECTING, ICONS_ONLINE}[state];
+	info.iImage = (IconIndex []){ICON_OFFLINE, ICON_CONNECTING, ICON_ONLINE}[state];
 	info.pszText = (wchar_t *)(const wchar_t * []){L"Offline", L"Logging in", L"Online"}[state];
 
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETBUTTONINFO,
@@ -482,14 +483,16 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 	/* InitializeSystemMetrics(); */
 	LoadLibrary(L"Riched20.dll");
 
-	RegisterClassEx(&(WNDCLASSEX) {
-			.cbSize = sizeof(WNDCLASSEX),
-			.lpszClassName = WC_ALPHALOBBY,
-			.lpfnWndProc	= main_window_proc,
-			.hIcon          = ImageList_GetIcon(g_icon_list, 0, 0),
-			.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
-			.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
-			});
+	WNDCLASSEX window_class = {
+		.cbSize = sizeof(WNDCLASSEX),
+		.lpszClassName = WC_ALPHALOBBY,
+		.lpfnWndProc	= main_window_proc,
+		.hIcon          = IconList_get_icon(ICON_ALPHALOBBY),
+		.hCursor        = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.hbrBackground  = (HBRUSH)(COLOR_BTNFACE+1),
+	};
+
+	RegisterClassEx(&window_class);
 
 	LONG left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
 	const char *window_placement = Settings_load_str("window_placement");

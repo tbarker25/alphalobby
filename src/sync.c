@@ -446,9 +446,9 @@ Sync_on_changed_mod(const char *mod_name)
 		gzread(fd, g_side_names, g_side_len * 32);
 		gzread(fd, side_pics, sizeof(side_pics));
 
-		for (int i=0; i<g_side_len; ++i) {
+		for (uint8_t i=0; i<g_side_len; ++i) {
 			HBITMAP bitmap = CreateBitmap(16, 16, 1, 32, side_pics[i]);
-			ImageList_Replace(g_icon_list, ICONS_FIRST_SIDE + i, bitmap, NULL);
+			IconList_replace_icon(ICON_FIRST_SIDE + i, bitmap);
 			DeleteObject(bitmap);
 		}
 	}
