@@ -31,10 +31,13 @@
 #include "mainwindow.h"
 #include "mybattle.h"
 #include "settings.h"
+#include "spring.h"
 #include "user.h"
 
 #define LAUNCH_SPRING(path)\
 	CreateThread(NULL, 0, spring_proc, (LPVOID)(_wcsdup(path)), 0, NULL);
+
+static bool ingame;
 
 static DWORD WINAPI
 spring_proc(LPVOID path)
@@ -45,16 +48,24 @@ spring_proc(LPVOID path)
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
-		SetClientStatus(CS_INGAME, CS_INGAME);
+		ingame = true;
+		SetMyClientStatus(g_my_user.ClientStatus);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
-		SetClientStatus(0, CS_INGAME);
+		ingame = false;
+		SetMyClientStatus(g_my_user.ClientStatus);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
 
 	free(path);
 	return 0;
+}
+
+bool
+Spring_is_ingame(void)
+{
+	return ingame;
 }
 
 void

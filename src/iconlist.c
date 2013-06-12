@@ -59,7 +59,7 @@ get_player_color_index(const union UserOrBot *u)
 {
 	static const UserOrBot *player_colors[ICON_LAST_COLOR - ICON_FIRST_COLOR + 1];
 
-	if (!(u->battle_status & BS_MODE))
+	if (!u->mode)
 		return -1;
 
 	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
@@ -70,8 +70,8 @@ get_player_color_index(const union UserOrBot *u)
 	}
 
 	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
-		for (size_t j = 0; j < g_my_battle->participant_len; ++j) {
-			if (g_my_battle->users[j]->battle_status & BS_MODE
+		for (size_t j = 0; j < g_my_battle->user_len; ++j) {
+			if (g_my_battle->users[j]->mode
 					&& g_my_battle->users[j] == player_colors[i])
 				goto color_already_used;
 		}

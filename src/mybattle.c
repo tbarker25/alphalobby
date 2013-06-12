@@ -29,6 +29,7 @@
 #include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
+#include "client.h"
 #include "client_message.h"
 #include "common.h"
 #include "dialogboxes.h"
@@ -44,7 +45,7 @@ uint32_t g_udp_help_port;
 uint32_t g_battle_to_join;
 
 Battle *g_my_battle;
-extern uint32_t g_last_battle_status;
+bool g_battle_info_finished;
 
 uint32_t g_map_hash, g_mod_hash;
 size_t g_mod_option_len, g_map_option_len;
@@ -81,22 +82,37 @@ MyBattle_set_map(const char *restrict name)
 		g_host_type->set_map(name);
 }
 
-uint32_t
+BattleStatus
 MyBattle_new_battle_status(void)
 {
-	int team_bit_field=0, ally=0;
-	FOR_EACH_PLAYER(s, g_my_battle) {
-		ally += ((s->battle_status & BS_ALLY) == 0) - ((s->battle_status & BS_ALLY) == TO_BS_ALLY_MASK(1));
-		team_bit_field |= 1 << FROM_BS_TEAM(s->battle_status);
+	BattleStatus ret = {0};
+	uint16_t team_bit_field;
+	int ally_diff;
+
+	ret.mode = 1;
+	ret.ready = 1;
+
+	team_bit_field = 0;
+	ally_diff = 0;
+
+	for (uint8_t i = 0; i < g_my_battle->user_len; ++i) {
+		if (!g_my_battle->users[i]->mode)
+			break;
+		ally_diff += g_my_battle->users[i]->ally == 0;
+		ally_diff -= g_my_battle->users[i]->ally == 1;
+		team_bit_field |= 1 << g_my_battle->users[i]->team;
 	}
-	int team_mask = 0;
+
+	ret.ally = ally_diff < 0;
+
 	for (int i=0; i<16; ++i) {
-		if (!(team_bit_field & 1 << i)) {
-			team_mask = TO_BS_TEAM_MASK(i);
+		if (~team_bit_field & 1 << i) {
+			ret.team = i;
 			break;
 		}
 	}
-	return BS_MODE | BS_READY | team_mask | TO_BS_ALLY_MASK(ally > 0);
+
+	return ret;
 }
 
 void
@@ -105,8 +121,8 @@ MyBattle_joined_battle(Battle *restrict b, uint32_t mod_hash)
 	g_my_battle = b;
 	g_battle_options.mod_hash = mod_hash;
 
-	g_my_user.battle_status = 0;
-	g_last_battle_status = 0;
+	g_my_user.BattleStatus = (BattleStatus){0};
+	g_last_battle_status = (BattleStatus){0};
 
 	if (g_mod_hash !=mod_hash)
 		Sync_on_changed_mod(b->mod_name);
@@ -131,10 +147,10 @@ MyBattle_left_battle(void)
 	BattleRoom_on_set_mod_details();
 
 	while (g_my_battle->bot_len)
-		Users_del_bot(g_my_battle->users[g_my_battle->participant_len - 1]->bot.name);
+		Users_del_bot(g_my_battle->users[g_my_battle->user_len - 1]->bot.name);
 
-	g_my_user.battle_status = 0;
-	g_last_battle_status = 0;
+	g_my_user.BattleStatus = (BattleStatus){0};
+	g_last_battle_status = (BattleStatus){0};
 	g_battle_info_finished = 0;
 
 	g_my_battle = NULL;
@@ -147,44 +163,41 @@ MyBattle_left_battle(void)
 
 
 void
-MyBattle_update_battle_status(UserOrBot *restrict s, uint32_t bs, uint32_t color)
+MyBattle_update_battle_status(UserOrBot *restrict u, BattleStatus bs, uint32_t color)
 {
-	uint32_t last_b_s = s->battle_status;
-	s->battle_status = bs;
-	uint32_t last_color = s->color;
-	s->color = color;
+	BattleStatus last_bs = u->BattleStatus;
+	u->BattleStatus = bs;
+	u->color = color;
 
-	#ifdef NDEBUG
-	if (!s || !g_my_battle || g_my_battle != s->battle)
+#ifdef NDEBUG
+	if (!u || !g_my_battle || g_my_battle != u->battle)
 		return;
-	#endif
+#endif
 
-	BattleRoom_update_user(s);
+	BattleRoom_update_user(u);
 
-	if (&s->user == &g_my_user)
+	if (&u->user == &g_my_user)
 		g_last_battle_status = bs;
 
-	if ((last_b_s ^ bs) & BS_MODE) {
-
-		if (!(bs & BS_MODE)
-				&& (User *)s != &g_my_user
-				&& BattleRoom_is_auto_unspec())
-			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
-
-		g_my_battle->spectator_len = 0;
-		for (int i=0; i < g_my_battle->participant_len; ++i)
-			g_my_battle->spectator_len += !(g_my_battle->users[i]->battle_status & BS_MODE);
-		BattleList_update_battle(g_my_battle);
-		/* Rebalance(); */
-	} else if (bs & BS_MODE
-			&& ((last_b_s ^ bs) & (BS_TEAM | BS_ALLY)
-			   ||  last_color != color)) {
-		/* FixPlayerStatus((void *)s); */
-	} else
-		return;
-	if ((last_b_s ^ bs) & BS_MODE
-			|| ((last_b_s ^ bs) & BS_ALLY && &s->user == &g_my_user))
+	if (last_bs.mode != bs.mode
+			|| (last_bs.ally != bs.ally && &u->user == &g_my_user))
 		BattleRoom_on_start_position_change();
+
+	if (last_bs.mode == bs.mode)
+		return;
+
+	if (!bs.mode && (User *)u != &g_my_user
+			&& BattleRoom_is_auto_unspec()) {
+		BattleStatus new_bs = u->BattleStatus;
+		new_bs.mode = 1;
+		SetMyBattleStatus(new_bs);
+	}
+
+	g_my_battle->spectator_len = 0;
+	for (int i=0; i < g_my_battle->user_len; ++i)
+		g_my_battle->spectator_len += !g_my_battle->users[i]->mode;
+	BattleList_update_battle(g_my_battle);
+	/* Rebalance(); */
 }
 
 void
@@ -209,8 +222,7 @@ MyBattle_change_option(Option *restrict opt)
 		SetLastError(0);
 		POINT point;
 		GetCursorPos(&point);
-		void
-func(int *i) {
+		void func(int *i) {
 			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, g_main_window, NULL);
 		}
 		int clicked;
@@ -275,10 +287,11 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 			printf("unrecognized player option %s=%s\n", key, val);
 			return;
 		}
-		FOR_EACH_HUMAN_PLAYER(p, g_my_battle) {
-			if (!_stricmp(username, p->name)) {
-				free(p->skill);
-				p->skill = _strdup(val);
+		for (uint8_t i=0; i<g_my_battle->user_len; ++i) {
+			UserOrBot *u = g_my_battle->users[i];
+			if (!u->ai && !_stricmp(u->name, username)) {
+				free(u->user.skill);
+				u->user.skill = _strdup(val);
 			}
 		}
 		return;
@@ -363,4 +376,11 @@ MyBattle_update_mod_options(void)
 	for (size_t i=0; i<g_map_option_len; ++i)
 		if (!g_map_options[i].val)
 			BattleRoom_on_set_option(&g_map_options[i]);
+}
+
+void
+MyBattle_leave(void)
+{
+	assert(g_my_battle);
+	Server_send("LEAVEBATTLE");
 }

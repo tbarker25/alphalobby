@@ -97,8 +97,6 @@ static void update_bot(void);
 
 static FILE *agreement_file;
 static DWORD time_battle_joined;
-extern uint32_t g_last_battle_status;
-extern uint8_t g_last_client_status;
 static char *command;
 
 static const struct {
@@ -207,6 +205,10 @@ accepted(void)
 static void
 add_bot(void)
 {
+	union {
+		BattleStatus; uint32_t as_int;
+	} bs;
+
 	// ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL}
 	__attribute__((unused))
 	char *battle_id = get_next_word();
@@ -214,9 +216,9 @@ add_bot(void)
 	char *name = get_next_word();
 	User *owner = Users_find(get_next_word());
 	assert(owner);
-	uint32_t battle_status = get_next_int();
+	bs.as_int = get_next_int();
 	uint32_t color = get_next_int();
-	Users_add_bot(name, owner, battle_status, color, command);
+	Users_add_bot(name, owner, bs.BattleStatus, color, command);
 }
 
 static void
@@ -280,7 +282,7 @@ battle_opened(void)
 	copy_next_word(founder_name);
 	b->founder = Users_find(founder_name);
 	assert(b->founder);
-	b->participant_len = 1;
+	b->user_len = 1;
 	b->founder->battle = b;
 
 	copy_next_word(b->ip);
@@ -314,8 +316,8 @@ battle_closed(void)
 		MyBattle_left_battle();
 	}
 
-	for (int i=0; i<b->participant_len; ++i)
-		b->users[i]->user.battle = NULL;
+	for (int i=0; i<b->user_len; ++i)
+		b->users[i]->battle = NULL;
 
 	BattleList_close_battle(b);
 	Battles_del(b);
@@ -351,10 +353,16 @@ channel_topic(void)
 static void
 client_battle_status(void)
 {
-	User *u = Users_find(get_next_word());
-	uint32_t bs = get_next_int();
+	User *u;
+	union {
+		BattleStatus; uint32_t as_int;
+	} bs;
+
+	u = Users_find(get_next_word());
+	bs.as_int = get_next_int();
+
 	MyBattle_update_battle_status((UserOrBot *)u,
-			(bs & ~BS_INTERNAL) | (u->battle_status & BS_INTERNAL),
+			bs.BattleStatus,
 			get_next_int());
 }
 
@@ -370,36 +378,41 @@ clients(void)
 static void
 client_status(void)
 {
-	User *u = Users_find(get_next_word());
+	union {
+		ClientStatus; uint8_t as_int;
+	} status;
+
+	ClientStatus previous;
+	User *u;
+
+	u = Users_find(get_next_word());
 	if (!u)
 		return;
 
-	uint8_t status = get_next_int();
-	uint8_t diff = status ^ u->client_status;
-	u->client_status = status;
+	status.as_int = get_next_int();
+	previous = u->ClientStatus;
+	u->ClientStatus = status.ClientStatus;
+
+	if (u == &g_my_user)
+		g_last_client_status = u->ClientStatus;
 
 	if (g_my_battle && u->battle == g_my_battle)
 		BattleRoom_update_user((void *)u);
 
-	if (diff & (CS_INGAME | CS_AWAY))
+	if (previous.ingame != u->ingame
+			|| previous.away != u->away)
 		Chat_update_user(u);
 
 	if (!u->battle)
 		return;
 
-	if (u == &g_my_user)
-		g_last_client_status = (status & ~CS_INGAME)
-			| (g_last_client_status & CS_INGAME);
-
-	if (diff & CS_INGAME && u == u->battle->founder)
+	if (previous.ingame == u->ingame
+			|| u == u->battle->founder) {
 		BattleList_update_battle(u->battle);
 
-	if (g_my_battle == u->battle
-			&& diff & CS_INGAME
-			&& status & CS_INGAME
-			&& u == u->battle->founder
-			&& u != &g_my_user)
-		Spring_launch();
+		if (g_my_battle == u->battle && u->ingame && u != &g_my_user)
+			Spring_launch();
+	}
 }
 
 static void
@@ -463,13 +476,13 @@ joined_battle(void)
 	u->script_password = _strdup(get_next_word());
 
 	int i=1; //Start at 1 so founder is first
-	while (i<b->participant_len - b->bot_len && _stricmp(b->users[i]->name, u->name) < 0)
+	while (i<b->user_len - b->bot_len && _stricmp(b->users[i]->name, u->name) < 0)
 		++i;
-	for (int j=b->participant_len; j>i; --j)
+	for (int j=b->user_len; j>i; --j)
 		b->users[j] = b->users[j-1];
 	b->users[i] = (void *)u;
-	++b->participant_len;
-	u->battle_status = 0;
+	++b->user_len;
+	u->BattleStatus = (BattleStatus){0};
 	BattleList_update_battle(b);
 	Chat_update_user(u);
 
@@ -510,14 +523,14 @@ left_battle(void)
 
 	u->battle = NULL;
 	int i=1; //Start at 1, we won't remove founder here
-	for (; i < b->participant_len; ++i)
+	for (; i < b->user_len; ++i)
 		if (&b->users[i]->user == u)
 			break;
-	assert(i < b->participant_len);
-	if (i >= b->participant_len)
+	assert(i < b->user_len);
+	if (i >= b->user_len)
 		return;
-	--b->participant_len;
-	for (;i < b->participant_len; ++i)
+	--b->user_len;
+	for (;i < b->user_len; ++i)
 		b->users[i] = b->users[i + 1];
 
 	if (u == &g_my_user)
@@ -526,9 +539,11 @@ left_battle(void)
 	Chat_update_user(u);
 	BattleList_update_battle(b);
 
-	if (b == g_my_battle){
-		if (u->battle_status & BS_MODE && BattleRoom_is_auto_unspec())
-			SetBattleStatus(&g_my_user, BS_MODE, BS_MODE);
+	if (b == g_my_battle) {
+		if (u->mode && BattleRoom_is_auto_unspec()) {
+			BattleStatus bs = g_my_user.BattleStatus;
+			SetMyBattleStatus(bs);
+		}
 		if (g_settings.flags & (1<<DEST_BATTLE)){
 			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
 			BattleRoom_on_left_battle((void *)u);
@@ -562,8 +577,7 @@ open_battle(void)
 static void
 registration_accepted(void)
 {
-	extern void
-login(void);
+	extern void login(void);
 	login();
 	MainWindow_msg_box("Registration accepted", "Logging in now.");
 }
@@ -605,9 +619,12 @@ remove_user(void)
 static void
 request_battle_status(void)
 {
-	g_my_user.battle_status &= ~BS_MODE;
+	assert(g_my_user.mode == 0);
+	assert(g_my_user.sync == 0);
+
 	g_battle_info_finished = 1;
-	SetBattleStatus(&g_my_user, MyBattle_new_battle_status(), BS_MODE | BS_TEAM | BS_ALLY | BS_READY);
+
+	SetMyBattleStatus(MyBattle_new_battle_status());
 	BattleRoom_resize_columns();
 }
 
@@ -812,11 +829,11 @@ update_bot(void)
 		char *battle_id = get_next_word();
 	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
 	char *name = get_next_word();
-	for (int i=g_my_battle->participant_len - g_my_battle->bot_len; i<g_my_battle->participant_len; ++i){
+	for (int i=g_my_battle->user_len - g_my_battle->bot_len; i<g_my_battle->user_len; ++i){
 		struct Bot *s = &g_my_battle->users[i]->bot;
 		if (!strcmp(name, s->name)){
-			uint32_t bs = get_next_int() | BS_AI | BS_MODE;
-			MyBattle_update_battle_status((UserOrBot *)s, bs, get_next_int());
+			/* uint32_t bs = get_next_int() | BS_AI | BS_MODE; */
+			/* MyBattle_update_battle_status((UserOrBot *)s, bs, get_next_int()); */
 			return;
 		}
 	}

@@ -29,7 +29,7 @@ struct Option;
 int          Sync_ai_option_len(const char *name);
 void         Sync_cleanup(void);
 void         Sync_for_each_ai(void (*func)(const char *, void *), void *arg);
-uint32_t     Sync_get_status(void) __attribute__((pure));
+uint32_t     Sync_is_synced(void) __attribute__((pure));
 void         Sync_init(void);
 uint32_t     Sync_map_hash(const char *map_name);
 uint32_t     Sync_mod_hash(const char *mod_name);

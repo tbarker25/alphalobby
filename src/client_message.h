@@ -19,20 +19,18 @@
 #ifndef CLIENT_MESSAGE_H
 #define CLIENT_MESSAGE_H
 
+union UserOrBot;
+struct BattleStatus;
+struct ClientStatus;
 
 void JoinBattle(uint32_t id, const char *password);
 
-union UserOrBot;
-void SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask, uint32_t nand_mask, uint32_t color);
-#define SetBattleStatus(_s, _or_mask, _nand_mask)\
-	SetBattleStatusAndColor((union UserOrBot *)(_s), (_or_mask), (_nand_mask), -1)
-#define SetColor(_s, color)\
-	SetBattleStatusAndColor((union UserOrBot *)(_s), 0, 0, (color))
+void SetMyColor(uint32_t color);
+void SetMyBattleStatus(struct BattleStatus);
 void Kick(union UserOrBot *);
 
-void SetClientStatus(uint8_t s, uint8_t mask);
+void SetMyClientStatus(struct ClientStatus status);
 void RequestChannels(void);
-void LeaveBattle(void);
 void JoinChannel(const char *channel_name, int focus);
 void LeaveChannel(const char *channel_name);
 void RenameAccount(const char *new_username);
@@ -47,8 +45,7 @@ void RequestIngame_time(const char *username);
 void ChangeMap(const char *map_name);
 
 extern int      g_last_auto_message;
-extern int      g_last_status_update;
-extern uint32_t g_last_battle_status;
-extern uint8_t  g_last_client_status;
+extern struct BattleStatus g_last_battle_status;
+extern struct ClientStatus g_last_client_status;
 
 #endif /* end of include guard: CLIENT_MESSAGE_H */

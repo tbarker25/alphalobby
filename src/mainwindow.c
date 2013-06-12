@@ -52,6 +52,8 @@
 
 #ifndef NDEBUG
 #define TBSTATE_DISABLED TBSTATE_ENABLED
+#else
+#define TBSTATE_DISABLED (0)
 #endif
 
 HWND g_main_window;
