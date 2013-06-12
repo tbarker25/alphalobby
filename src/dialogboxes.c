@@ -297,9 +297,10 @@ color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		}
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
-			union UserOrBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
-			uint32_t color = get_rgb(window);
-			SetColor(s, color);
+			/* TODO */
+			/* union UserOrBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA); */
+			/* uint32_t color = get_rgb(window); */
+			/* SetMyColor(s, color); */
 		} // fallthrough:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);

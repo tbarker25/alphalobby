@@ -19,7 +19,8 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
-#define MAX_TITLE 128 //Also used for mapnames, modnames. Overflow is truncated to fit
+/* Also used for mapnames, modnames. Overflow is truncated to fit */
+#define MAX_TITLE 128
 
 enum BattleType {
 	BATTLE_NORMAL = 0,
@@ -32,12 +33,11 @@ enum NatType {
 };
 
 typedef struct Battle {
-	//MUST BE FIRST SINCE IT IS USED BY HASH:
 	uint32_t id;
 	uint32_t map_hash;
 	char map_name[MAX_TITLE+1], mod_name[MAX_TITLE+1], title[MAX_TITLE+1], ip[16];
 	uint16_t port;
-	uint8_t passworded, locked, type, max_players, rank, participant_len, spectator_len, bot_len;
+	uint8_t passworded, locked, type, max_players, rank, user_len, spectator_len, bot_len;
 	enum NatType nat_type;
 	union {
 		union UserOrBot *users[128];
@@ -50,23 +50,7 @@ Battle * Battles_find(uint32_t id) __attribute__((pure));
 Battle * Battles_new(void);
 void     Battles_reset(void);
 
-#define FOR_EACH_PARTICIPANT(_u, _b)\
-	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->participant_len; ++__u)
-
-#define FOR_EACH_USER(_u, _b)\
-	for (User **__u = (User **)(_b)->users, *(_u); (_u) = *__u, __u - (User **)(_b)->users < (_b)->participant_len - (_b)->bot_len; ++__u)
-
-#define FOR_EACH_BOT(_u, _b)\
-	for (User **__u = (Bot **)&(_b)->users[(_b)->bot_len], *(_u); (_u) = *__u, __u - (Bot **)(_b)->users < (_b)->participant_len; ++__u)
-
-#define FOR_EACH_PLAYER(_u, _b)\
-	for (UserOrBot **__u = (_b)->users, *(_u); (_u) = *__u, __u - (_b)->users < (_b)->participant_len; ++__u) if (!((_u)->battle_status & BS_MODE)) continue; else
-
-#define FOR_EACH_HUMAN_PLAYER(_u, _b)\
-	for (User **__u = (User **)(_b)->users, *(_u); (_u) = *__u, __u - (User **)(_b)->users < (_b)->participant_len - (_b)->bot_len; ++__u) if (!((_u)->battle_status & BS_MODE)) continue; else
-
-
 #define GetNumPlayers(_b)\
-	((_b)->participant_len - (_b)->spectator_len - (_b)->bot_len)
+	((_b)->user_len - (_b)->spectator_len - (_b)->bot_len)
 
 #endif /* end of include guard: BATTLE_H */

@@ -30,16 +30,16 @@
 #include "sync.h"
 #include "user.h"
 
-static void _init (void)
-static LRESULT CALLBACK minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
-static void on_draw(HWND window)
+static void _init (void);
+static LRESULT CALLBACK minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static void on_draw(HWND window);
 
-static void copy_heightmap       (uint32_t *dst, int width, int height)
-static void copy_normalmap       (uint32_t *dst, int width, int height)
-static void copy_metalmap        (uint32_t *dst, int width, int height)
-static uint32_t * copy_minimap   (int width, int height)
-static void copy_start_boxes     (uint32_t *pixels, int width, int height)
-static void copy_start_positions (uint32_t *dst, int width, int height)
+static void copy_heightmap       (uint32_t *dst, int width, int height);
+static void copy_normalmap       (uint32_t *dst, int width, int height);
+static void copy_metalmap        (uint32_t *dst, int width, int height);
+static uint32_t * copy_minimap   (int width, int height);
+static void copy_start_boxes     (uint32_t *pixels, int width, int height);
+static void copy_start_positions (uint32_t *dst, int width, int height);
 
 static HWND minimap;
 
@@ -133,12 +133,11 @@ copy_start_boxes(uint32_t *pixels, int width, int height)
 {
 	uint8_t ally;
 
-	ally = !(g_my_user.battle_status & BS_MODE) ? 255
-		: FROM_BS_ALLY(g_my_user.battle_status);
+	ally = !g_my_user.mode ? 255 : g_my_user.ally;
 
 	for (uint8_t i=0; i<NUM_ALLIANCES; ++i) {
 		uint16_t x_min, x_max, y_min, y_max;
-		RECT *start_rect;
+		StartRect *start_rect;
 
 		start_rect = &g_battle_options.start_rects[i];
 
@@ -182,11 +181,16 @@ copy_start_boxes(uint32_t *pixels, int width, int height)
 static void
 copy_start_positions(uint32_t *dst, int width, int height)
 {
-	uint8_t max = g_my_battle ? GetNumPlayers(g_my_battle) : 0;
+	uint8_t max;
+
+	max = g_my_battle ? GetNumPlayers(g_my_battle) : 0;
 	max = max < g_map_info.pos_len ? max : g_map_info.pos_len;
-	for (uint16_t i=0; i<max; ++i) {
-		uint16_t x_mid = g_map_info.positions[i].x * width / g_map_info.width;
-		uint16_t y_mid = g_map_info.positions[i].z * height / g_map_info.height;
+
+	for (uint8_t i=0; i<max; ++i) {
+		uint16_t x_mid, y_mid;
+
+		x_mid = g_map_info.positions[i].x * width / g_map_info.width;
+		y_mid = g_map_info.positions[i].z * height / g_map_info.height;
 
 		for (uint16_t x=x_mid-5; x<x_mid+5; ++x)
 			for (uint16_t y=y_mid-5; y<y_mid+5; ++y)
@@ -202,10 +206,6 @@ copy_minimap(int width, int height)
 	if (!minimap_pixels)
 		return NULL;
 
-	if (!g_map_info.width || !g_map_info.height || !width || !height) {
-		assert(0);
-		return NULL;
-	}
 
 	ret = malloc(width * height * sizeof(*ret));
 
@@ -250,15 +250,25 @@ on_draw(HWND window)
 	width = rect.right;
 	height = rect.bottom;
 
+	drawing_context = BeginPaint(window, &ps);
+	FillRect(drawing_context, &rect, (HBRUSH) (COLOR_BTNFACE+1));
+
+	if (!g_map_info.width || !g_map_info.height || !width || !height) {
+		return;
+	}
+
+
 	if (height * g_map_info.width > width * g_map_info.height)
 		height = width * g_map_info.height / g_map_info.width;
 	else
 		width = height * g_map_info.width / g_map_info.height;
 
-	pixels = copy_minimap(width, height);
+	if (!width || !height) {
+		assert(0);
+		return;
+	}
 
-	drawing_context = BeginPaint(window, &ps);
-	FillRect(drawing_context, &rect, (HBRUSH) (COLOR_BTNFACE+1));
+	pixels = copy_minimap(width, height);
 
 	if (!pixels)
 		return;

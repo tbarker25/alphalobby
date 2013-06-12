@@ -102,6 +102,7 @@ typedef struct MapInfo_ {
 
 union UserOrBot;
 struct Battle;
+struct BattleStatus;
 
 extern MapInfo_ g_map_info;
 
@@ -124,17 +125,20 @@ extern char g_side_names[16][32];
 
 extern uint32_t g_udp_help_port;
 
+extern bool g_battle_info_finished;
+
 void MyBattle_append_script(char *restrict script);
 void MyBattle_change_option(struct Option *restrict opt);
-uint32_t MyBattle_new_battle_status(void)
+struct BattleStatus MyBattle_new_battle_status(void)
 	__attribute__((pure));
 void MyBattle_joined_battle(struct Battle *restrict b, uint32_t mod_hash);
+void MyBattle_leave(void);
 void MyBattle_left_battle(void);
 void Rebalance(void);
 void ResetBattleOptions(void);
 void MyBattle_set_map(const char *name);
 void MyBattle_set_split(SplitType, int size);
-void MyBattle_update_battle_status(union UserOrBot *s, uint32_t battle_status, uint32_t color);
+void MyBattle_update_battle_status(union UserOrBot *s, struct BattleStatus battle_status, uint32_t color);
 void MyBattle_update_mod_options(void);
 
 

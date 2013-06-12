@@ -36,7 +36,8 @@
 void
 UserMenu_spawn(union UserOrBot *s, HWND window)
 {
-
+	printf("%p %p\n", s, window);
+#if 0
 	enum menuID {
 		CHAT = 1, IGNORED, ALIAS, ID, ALLY, SIDE, COLOR, KICK,
 			RING, SPEC,
@@ -58,12 +59,12 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 	for (uint8_t i=0; i<16; ++i) {
 		wchar_t buf[3];
 		_swprintf(buf, L"%d", i+1);
-		AppendMenu(menus[TEAM_MENU], MF_CHECKED * (i == FROM_BS_TEAM(battle_status)), FLAG_TEAM | i, buf);
-		AppendMenu(menus[ALLY_MENU], MF_CHECKED * (i == FROM_BS_ALLY(battle_status)), FLAG_ALLY | i, buf);
+		AppendMenu(menus[TEAM_MENU], i == s->team ? MF_CHECKED : 0, FLAG_TEAM | i, buf);
+		AppendMenu(menus[ALLY_MENU], i == s->ally ? MF_CHECKED : 0, FLAG_ALLY | i, buf);
 	}
 
 	for (size_t i=0; *g_side_names[i]; ++i)
-		AppendMenuA(menus[SIDE_MENU], MF_CHECKED * (i == FROM_BS_SIDE(battle_status)), FLAG_SIDE | i, g_side_names[i]);
+		AppendMenuA(menus[SIDE_MENU], i == s->side ? MF_CHECKED : 0, FLAG_SIDE | i, g_side_names[i]);
 
 
 	if (battle_status & BS_AI) {
@@ -153,7 +154,7 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 				// break;
 			// }
 		} else
-			/* SetBattleStatus(s, */
+			/* SetMyBattleStatus(s, */
 					/* (clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET), */
 					/* clicked & FLAG_TEAM ? BS_TEAM : clicked & FLAG_ALLY ? BS_ALLY : BS_SIDE); */
 
@@ -162,4 +163,5 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 
 	for (int i=0; i<=last_menu; ++i)
 		DestroyMenu(menus[i]);
+#endif
 }

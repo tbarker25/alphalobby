@@ -277,7 +277,7 @@ BattleRoom_on_left_battle(const union UserOrBot *s)
 static const char *
 get_effective_name(const union UserOrBot *s)
 {
-	if (s->battle_status & BS_AI)
+	if (s->ai)
 		return s->bot.owner->name;
 
 	return s->name;
@@ -301,8 +301,9 @@ update_group(uint8_t group_id)
 		return;
 
 	players_on_team = 0;
-	FOR_EACH_PLAYER(p, g_my_battle)
-		players_on_team += FROM_BS_ALLY(p->battle_status) == group_id;
+	for (uint8_t i = 0; i < g_my_battle->user_len; ++i)
+		players_on_team += g_my_battle->users[i]->mode
+			&& g_my_battle->users[i]->ally == group_id;
 	_swprintf(buf, L"Team %d :: %hu Player%c", group_id + 1, players_on_team, players_on_team > 1 ? 's' : '\0');
 
 	group_info.cbSize = sizeof(group_info);
@@ -323,8 +324,7 @@ BattleRoom_update_user(union UserOrBot *s)
 {
 	HWND player_list = GetDlgItem(g_battle_room, DLG_PLAYERLIST);
 
-	uint32_t battle_status = s->battle_status;
-	uint8_t group_id = (battle_status & BS_MODE) ? FROM_BS_ALLY(battle_status) : 16;
+	uint8_t group_id = s->mode ? s->ally : 16;
 
 	LVITEM item;
 	item.iItem = find_user(s);
@@ -351,16 +351,16 @@ BattleRoom_update_user(union UserOrBot *s)
 	item.iSubItem = COLUMN_STATUS;
 	item.stateMask = LVIS_OVERLAYMASK;
 
-	if (!(battle_status & BS_AI)) {
-		item.iImage = &s->user == g_my_battle->founder ? (battle_status & BS_MODE ? ICON_HOST : ICON_HOST_SPECTATOR)
-			: s->user.client_status & CS_INGAME ? ICON_INGAME
-			: !(battle_status & BS_MODE) ? ICON_SPECTATOR
-			: battle_status & BS_READY ? ICON_READY
+	if (!s->ai) {
+		item.iImage = &s->user == g_my_battle->founder ? (s->mode ? ICON_HOST : ICON_HOST_SPECTATOR)
+			: s->user.ingame ? ICON_INGAME
+			: !s->mode ? ICON_SPECTATOR
+			: s->ready ? ICON_READY
 			: ICON_UNREADY;
 		int icon_index = USER_MASK;
-		if (!(battle_status & SYNCED))
+		if (s->sync != 1)
 			icon_index |= UNBS_SYNC;
-		if (s->user.client_status & CS_AWAY)
+		if (s->user.away)
 			icon_index |= AWAY_MASK;
 		if (s->user.ignore)
 			icon_index |= IGNORE_MASK;
@@ -375,8 +375,8 @@ BattleRoom_update_user(union UserOrBot *s)
 	ListView_SetItem(player_list, &item);
 
 	int side_icon = -1;
-	if (battle_status & BS_MODE && *g_side_names[FROM_BS_SIDE(battle_status)])
-		side_icon = ICON_FIRST_SIDE + FROM_BS_SIDE(battle_status);
+	if (s->mode && *g_side_names[s->side])
+		side_icon = ICON_FIRST_SIDE + s->side;
 	item.mask = LVIF_IMAGE;
 	set_icon(COLUMN_SIDE, side_icon);
 
@@ -384,7 +384,7 @@ BattleRoom_update_user(union UserOrBot *s)
 	extern int IconList_get_user_color(const union UserOrBot *);
 	set_icon(COLUMN_COLOR, IconList_get_user_color((void *)s));
 
-	if (battle_status & BS_AI) {
+	if (s->ai) {
 		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
 		_swprintf(name, L"%hs (%hs)", s->name, s->bot.dll);
 		item.mask = LVIF_TEXT;
@@ -399,39 +399,41 @@ BattleRoom_update_user(union UserOrBot *s)
 
 	assert(item.mask = LVIF_IMAGE);
 	set_icon(COLUMN_FLAG, ICON_FIRST_FLAG + u->country);
-	set_icon(COLUMN_RANK, ICON_FIRST_RANK + FROM_RANK_MASK(u->client_status));
+	set_icon(COLUMN_RANK, ICON_FIRST_RANK + u->rank);
 
 	if (u == &g_my_user) {
 		SendDlgItemMessage(g_battle_room, DLG_SPECTATE, BM_SETCHECK,
-				!(battle_status & BS_MODE), 0);
+				!s->mode, 0);
 
 		EnableWindow(GetDlgItem(g_battle_room, DLG_AUTO_UNSPEC),
-				!(battle_status & BS_MODE));
+				!s->mode);
 
 		for (size_t i=0; i<=NUM_SIDE_BUTTONS; ++i)
 			SendDlgItemMessage(g_battle_room, DLG_SIDE_FIRST + i, BM_SETCHECK,
-					FROM_BS_SIDE(battle_status) == i, 0);
+					s->side == i, 0);
 
 		SendDlgItemMessage(g_battle_room, DLG_ALLY, CB_SETCURSEL,
-				FROM_BS_ALLY(battle_status), 0);
+				s->ally, 0);
 	}
 
 	if (u->battle->founder == u) {
 		HWND start_button = GetDlgItem(g_battle_room, DLG_START);
-		int can_join = !(g_my_user.client_status & CS_INGAME);
+		int can_join = !(g_my_user.ingame);
 		EnableWindow(start_button, can_join);
 	}
 
 sort:;
 	int team_sizes[16] = {};
 
-	FOR_EACH_PLAYER(u, g_my_battle)
-		++team_sizes[FROM_BS_TEAM(u->battle_status)];
+	for (uint8_t i = 0; i < g_my_battle->user_len; ++i)
+		team_sizes[g_my_battle->users[i]->team]
+			+= (g_my_battle->users[i]->mode) != 0;
 
-	FOR_EACH_USER(u, g_my_battle) {
+	for (uint8_t i = 0; i < g_my_battle->user_len - g_my_battle->bot_len; ++i) {
+		User *u = &g_my_battle->users[i]->user;
 		wchar_t buf[128], *s=buf;
-		if ((u->battle_status & BS_MODE) && team_sizes[FROM_BS_TEAM(u->battle_status)] > 1)
-			s += _swprintf(s, L"%d: ", FROM_BS_TEAM(u->battle_status)+1);
+		if (u->mode && team_sizes[u->team] > 1)
+			s += _swprintf(s, L"%d: ", u->team+1);
 		s += _swprintf(s, L"%hs", u->name);
 		if (strcmp(UNTAGGED_NAME(u->name), u->alias))
 			s += _swprintf(s, L" (%hs)", u->alias);
@@ -622,18 +624,18 @@ static wchar_t *
 get_tooltip(const User *u)
 {
 	static wchar_t buf[128];
-	int buffUsed = 0;
+	int buf_used = 0;
 
 #define APPEND(...) { \
-	int read = _snwprintf(buf + buffUsed, \
-			sizeof(buf) / sizeof(*buf) - buffUsed - 1, \
+	int read = _snwprintf(buf + buf_used, \
+			sizeof(buf) / sizeof(*buf) - buf_used - 1, \
 			__VA_ARGS__); \
 	\
 	if (read < 0) {\
 		buf[sizeof(buf) / sizeof(*buf) - 1] = '\0'; \
 		return buf; \
 	} \
-	buffUsed += read; \
+	buf_used += read; \
 }
 
 	APPEND(L"%hs", u->name);
@@ -641,31 +643,31 @@ get_tooltip(const User *u)
 	if (strcmp(UNTAGGED_NAME(u->name), u->alias))
 		APPEND(L" (%hs)", u->alias);
 
-	if (!(u->battle_status & BS_AI))
-		APPEND(L"\nRank %d - %hs - %.2fGHz\n",
-				FROM_RANK_MASK(u->client_status),
+	if (!u->ai)
+		APPEND(L"\nRank %d - %hs - %.2fGHz",
+				u->rank,
 				Country_get_name(u->country),
 				(float)u->cpu / 1000);
-
-	if (!(u->battle_status & BS_MODE)) {
-		APPEND(L"Spectator");
-		return buf;
-	}
-
-	const char *side_name = g_side_names[FROM_BS_SIDE(u->battle_status)];
-
-	APPEND(L"Player %d - Team %d",
-			FROM_BS_TEAM(u->battle_status),
-			FROM_BS_ALLY(u->battle_status));
-	if (*side_name)
-		APPEND(L" - %hs", side_name);
 
 	if (u->skill)
 		APPEND(L"\nSkill: %hs", u->skill);
 
-	if (u->battle_status & BS_HANDICAP)
+	if (!u->mode) {
+		APPEND(L"\nSpectator");
+		return buf;
+	}
+
+	const char *side_name = g_side_names[u->side];
+
+	APPEND(L"\nPlayer %d - Team %d",
+			u->team,
+			u->ally);
+	if (*side_name)
+		APPEND(L" - %hs", side_name);
+
+	if (u->handicap)
 		APPEND(L"\nHandicap: %d",
-				FROM_BS_HANDICAP(u->battle_status));
+				u->handicap);
 	return buf;
 #undef APPEND
 }
@@ -736,6 +738,7 @@ static LRESULT
 on_command(WPARAM w_param, HWND window)
 {
 	HMENU menu;
+	BattleStatus new_battle_status;
 
 	switch (w_param) {
 	case MAKEWPARAM(DLG_START, BN_CLICKED):
@@ -757,7 +760,6 @@ on_command(WPARAM w_param, HWND window)
 		DestroyMenu(menu);
 		return 0;
 
-		//TODO: This seems wrong to me. Too lazy to fix.
 	case MAKEWPARAM(DLG_SPLIT_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SPLIT_LAST, BN_CLICKED):
 		MyBattle_set_split(LOWORD(w_param) - DLG_SPLIT_FIRST, SendDlgItemMessage(g_battle_room, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
 		return 0;
@@ -767,20 +769,27 @@ on_command(WPARAM w_param, HWND window)
 		return 0;
 
 	case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
-		if (g_my_user.battle_status & BS_MODE)
+		if (g_my_user.mode)
 			SendDlgItemMessage(g_battle_room, DLG_AUTO_UNSPEC,
 					BM_SETCHECK, BST_UNCHECKED, 0);
 
-		SetBattleStatus(&g_my_user, ~g_my_user.battle_status, BS_MODE);
+		new_battle_status = g_my_user.BattleStatus;
+		new_battle_status.mode = !new_battle_status.mode;
+
+		SetMyBattleStatus(new_battle_status);
 		return 0;
 
 	case MAKEWPARAM(DLG_ALLY, CBN_SELCHANGE):
-		SetBattleStatus(&g_my_user, TO_BS_ALLY_MASK(SendMessage(window, CB_GETCURSEL, 0, 0)), BS_ALLY);
-		SendMessage(window, CB_SETCURSEL, FROM_BS_ALLY(g_my_user.battle_status), 0);
+		new_battle_status = g_my_user.BattleStatus;
+		new_battle_status.ally = SendMessage(window, CB_GETCURSEL, 0, 0);
+		SetMyBattleStatus(new_battle_status);
+		SendMessage(window, CB_SETCURSEL, g_my_user.ally, 0);
 		return 0;
 
 	case MAKEWPARAM(DLG_SIDE_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SIDE_LAST, BN_CLICKED):
-		SetBattleStatus(&g_my_user, TO_BS_SIDE_MASK(LOWORD(w_param) - DLG_SIDE_FIRST), BS_SIDE);
+		new_battle_status = g_my_user.BattleStatus;
+		new_battle_status.side = LOWORD(w_param) - DLG_SIDE_FIRST;
+		SetMyBattleStatus(new_battle_status);
 		return 0;
 
 	case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
@@ -833,7 +842,6 @@ BattleRoom_on_set_mod_details(void)
 
 	set_details(g_mod_options, g_mod_option_len);
 	set_details(g_map_options, g_map_option_len);
-	/* set_map_info(); */
 
 	ListView_SetColumnWidth(info_list, 0, LVSCW_AUTOSIZE_USEHEADER);
 	ListView_SetColumnWidth(info_list, 1, LVSCW_AUTOSIZE_USEHEADER);
@@ -882,8 +890,8 @@ BattleRoom_on_change_mod(void)
 		item.mask = LVIF_IMAGE;
 		item.iSubItem = COLUMN_SIDE;
 		union UserOrBot *s = (void *)item.lParam;
-		item.iImage = s->battle_status & BS_MODE
-			&& *g_side_names[FROM_BS_SIDE(s->battle_status)] ? ICON_FIRST_SIDE + (int)FROM_BS_SIDE(s->battle_status) : -1;
+		item.iImage = s->mode
+			&& *g_side_names[s->side] ? ICON_FIRST_SIDE + (int)s->side : -1;
 		SendMessage(player_list, LVM_SETITEM, 0, (LPARAM)&item);
 	}
 }
@@ -935,7 +943,7 @@ battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 	case WM_CLOSE:
 		MainWindow_disable_battleroom_button();
-		LeaveBattle();
+		MyBattle_leave();
 		return 0;
 
 	case WM_COMMAND:
@@ -947,7 +955,7 @@ battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 static void __attribute__((constructor))
-init (void)
+_init (void)
 {
 	WNDCLASSEX window_class = {
 		.lpszClassName = WC_BATTLEROOM,

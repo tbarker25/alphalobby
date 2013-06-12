@@ -104,7 +104,7 @@ set_split(int size, SplitType type)
 static void
 start_game(void)
 {
-	if (g_my_battle->founder->client_status & CS_INGAME)
+	if (g_my_battle->founder->ingame)
 		Spring_launch();
 	else
 		Server_send("SAYPRIVATE %s !start",

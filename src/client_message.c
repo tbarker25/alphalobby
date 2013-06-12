@@ -39,13 +39,13 @@
 #include "md5.h"
 #include "mybattle.h"
 #include "settings.h"
+#include "spring.h"
 #include "sync.h"
 #include "user.h"
 
 int      g_last_auto_message;
-int      g_last_status_update;
-uint32_t g_last_battle_status;
-uint8_t  g_last_client_status;
+BattleStatus g_last_battle_status;
+ClientStatus g_last_client_status;
 
 static char my_password[BASE16_MD5_LENGTH];
 static char my_username[MAX_NAME_LENGTH+1];
@@ -74,11 +74,11 @@ JoinBattle(uint32_t id, const char *password)
 		g_battle_to_join = id;
 		free((void *)password_to_join);
 		password_to_join = _strdup(password);
-		LeaveBattle();
+		MyBattle_leave();
 
 	} else {
 		g_battle_to_join = 0;
-		g_my_user.battle_status = 0;
+		g_my_user.BattleStatus = (BattleStatus){0};
 		password = password ?: password_to_join;
 		//NB: This section must _not_ be accessed from Server_poll
 		if (b->passworded && !password) {
@@ -97,48 +97,49 @@ JoinBattle(uint32_t id, const char *password)
 	}
 }
 
+void
+SetMyBattleStatus(struct BattleStatus battle_status)
+{
+	union {
+		BattleStatus; uint32_t as_int;
+	} bs, last_bs;
+
+	if (!g_battle_info_finished) {
+		/* TODO: remove this */
+		puts("battleinfo not finished");
+		return;
+	}
+
+	bs.BattleStatus = battle_status;
+	assert(bs.as_int);
+	bs.sync = Sync_is_synced() ? 1 : 2;
+	last_bs.BattleStatus = g_last_battle_status;
+
+	if (bs.as_int != last_bs.as_int) {
+		g_last_battle_status = battle_status;
+		Server_send("MYBATTLESTATUS %d %d", bs.as_int, g_my_user.color);
+	} else {
+		/* TODO: remove this */
+		printf("dup battle_status %d\n", bs.as_int);
+	}
+}
 
 void
-SetBattleStatusAndColor(union UserOrBot *s, uint32_t or_mask,
-		uint32_t nand_mask, uint32_t color)
+SetMyColor(uint32_t color)
 {
-	if (!s)
-		return;
-	if (color == (uint32_t)-1)
-		color = s->color;
-	uint32_t bs = ((or_mask & nand_mask) | (s->battle_status & ~nand_mask)) & ~BS_INTERNAL;
+	union {
+		BattleStatus; uint32_t as_int;
+	} bs;
 
-	if (&s->user == &g_my_user) {
-		uint32_t bs = (or_mask & nand_mask) | (g_last_battle_status & ~nand_mask & ~BS_SYNC) | Sync_get_status() | BS_READY;
-		if (bs != g_last_battle_status || color != g_my_user.color) {
-			g_last_battle_status=bs;
-			if (g_battle_info_finished)
-				Server_send("MYBATTLESTATUS %d %d", bs & ~BS_INTERNAL, color);
-		}
-		return;
-	}
-
-	if ((s->battle_status & ~BS_INTERNAL) == bs && color == s->color)
-		return;
-
-	if (s->battle_status & BS_AI) {
-		Server_send("UPDATEBOT %s %d %d" + (s->bot.owner == &g_my_user), s->name, bs, color);
-		return;
-	}
-
-	if (nand_mask & BS_TEAM)
-		if (g_host_type && g_host_type->force_team)
-			g_host_type->force_team(s->name, FROM_BS_TEAM(or_mask));
-
-	if (nand_mask & BS_ALLY)
-		if (g_host_type && g_host_type->force_ally)
-			g_host_type->force_ally(s->name, FROM_BS_ALLY(or_mask));
+	bs.BattleStatus = g_my_user.BattleStatus;
+	Server_send("MYBATTLESTATUS %d %d",
+			bs.as_int, color);
 }
 
 void
 Kick(union UserOrBot *s)
 {
-	if (s->battle_status & BS_AI) {
+	if (s->ai) {
 		Server_send("REMOVEBOT %s", s->name);
 		return;
 	}
@@ -150,11 +151,23 @@ Kick(union UserOrBot *s)
 }
 
 void
-SetClientStatus(uint8_t s, uint8_t mask)
+SetMyClientStatus(ClientStatus status)
 {
-	uint8_t cs = (s & mask) | (g_last_client_status & ~mask);
-	if (cs != g_last_client_status)
-		Server_send("MYSTATUS %d", (g_last_client_status=cs));
+	union {
+		ClientStatus; uint8_t as_int;
+	} cs, last_cs;
+
+	cs.ClientStatus = status;
+	cs.ingame = Spring_is_ingame();
+	last_cs.ClientStatus = g_last_client_status;
+
+	if (cs.as_int != last_cs.as_int) {
+		g_last_client_status = status;
+		Server_send("MYSTATUS %d", cs.as_int);
+	} else {
+		/* TODO: remove this */
+		puts("dup client status");
+	}
 }
 
 void
@@ -168,13 +181,6 @@ void
 RequestIngame_time(const char username[])
 {
 	Server_send("GETINGAMETIME %s", username?:"");
-}
-
-
-void
-LeaveBattle(void)
-{
-	Server_send("LEAVEBATTLE");
 }
 
 void
@@ -262,7 +268,7 @@ char Autologin(void)
 
 void
 Login(const char *username, const char *password)
-// LOGIN username password cpu local_i_p {lobby name and version} [{user_id}] [{comp_flags}]
+/* LOGIN username password cpu local_i_p {lobby name and version} [{user_id}] [{comp_flags}] */
 {
 	strcpy(my_username, username);
 	strcpy(my_password, password);
@@ -277,7 +283,10 @@ ConfirmAgreement(void)
 }
 
 void
-OpenBattle(const char *title, const char *password, const char *mod_name, const char *map_name, uint16_t port)
+OpenBattle(const char *title, const char *password, const char *mod_name,
+		const char *map_name, uint16_t port)
 {
-	Server_send("OPENBATTLE 0 0 %s %hu 16 %d 0 %d %s\t%s\t%s", password ?: "*", port, Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
+	Server_send("OPENBATTLE 0 0 %s %hu 16 %d 0 %d %s\t%s\t%s",
+			password ?: "*", port, Sync_mod_hash(mod_name),
+			Sync_map_hash(map_name), map_name, title, mod_name);
 }

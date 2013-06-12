@@ -146,7 +146,7 @@ syncProc (__attribute__((unused)) LPVOID lp_parameter)
 			create_map_file(s);
 			free(s);
 		} else if (task_set_battle_status) {
-			SetBattleStatus(&g_my_user, 0, 0);
+			SetMyBattleStatus(g_my_user.BattleStatus);
 			task_set_battle_status = 0;
 		} else {
 			WaitForSingleObject(event, INFINITE);
@@ -155,12 +155,10 @@ syncProc (__attribute__((unused)) LPVOID lp_parameter)
 }
 
 uint32_t
-Sync_get_status(void)
+Sync_is_synced(void)
 {
-	return (g_my_battle
-			&& g_map_hash && (!g_my_battle->map_hash || g_map_hash == g_my_battle->map_hash)
-			&& g_mod_hash && (!g_battle_options.mod_hash || g_mod_hash == g_battle_options.mod_hash))
-		? SYNCED : UNSYNCED;
+	return g_my_battle && g_map_hash && (!g_my_battle->map_hash || g_map_hash == g_my_battle->map_hash)
+			&& g_mod_hash && (!g_battle_options.mod_hash || g_mod_hash == g_battle_options.mod_hash);
 }
 
 void

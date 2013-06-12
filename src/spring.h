@@ -21,5 +21,6 @@
 
 void Spring_launch(void);
 void Spring_launch_replay(const wchar_t *replay_name);
+bool __attribute__((pure)) Spring_is_ingame(void);
 
 #endif /* end of include guard: SPRING_H */

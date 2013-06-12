@@ -197,8 +197,9 @@ on_item_right_click(POINT pt)
 	if (!Sync_mod_hash(b->mod_name))
 		AppendMenu(menu, 0, DL_MOD, L"Download mod");
 
-	FOR_EACH_USER(u, b)
-		AppendMenuA(user_menu, 0, (UINT_PTR)u, u->name);
+	for (uint8_t i = 0; i < g_my_battle->user_len - g_my_battle->bot_len; ++i)
+		AppendMenuA(user_menu, 0, (UINT_PTR)g_my_battle->users[i],
+				g_my_battle->users[i]->name);
 
 	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 
@@ -238,7 +239,7 @@ on_get_info_tip(NMLVGETINFOTIP *info)
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->mod_name, b->map_name,
 			utf8to16(b->title), GetNumPlayers(b), b->max_players,
-			b->participant_len);
+			b->user_len);
 }
 
 static void
@@ -330,6 +331,7 @@ BattleList_add_battle(Battle *b)
 	item.lParam = (LPARAM)b;
 	item.pszText = utf8to16(b->founder->name);
 
+	__attribute__((unused))
 	int index = SendDlgItemMessage(g_battle_list, DLG_LIST, LVM_INSERTITEM,
 			0, (LPARAM)&item);
 
@@ -354,7 +356,7 @@ get_icon_index(const Battle *b)
 {
 	int icon_index = 0;
 
-	if (b->founder->client_status & CS_INGAME)
+	if (b->founder->ingame)
 		icon_index |= INGAME_MASK;
 	if (b->passworded)
 		icon_index |= PW_MASK;

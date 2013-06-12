@@ -90,12 +90,12 @@ on_init(HWND window)
 				u->name, u->alias);
 		item.pszText = name;
 
-		item.iImage = u->client_status & CS_INGAME ? ICON_INGAME
+		item.iImage = u->ingame ? ICON_INGAME
 			: u->battle ? INGAME_MASK
 			: -1;
 
 		int icon_index = USER_MASK;
-		if (u->client_status & CS_AWAY)
+		if (u->away)
 		icon_index |= AWAY_MASK;
 		if (u->ignore)
 		icon_index |= IGNORE_MASK;

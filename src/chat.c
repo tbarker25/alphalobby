@@ -140,13 +140,13 @@ update_user(HWND window, User *u, int index)
 	item.iItem = index;
 	item.iSubItem = 0;
 	item.pszText = name;
-	item.iImage = u->client_status & CS_INGAME ? ICON_INGAME
+	item.iImage = u->ingame ? ICON_INGAME
 		    : u->battle ? INGAME_MASK
 		    : -1;
 	item.stateMask = LVIS_OVERLAYMASK;
 
 	int icon_index = USER_MASK;
-	if (u->client_status & CS_AWAY)
+	if (u->away)
 		icon_index |= AWAY_MASK;
 	if (u->ignore)
 		icon_index |= IGNORE_MASK;
@@ -283,9 +283,11 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		}
 	} else if (!strcmp(code, "j") || !strcmp(code, "join"))
 		JoinChannel(s, 1);
-	else if (!strcmp(code, "away"))
-		SetClientStatus(~g_my_user.client_status, CS_AWAY);
-	else if (!strcmp(code, "ingametime"))
+	else if (!strcmp(code, "away")) {
+		ClientStatus cs = g_my_user.ClientStatus;
+		cs.away = !cs.away;
+		SetMyClientStatus(cs);
+	} else if (!strcmp(code, "ingametime"))
 		Server_send("GETINGAMETIME");
 	else if (!strcmp(code, "split")) {
 		char *split_type = strsep(&s, " ");
@@ -297,7 +299,9 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		if (type <= SPLIT_LAST)
 			MyBattle_set_split(type, atoi(s));
 	} else if (!strcmp(code, "ingame")) {
-		SetClientStatus(~g_my_user.client_status, CS_INGAME);
+		ClientStatus cs = g_my_user.ClientStatus;
+		cs.ingame = !cs.ingame;
+		SetMyClientStatus(cs);
 	}
 }
 
