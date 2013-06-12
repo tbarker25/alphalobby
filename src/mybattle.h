@@ -94,17 +94,16 @@ typedef struct BattleOptions {
 } BattleOption;
 
 
-struct _LargeMapInfo {
-	MapInfo map_info;
-	char description[256];
-	char author[201];
-};
+typedef struct MapInfo_ {
+	MapInfo;
+	char _description[256];
+	char _author[201];
+} MapInfo_;
 
 union UserOrBot;
 struct Battle;
 
-extern struct _LargeMapInfo _g_largeMapInfo;
-#define g_map_info (_g_largeMapInfo.map_info)
+extern MapInfo_ g_map_info;
 
 struct Battle;
 extern struct Battle *g_my_battle;

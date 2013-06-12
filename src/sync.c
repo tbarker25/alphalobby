@@ -33,6 +33,7 @@
 #include "downloader.h"
 #include "iconlist.h"
 #include "mainwindow.h"
+#include "minimap.h"
 #include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
@@ -272,49 +273,66 @@ load_options(gzFile fd)
 }
 
 static void
+write_info_map(const char *map_name, const char *map_type, gzFile gz_file)
+{
+	int w=0, h=0;
+	uint32_t tmp;
+	void *map_data;
+	int ok __attribute__((unused));
+
+	ok = GetInfoMapSize(map_name, map_type, &w, &h);
+	assert(ok);
+
+	tmp = h << 16 | w;
+	gzwrite(gz_file, &tmp, sizeof(tmp));
+
+	map_data = calloc(1, w * h);
+	ok = GetInfoMap(map_name, map_type, map_data, bm_grayscale_8);
+	assert(ok);
+
+	gzwrite(gz_file, map_data, w * h);
+	free(map_data);
+}
+
+static void
 create_map_file(const char *map_name)
 {
-	uint32_t map_hash = GetMapChecksumFromName(map_name);
+	uint32_t map_hash;
+	uint16_t *minimap_pixels;
+	char file_path[MAX_PATH];
+	char tmp_file_path[MAX_PATH];
+	struct MapInfo_ map_info;
+
+	map_hash = GetMapChecksumFromName(map_name);
+
 	if (!map_hash) {
 		if (!have_tried_to_download)
 			DownloadMap(map_name);
 		return;
 	}
 
-	char tmp_file_path[MAX_PATH];
 	GetTempPathA(MAX_PATH, tmp_file_path);
 	GetTempFileNameA(tmp_file_path, NULL, 0, tmp_file_path);
 
-	gzFile fd = gzopen(tmp_file_path, "wb");
-	gzputc(fd, SYNCFILE_VERSION);
-	gzwrite(fd, &map_hash, sizeof(map_hash));
-	struct _LargeMapInfo map_info = {.map_info = {.description = map_info.description, .author = map_info.author}};
+	gzFile gz_file = gzopen(tmp_file_path, "wb");
+	gzputc(gz_file, SYNCFILE_VERSION);
+	gzwrite(gz_file, &map_hash, sizeof(map_hash));
+	map_info.description = map_info._description;
+	map_info.author = map_info._author;
 
-	GetMapInfoEx(map_name, &map_info.map_info, 1);
-	gzwrite(fd, &map_info, sizeof(map_info));
-	init_options(GetMapOptionCount(map_name), fd);
+	GetMapInfoEx(map_name, &map_info, 1);
+	gzwrite(gz_file, &map_info, sizeof(map_info));
+	init_options(GetMapOptionCount(map_name), gz_file);
 
-	uint16_t *minimap_pixels = GetMinimap(map_name, MAP_DETAIL);
+	minimap_pixels = GetMinimap(map_name, MAP_DETAIL);
 	assert(minimap_pixels);
-	gzwrite(fd, minimap_pixels, MAP_SIZE*sizeof(*minimap_pixels));
+	gzwrite(gz_file, minimap_pixels, MAP_SIZE*sizeof(*minimap_pixels));
 
-	for (int i=0; i<2; ++i) {
-		const char *map_type = i ? "metal" : "height";
-		int w=0, h=0;
-		__attribute__((unused))
-		int ok = GetInfoMapSize(map_name, map_type, &w, &h);
-		assert(ok);
-		void *map_data = calloc(1, w * h);
-		gzwrite(fd, (uint16_t []){w, h}, 4);
-		ok = GetInfoMap(map_name, map_type, map_data, bm_grayscale_8);
-		assert(ok);
-		gzwrite(fd, map_data, w * h);
-		free(map_data);
-	}
+	write_info_map(map_name, "height", gz_file);
+	write_info_map(map_name, "metal", gz_file);
 
-	gzclose(fd);
+	gzclose(gz_file);
 
-	char file_path[MAX_PATH];
 	sprintf(file_path, "%lscache\\alphalobby\\%s.MapData", g_data_dir, map_name);
 	SHCreateDirectoryExW(NULL, Settings_get_data_dir(L"cache\\alphalobby"), NULL);
 	MoveFileExA(tmp_file_path, file_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
@@ -495,7 +513,7 @@ Sync_on_changed_map(const char *map_name)
 		have_tried_to_download = 0;
 		g_map_hash = 0;
 		current_map[0] = 0;
-		BattleRoom_change_minimap_bitmap(NULL, 0, 0, NULL, 0, 0, NULL);
+		Minimap_set_bitmap(NULL, 0, 0, NULL, 0, 0, NULL);
 		free(InterlockedExchangePointer(&map_to_save, _strdup(map_name)));
 		SetEvent(event);
 		MyBattle_update_mod_options();
@@ -505,9 +523,9 @@ Sync_on_changed_map(const char *map_name)
 	strcpy(current_map, map_name);
 
 	gzread(fd, &g_map_hash, sizeof(g_map_hash));
-	gzread(fd, &_g_largeMapInfo, sizeof(_g_largeMapInfo));
-	g_map_info.description = _g_largeMapInfo.description;
-	g_map_info.author = _g_largeMapInfo.author;
+	gzread(fd, &g_map_info, sizeof(g_map_info));
+	g_map_info.description = g_map_info.description;
+	g_map_info.author = g_map_info.author;
 
 	OptionList option_list = load_options(fd);
 	g_map_options = option_list.xs;
@@ -536,7 +554,7 @@ Sync_on_changed_map(const char *map_name)
 	metal_map_pixels = malloc(d[0] * d[1]);
 	gzread(fd, metal_map_pixels, d[0] *  d[1]);
 
-	BattleRoom_change_minimap_bitmap(pixels,
+	Minimap_set_bitmap(pixels,
 			d[0], d[1], metal_map_pixels,
 			h[0], h[1], height_map_pixels);
 

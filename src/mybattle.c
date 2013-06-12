@@ -65,7 +65,7 @@ static char *current_script;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-struct _LargeMapInfo _g_largeMapInfo = {.map_info = {.description = _g_largeMapInfo.description, .author = _g_largeMapInfo.author}};
+MapInfo_ g_map_info = {.MapInfo = {.description = g_map_info._description, .author = g_map_info._author}};
 
 void
 MyBattle_set_split(SplitType type, int size)

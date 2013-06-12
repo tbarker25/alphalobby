@@ -165,7 +165,7 @@ on_session_end(SessionContext *ses)
 	free(ses->package_bytes);
 	ses->status = 0;
 	if (ses->name) {
-		/* BattleRoom_redraw_minimap(); */
+		/* Minimap_redraw(); */
 		DownloadList_remove(ses->name);
 		Sync_reload();
 	}
@@ -190,7 +190,7 @@ on_read_complete(HINTERNET handle, RequestContext *req, DWORD num_read)
 	if (req->ses->total_bytes) {
 		req->ses->fetched_bytes += num_read;
 		assert(req->ses->total_bytes);
-		/* BattleRoom_redraw_minimap(); */
+		/* Minimap_redraw(); */
 		wchar_t text[128];
 		_swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
 				(float)req->ses->fetched_bytes / 1000000,
