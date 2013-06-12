@@ -27,11 +27,6 @@ typedef struct HWND__* HWND;
 
 extern HWND g_battle_room;
 
-void BattleRoom_change_minimap_bitmap(const uint16_t *map_pixels,
-		uint16_t metal_map_width, uint16_t metal_map_height,
-		const uint8_t *metal_map_pixels, uint16_t height_map_width,
-		uint16_t height_map_height, const uint8_t *height_map_pixels);
-
 void BattleRoom_hide(void);
 bool BattleRoom_is_auto_unspec(void);
 void BattleRoom_on_change_mod(void);
@@ -39,7 +34,6 @@ void BattleRoom_on_left_battle(const union UserOrBot *u);
 void BattleRoom_on_set_mod_details(void);
 void BattleRoom_on_set_option(struct Option *opt);
 void BattleRoom_on_start_position_change(void);
-void BattleRoom_redraw_minimap(void);
 void BattleRoom_resize_columns(void);
 void BattleRoom_show(void);
 void BattleRoom_update_user(union UserOrBot *);

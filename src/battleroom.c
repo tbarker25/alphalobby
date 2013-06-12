@@ -39,6 +39,7 @@
 #include "iconlist.h"
 #include "layoutmetrics.h"
 #include "mainwindow.h"
+#include "minimap.h"
 #include "mybattle.h"
 #include "settings.h"
 #include "spring.h"
@@ -92,11 +93,6 @@ enum DialogId {
 	DLG_LAST = DLG_CHANGE_MAP,
 };
 
-static const uint16_t *minimap_pixels;
-static uint16_t metal_map_height, metal_map_width;
-static const uint8_t *metal_map_pixels;
-static uint16_t height_map_height, height_map_width;
-static const uint8_t *height_map_pixels;
 static RECT bounding_rect;
 
 static const DialogItem dialog_items[] = {
@@ -126,8 +122,8 @@ static const DialogItem dialog_items[] = {
 		.name = L"Auto unspectate",
 		.style = WS_VISIBLE | BS_AUTOCHECKBOX | WS_DISABLED,
 	}, [DLG_MINIMAP] = {
-		.class = WC_STATIC,
-		.style = WS_VISIBLE | SS_OWNERDRAW,
+		.class = WC_MINIMAP,
+		.style = WS_VISIBLE,
 	}, [DLG_LEAVE] = {
 		.class = WC_BUTTON,
 		.name = L"Leave",
@@ -172,30 +168,6 @@ static const DialogItem dialog_items[] = {
 	}
 };
 
-void
-BattleRoom_change_minimap_bitmap(const uint16_t *_minimap_pixels,
-		uint16_t _metal_mapWidth, uint16_t _metal_mapHeight, const uint8_t *_metal_mapPixels,
-		uint16_t _height_mapWidth, uint16_t _height_mapHeight, const uint8_t *_height_mapPixels)
-{
-	minimap_pixels = _minimap_pixels;
-
-	metal_map_width = _metal_mapWidth;
-	metal_map_height = _metal_mapHeight;
-	metal_map_pixels = _metal_mapPixels;
-
-	height_map_width = _height_mapWidth;
-	height_map_height = _height_mapHeight;
-	height_map_pixels = _height_mapPixels;
-
-	InvalidateRect(GetDlgItem(g_battle_room, DLG_MINIMAP), 0, 0);
-}
-
-void
-BattleRoom_redraw_minimap(void)
-{
-	InvalidateRect(GetDlgItem(g_battle_room, DLG_MINIMAP), 0, 0);
-}
-
 static void
 set_split(SplitType type, int size)
 {
@@ -217,7 +189,7 @@ BattleRoom_on_start_position_change(void)
 	if (!g_battle_info_finished)
 		return;
 
-	BattleRoom_redraw_minimap();
+	Minimap_redraw();
 
 	if (g_battle_options.start_pos_type == STARTPOS_RANDOM) {
 		set_split(SPLIT_RAND, 0);
@@ -553,7 +525,7 @@ resize_all(LPARAM l_param)
 
 	EndDeferWindowPos(dwp);
 	BattleRoom_resize_columns();
-	BattleRoom_redraw_minimap();
+	Minimap_redraw();
 }
 
 static LRESULT CALLBACK
@@ -644,116 +616,6 @@ on_create(HWND window)
 			ICON_SPLIT_RAND);
 
 	SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
-}
-
-static void
-on_draw(DRAWITEMSTRUCT *info)
-{
-	FillRect(info->hDC, &info->rcItem, (HBRUSH) (COLOR_BTNFACE+1));
-
-	if (!minimap_pixels) {
-		/* extern void
-GetDownloadMessage(const char *text); */
-		/* char text[256]; */
-		/* GetDownloadMessage(text); */
-		/* DrawTextA(info->hDC, text, -1, &info->rcItem, DT_CENTER); */
-		return;
-	}
-
-	int width = info->rcItem.right;
-	int height = info->rcItem.bottom;
-
-	if (!g_map_info.width || !g_map_info.height || !width || !height)
-		return;
-
-	if (height * g_map_info.width > width * g_map_info.height)
-		height = width * g_map_info.height / g_map_info.width;
-	else
-		width = height * g_map_info.width / g_map_info.height;
-
-	int x_offset = (info->rcItem.right - width) / 2;
-	int y_offset = (info->rcItem.bottom - height) / 2;
-
-
-	uint32_t *pixels = malloc(width * height * 4);
-	if (SendDlgItemMessage(g_battle_room, DLG_MAPMODE_ELEVATION, BM_GETCHECK, 0, 0)) {
-		for (int i=0; i<width * height; ++i) {
-			uint8_t height_pixel = height_map_pixels[i % width * height_map_width / width + i / width * height_map_height / height * height_map_width];
-			pixels[i] = height_pixel | height_pixel << 8 | height_pixel << 16;
-		}
-	} else if (SendDlgItemMessage(g_battle_room, DLG_MAPMODE_METAL, BM_GETCHECK, 0, 0)) {
-		for (int i=0; i<width * height; ++i) {
-			uint16_t p = minimap_pixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
-			uint8_t metal_pixel = metal_map_pixels[i % width * metal_map_width / width + i / width * metal_map_height / height * metal_map_width];
-			pixels[i] = (p & 0x001B) << 1 | (p & 0x700 ) << 3 | (p & 0xE000) << 6 | metal_pixel >> 2 | metal_pixel << 8;
-		}
-	} else {
-		for (int i=0; i<width * height; ++i) {
-			uint16_t p = minimap_pixels[i % width * MAP_RESOLUTION / width + i / width * MAP_RESOLUTION / height * MAP_RESOLUTION];
-			pixels[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
-		}
-	}
-	if (!g_my_battle)
-		goto cleanup;
-
-	if (g_battle_options.start_pos_type == STARTPOS_CHOOSE_INGAME) {
-		for (uint8_t j=0; j<NUM_ALLIANCES; ++j) {
-			uint16_t x_min = g_battle_options.start_rects[j].left * width / START_RECT_MAX;
-			uint16_t x_max = g_battle_options.start_rects[j].right * width / START_RECT_MAX;
-			uint16_t y_min = g_battle_options.start_rects[j].top * height / START_RECT_MAX;
-			uint16_t y_max = g_battle_options.start_rects[j].bottom * height / START_RECT_MAX;
-
-			if ((g_my_user.battle_status & BS_MODE) && j == FROM_BS_ALLY(g_my_user.battle_status)) {
-				for (uint16_t x=x_min; x<x_max; ++x) {
-					for (uint16_t y=y_min; y<y_max; ++y) {
-						if ((pixels[x+width*y] & 0x00FF00) >= (0x00FF00 - 0x003000))
-							pixels[x+width*y] |= 0x00FF00;
-						else
-							pixels[x+width*y] += 0x003000;
-					}
-				}
-			} else {
-				for (uint16_t x=x_min; x<x_max; ++x) {
-					for (uint16_t y=y_min; y<y_max; ++y) {
-						if ((pixels[x+width*y] & 0xFF0000) >= (0xFF0000 - 0x300000))
-							pixels[x+width*y] |= 0xFF0000;
-						else
-							pixels[x+width*y] += 0x300000;
-					}
-				}
-			}
-			for (uint16_t x=x_min; x<x_max; ++x) {
-				pixels[x+width*y_min] = 0;
-				pixels[x+width*(y_max-1)] = 0;
-			}
-			for (uint16_t y=y_min; y<y_max; ++y) {
-				pixels[x_min+width*y] = 0;
-				pixels[(x_max-1)+width*y] = 0;
-			}
-		}
-
-	} else {
-		uint8_t max = g_my_battle ? GetNumPlayers(g_my_battle) : 0;
-		max = max < g_map_info.pos_len ? max : g_map_info.pos_len;
-		for (uint16_t i=0; i<max; ++i) {
-			uint16_t x_mid = g_map_info.positions[i].x * width / g_map_info.width;
-			uint16_t y_mid = g_map_info.positions[i].z * height / g_map_info.height;
-
-			for (uint16_t x=x_mid-5; x<x_mid+5; ++x)
-				for (uint16_t y=y_mid-5; y<y_mid+5; ++y)
-					pixels[x + width * y] = 0x00CC00;
-		}
-	}
-
-cleanup:;
-	HBITMAP bitmap = CreateBitmap(width, height, 1, 32, pixels);
-	free(pixels);
-
-	HDC dcSrc = CreateCompatibleDC(info->hDC);
-	SelectObject(dcSrc, bitmap);
-	BitBlt(info->hDC, x_offset, y_offset, width, height, dcSrc, 0, 0, SRCCOPY);
-
-	DeleteObject(bitmap);
 }
 
 static wchar_t *
@@ -922,7 +784,7 @@ on_command(WPARAM w_param, HWND window)
 		return 0;
 
 	case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
-		InvalidateRect(GetDlgItem(g_battle_room, DLG_MINIMAP), 0, 0);
+		Minimap_set_type(LOWORD(w_param) - DLG_MAPMODE_MINIMAP);
 		return 0;
 	}
 	return 1;
@@ -961,39 +823,6 @@ set_details(const Option *options, ssize_t option_len)
 		SendMessageA(info_list, LVM_INSERTITEMA, 0, (LPARAM)&item);
 	}
 }
-
-/* static void
-set_map_info(void) */
-/* { */
-/* HWND info_list = GetDlgItem(g_battle_room, DLG_INFOLIST); */
-/* LVGROUP group; */
-/* group.cbSize = sizeof(group); */
-/* group.mask = LVGF_HEADER | LVGF_GROUPID; */
-/* group.pszHeader = L"Map Info"; */
-/* group.iGroupId = 1; */
-/* SendMessage(info_list, LVM_INSERTGROUP, -1, (LPARAM)&group); */
-
-/* LVITEM item; */
-
-/* #define ADD_STR(s1, s2) \ */
-/* item.mask = LVIF_TEXT | LVIF_GROUPID; \ */
-/* item.iItem = INT_MAX; \ */
-/* item.iSubItem = 0; \ */
-/* item.pszText = s1; \ */
-/* item.iGroupId = 1; \ */
-/* \ */
-/* item.iItem = SendMessage(info_list, LVM_INSERTITEM, 0, (LPARAM)&item); \ */
-/* item.mask = LVIF_TEXT; \ */
-/* item.iSubItem = 1; \ */
-/* item.pszText = s2; \ */
-/* SendMessage(info_list, LVM_SETITEM, 0, (LPARAM)&item); */
-
-/* if (g_map_info.author[0]) */
-/* ADD_STR(L"Author", utf8to16(g_map_info.author)); */
-/* ADD_STR(L"Tidal: ", utf8to16(g_map_info.author)); */
-
-/* #undef ADD_STR */
-/* } */
 
 void
 BattleRoom_on_set_mod_details(void)
@@ -1091,11 +920,6 @@ battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		resize_all(l_param);
 		return 0;
 
-	case WM_DRAWITEM:
-		if (w_param == DLG_MINIMAP)
-			on_draw((void *)l_param);
-		return 1;
-
 	case WM_NOTIFY:
 		return on_notify(w_param, (NMHDR *)l_param);
 
@@ -1135,4 +959,3 @@ init (void)
 
 	RegisterClassEx(&window_class);
 }
-
