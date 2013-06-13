@@ -23,7 +23,7 @@
 #define PW_MASK 2
 #define FULL_MASK 4
 #define USER_MASK 8
-#define UNBS_SYNC 1
+#define SYNC_MASK 1
 #define AWAY_MASK 2
 #define IGNORE_MASK 4
 

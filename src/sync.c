@@ -146,7 +146,7 @@ syncProc (__attribute__((unused)) LPVOID lp_parameter)
 			create_map_file(s);
 			free(s);
 		} else if (task_set_battle_status) {
-			SetMyBattleStatus(g_my_user.BattleStatus);
+			SetMyBattleStatus(g_last_battle_status);
 			task_set_battle_status = 0;
 		} else {
 			WaitForSingleObject(event, INFINITE);

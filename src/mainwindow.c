@@ -24,7 +24,7 @@
 #include <time.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "battle.h"
 #include "battlelist.h"

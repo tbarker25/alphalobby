@@ -23,7 +23,7 @@
 #include <stdio.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "common.h"
 #include "iconlist.h"

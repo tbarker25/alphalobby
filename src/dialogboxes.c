@@ -24,7 +24,7 @@
 #include <zlib.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 #include <Richedit.h>
 #include <basetyps.h>
 #include <shellapi.h>

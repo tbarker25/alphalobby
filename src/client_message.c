@@ -25,7 +25,7 @@
 #include <stdlib.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "battle.h"
 #include "battleroom.h"
@@ -111,7 +111,10 @@ SetMyBattleStatus(struct BattleStatus battle_status)
 	}
 
 	bs.BattleStatus = battle_status;
-	assert(bs.as_int);
+
+	/* TODO remove this */
+	if (!bs.as_int)
+		bs.BattleStatus = *(BattleStatus *)0;
 	bs.sync = Sync_is_synced() ? 1 : 2;
 	last_bs.BattleStatus = g_last_battle_status;
 
@@ -162,7 +165,7 @@ SetMyClientStatus(ClientStatus status)
 	last_cs.ClientStatus = g_last_client_status;
 
 	if (cs.as_int != last_cs.as_int) {
-		g_last_client_status = status;
+		g_last_client_status = cs.ClientStatus;
 		Server_send("MYSTATUS %d", cs.as_int);
 	} else {
 		/* TODO: remove this */

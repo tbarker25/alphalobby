@@ -25,7 +25,7 @@
 #include <sys\stat.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "battle.h"
 #include "chat_window.h"

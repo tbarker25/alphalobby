@@ -49,12 +49,12 @@ spring_proc(LPVOID path)
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
 		ingame = true;
-		SetMyClientStatus(g_my_user.ClientStatus);
+		SetMyClientStatus(g_last_client_status);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
 		ingame = false;
-		SetMyClientStatus(g_my_user.ClientStatus);
+		SetMyClientStatus(g_last_client_status);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
 
