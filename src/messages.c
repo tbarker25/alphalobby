@@ -251,7 +251,7 @@ add_start_rect(void)
 	rect->top = get_next_int();
 	rect->right = get_next_int();
 	rect->bottom = get_next_int();
-	BattleRoom_on_start_position_change();
+	Minimap_on_start_position_change();
 }
 
 static void
@@ -541,7 +541,7 @@ left_battle(void)
 
 	if (b == g_my_battle) {
 		if (u->mode && BattleRoom_is_auto_unspec()) {
-			BattleStatus bs = g_my_user.BattleStatus;
+			BattleStatus bs = g_last_battle_status;
 			SetMyBattleStatus(bs);
 		}
 		if (g_settings.flags & (1<<DEST_BATTLE)){
@@ -596,7 +596,7 @@ static void
 remove_start_rect(void)
 {
 	memset(&g_battle_options.start_rects[get_next_int()], 0, sizeof(typeof(*g_battle_options.start_rects)));
-	BattleRoom_on_start_position_change();
+	Minimap_on_start_position_change();
 }
 
 static void
@@ -619,9 +619,6 @@ remove_user(void)
 static void
 request_battle_status(void)
 {
-	assert(g_my_user.mode == 0);
-	assert(g_my_user.sync == 0);
-
 	g_battle_info_finished = 1;
 
 	SetMyBattleStatus(MyBattle_new_battle_status());

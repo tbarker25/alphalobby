@@ -181,14 +181,14 @@ MyBattle_update_battle_status(UserOrBot *restrict u, BattleStatus bs, uint32_t c
 
 	if (last_bs.mode != bs.mode
 			|| (last_bs.ally != bs.ally && &u->user == &g_my_user))
-		BattleRoom_on_start_position_change();
+		Minimap_on_start_position_change();
 
 	if (last_bs.mode == bs.mode)
 		return;
 
 	if (!bs.mode && (User *)u != &g_my_user
 			&& BattleRoom_is_auto_unspec()) {
-		BattleStatus new_bs = u->BattleStatus;
+		BattleStatus new_bs = g_last_battle_status;
 		new_bs.mode = 1;
 		SetMyBattleStatus(new_bs);
 	}

@@ -26,7 +26,7 @@
 #include <stdlib.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 #include <richedit.h>
 #include <basetyps.h>
 #include <shellapi.h>
@@ -284,7 +284,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 	} else if (!strcmp(code, "j") || !strcmp(code, "join"))
 		JoinChannel(s, 1);
 	else if (!strcmp(code, "away")) {
-		ClientStatus cs = g_my_user.ClientStatus;
+		ClientStatus cs = g_last_client_status;
 		cs.away = !cs.away;
 		SetMyClientStatus(cs);
 	} else if (!strcmp(code, "ingametime"))
@@ -299,7 +299,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		if (type <= SPLIT_LAST)
 			MyBattle_set_split(type, atoi(s));
 	} else if (!strcmp(code, "ingame")) {
-		ClientStatus cs = g_my_user.ClientStatus;
+		ClientStatus cs = g_last_client_status;
 		cs.ingame = !cs.ingame;
 		SetMyClientStatus(cs);
 	}

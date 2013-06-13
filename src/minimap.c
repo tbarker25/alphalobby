@@ -22,26 +22,78 @@
 #include <stdlib.h>
 
 #include <windows.h>
+#include <commctrl.h>
 
 #include "battle.h"
+#include "client_message.h"
+#include "common.h"
+#include "iconlist.h"
 #include "minimap.h"
 #include "mybattle.h"
-#include "common.h"
 #include "sync.h"
+#include "layoutmetrics.h"
 #include "user.h"
+#include "wincommon.h"
 
-static void _init (void);
-static LRESULT CALLBACK minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
-static void on_draw(HWND window);
+enum DialogId {
+	DLG_SPLIT_FIRST,
+	DLG_SPLIT_LAST = DLG_SPLIT_FIRST + SPLIT_LAST,
 
-static void copy_heightmap       (uint32_t *dst, int width, int height);
-static void copy_normalmap       (uint32_t *dst, int width, int height);
-static void copy_metalmap        (uint32_t *dst, int width, int height);
-static uint32_t * copy_minimap   (int width, int height);
+	DLG_SPLIT_SIZE,
+
+	DLG_MAPMODE_MINIMAP,
+	DLG_MAPMODE_METAL,
+	DLG_MAPMODE_ELEVATION,
+	DLG_CHANGE_MAP,
+
+	DLG_LAST = DLG_CHANGE_MAP,
+};
+
+static const DialogItem dialog_items[] = {
+	[DLG_MAPMODE_MINIMAP] = {
+		.class = WC_BUTTON,
+		.name = L"Minimap",
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_MAPMODE_METAL] = {
+		.class = WC_BUTTON,
+		.name = L"Metal",
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_MAPMODE_ELEVATION] = {
+		.class = WC_BUTTON,
+		.name = L"Elevation",
+		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
+	}, [DLG_CHANGE_MAP] = {
+		.class = WC_BUTTON,
+		.name = L"Change Map",
+		.style = WS_VISIBLE | BS_PUSHBUTTON,
+
+	}, [DLG_SPLIT_FIRST ... DLG_SPLIT_LAST] = {
+		.class = WC_BUTTON,
+		.style = WS_VISIBLE | BS_CHECKBOX | BS_PUSHLIKE | BS_ICON,
+
+	}, [DLG_SPLIT_SIZE] = {
+		.class = TRACKBAR_CLASS,
+		.style = WS_VISIBLE | WS_CHILD,
+	}
+};
+
+static void copy_start_positions (uint32_t *dst, int width, int height);
 static void copy_start_boxes     (uint32_t *pixels, int width, int height);
 static void copy_start_positions (uint32_t *dst, int width, int height);
+static void copy_metalmap        (uint32_t *dst, int width, int height);
+static uint32_t * copy_minimap   (int width, int height);
+static void copy_normalmap       (uint32_t *dst, int width, int height);
+static void copy_metalmap        (uint32_t *dst, int width, int height);
+static void copy_heightmap       (uint32_t *dst, int width, int height);
+static void copy_normalmap       (uint32_t *dst, int width, int height);
 
-static HWND minimap;
+static void _init                (void);
+static LRESULT CALLBACK minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static void on_create            (HWND window);
+static void on_draw              (HWND window);
+static void on_size              (LPARAM l_param);
+static void on_split_size_scroll (void);
+static void set_split            (SplitType type, int size);
 
 static enum MinimapType minimapType = MINIMAP_NORMAL;
 static const uint16_t *minimap_pixels;
@@ -49,6 +101,110 @@ static uint16_t metal_map_height, metal_map_width;
 static const uint8_t *metal_map_pixels;
 static uint16_t height_map_height, height_map_width;
 static const uint8_t *height_map_pixels;
+
+static HWND minimap;
+
+static void
+set_split(SplitType type, int size)
+{
+	for (SplitType i=0; i<=SPLIT_LAST; ++i)
+		SendDlgItemMessage(minimap, DLG_SPLIT_FIRST + i,
+				BM_SETCHECK, i == type, 0);
+
+	EnableWindow(GetDlgItem(minimap, DLG_SPLIT_SIZE),
+			g_battle_options.start_pos_type == STARTPOS_CHOOSE_INGAME);
+
+	SendDlgItemMessage(minimap, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
+}
+
+void
+Minimap_on_start_position_change(void)
+{
+	StartRect r1, r2;
+
+	if (!g_battle_info_finished)
+		return;
+
+	Minimap_redraw();
+
+	if (g_battle_options.start_pos_type == STARTPOS_RANDOM) {
+		set_split(SPLIT_RAND, 0);
+		return;
+	}
+
+	if (g_battle_options.start_pos_type != STARTPOS_CHOOSE_INGAME) {
+		set_split(SPLIT_LAST + 1, 0);
+		return;
+	}
+
+	if (g_battle_options.start_rects[0].left == 0
+			&& (g_battle_options.start_rects[0].top == 0
+				|| g_battle_options.start_rects[1].left != 0)) {
+		r1 = g_battle_options.start_rects[0];
+		r2 = g_battle_options.start_rects[1];
+	} else {
+		r1 = g_battle_options.start_rects[1];
+		r2 = g_battle_options.start_rects[0];
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r1.bottom == 200
+			&& r2.top == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.right == 200 - r2.left) {
+		set_split(SPLIT_VERT, r1.right);
+		return;
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r1.right == 200
+			&& r2.left == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.bottom == 200 - r2.top) {
+		set_split(SPLIT_HORZ, r1.bottom);
+		return;
+	}
+
+	if (r1.left == 0 && r1.top == 0 && r2.right == 200 && r2.bottom == 200
+			&& r1.right == 200 - r2.left
+			&& r1.bottom == 200 - r2.top) {
+		set_split(SPLIT_CORNERS1, (r1.right + r1.bottom) / 2);
+		return;
+	}
+
+	if (r1.left == 0 && r1.bottom == 200 && r2.right == 200 && r2.top == 0
+			&& r1.right == 200 - r2.left
+			&& r1.top == 200 - r2.bottom) {
+		set_split(SPLIT_CORNERS2, (r1.right + r2.bottom) / 2);
+		return;
+	}
+}
+
+static void
+on_size(LPARAM l_param)
+{
+	HDWP dwp = BeginDeferWindowPos(DLG_LAST + 1);
+	int w = LOWORD(l_param), h = HIWORD(l_param);
+
+#define S 2
+#define XS MAP_X(S)
+#define YS MAP_Y(S)
+#define YH MAP_Y(14)
+
+#define MOVE_ID(id, x, y, cx, cy)\
+	(DeferWindowPos(dwp, (GetDlgItem(minimap, (id))), NULL, (x), (y), (cx), (cy), 0))
+
+	for (SplitType i=0; i<=SPLIT_LAST; ++i)
+		MOVE_ID(DLG_SPLIT_FIRST + i,  (1 + i) * XS + i * YH, YS, MAP_Y(14), MAP_Y(14));
+	MOVE_ID(DLG_SPLIT_SIZE,  6*XS + 5*YH, YS, w - 7*XS - 5*YH, YH);
+
+#define TOP (h - MAP_Y(14 + S))
+	MOVE_ID(DLG_MAPMODE_MINIMAP,    XS, TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_METAL,      XS + MAP_X(50),  TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_MAPMODE_ELEVATION,  XS + MAP_X(100), TOP, MAP_X(50), COMMANDBUTTON_Y);
+	MOVE_ID(DLG_CHANGE_MAP,        w - 2*XS - MAP_X(60),   TOP, MAP_X(60), COMMANDBUTTON_Y);
+#undef TOP
+	EndDeferWindowPos(dwp);
+
+	Minimap_redraw();
+}
+
 
 void Minimap_set_type(enum MinimapType type)
 {
@@ -247,6 +403,9 @@ on_draw(HWND window)
 	int width, height;
 
 	GetClientRect(window, &rect);
+	rect.top += MAP_Y(18);
+	rect.bottom -= MAP_Y(36);
+
 	width = rect.right;
 	height = rect.bottom;
 
@@ -281,12 +440,86 @@ on_draw(HWND window)
 
 	BitBlt(drawing_context,
 			(rect.right - width) / 2,
-			(rect.bottom - height) / 2,
+			rect.top + (rect.bottom - height) / 2,
 			rect.right, rect.bottom,
 			bitmap_context, 0, 0, SRCCOPY);
 
 	DeleteObject(bitmap);
 	EndPaint(window, &ps);
+}
+
+static LRESULT
+on_command(WPARAM w_param)
+{
+	HMENU menu;
+	switch (w_param) {
+	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED):
+		menu = CreatePopupMenu();
+		for (size_t i=0; i<g_map_len; ++i)
+			AppendMenuA(menu, MF_CHECKED * !strcmp(g_my_battle->map_name,  g_maps[i]), i + 1, g_maps[i]);
+		POINT pt;
+		GetCursorPos(&pt);
+		int map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, minimap, NULL);
+		if (map_index > 0)
+			ChangeMap(g_maps[map_index - 1]);
+		DestroyMenu(menu);
+		return 0;
+
+	case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
+		Minimap_set_type(LOWORD(w_param) - DLG_MAPMODE_MINIMAP);
+		return 0;
+
+	case MAKEWPARAM(DLG_SPLIT_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SPLIT_LAST, BN_CLICKED):
+		MyBattle_set_split(LOWORD(w_param) - DLG_SPLIT_FIRST, SendDlgItemMessage(minimap, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
+		return 0;
+
+	default:
+		return 1;
+	}
+}
+
+static void
+on_split_size_scroll(void) {
+	SplitType split_type = 0;
+
+	/* find which split button is checked: */
+	while (!SendDlgItemMessage(minimap,
+				DLG_SPLIT_FIRST + split_type,
+				BM_GETCHECK, 0, 0)) {
+		if (split_type > SPLIT_LAST) {
+			assert(0);
+			return;
+		}
+		++split_type;
+	}
+
+	int split_size = SendDlgItemMessage(minimap, DLG_SPLIT_SIZE,
+			TBM_GETPOS, 0, 0);
+	MyBattle_set_split(split_type, split_size);
+}
+
+static void
+on_create(HWND window)
+{
+	minimap = window;
+
+	CreateDlgItems(window, dialog_items, DLG_LAST + 1);
+
+	SendDlgItemMessage(window, DLG_SPLIT_SIZE, TBM_SETRANGE, 1,
+			MAKELONG(0, 200));
+
+	IconList_set_window_image(GetDlgItem(window, DLG_SPLIT_FIRST + SPLIT_VERT),
+			ICON_SPLIT_VERT);
+	IconList_set_window_image(GetDlgItem(window, DLG_SPLIT_FIRST + SPLIT_HORZ),
+			ICON_SPLIT_HORZ);
+	IconList_set_window_image(GetDlgItem(window, DLG_SPLIT_FIRST + SPLIT_CORNERS1),
+			ICON_SPLIT_CORNER1);
+	IconList_set_window_image(GetDlgItem(window, DLG_SPLIT_FIRST + SPLIT_CORNERS2),
+			ICON_SPLIT_CORNER2);
+	IconList_set_window_image(GetDlgItem(window, DLG_SPLIT_FIRST + SPLIT_RAND),
+			ICON_SPLIT_RAND);
+
+	SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
 }
 
 static LRESULT CALLBACK
@@ -295,11 +528,23 @@ minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	switch (msg) {
 
 	case WM_CREATE:
-		minimap = window;
+		on_create(window);
 		return 0;
+
+	case WM_SIZE:
+		on_size(l_param);
 
 	case WM_PAINT:
 		on_draw(window);
+		return 0;
+
+	case WM_COMMAND:
+		return on_command(w_param);
+
+	case WM_HSCROLL:
+		if (GetDlgCtrlID((HWND)l_param) == DLG_SPLIT_SIZE
+				&& w_param == SB_ENDSCROLL)
+			on_split_size_scroll();
 		return 0;
 
 	default:

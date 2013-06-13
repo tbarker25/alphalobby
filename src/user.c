@@ -105,7 +105,7 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 	++b->bot_len;
 
 	/* Rebalance(); */
-	BattleRoom_on_start_position_change();
+	Minimap_on_start_position_change();
 	BattleRoom_update_user((void *)bot);
 }
 
@@ -125,7 +125,7 @@ Users_del_bot(const char *name)
 	--g_my_battle->user_len;
 	--g_my_battle->bot_len;
 	/* Rebalance(); */
-	BattleRoom_on_start_position_change();
+	Minimap_on_start_position_change();
 }
 
 void

@@ -27,6 +27,7 @@ enum MinimapType {
 	MINIMAP_HEIGHT,
 };
 
+void Minimap_on_start_position_change(void);
 void Minimap_set_type(enum MinimapType);
 void Minimap_redraw(void);
 void Minimap_set_bitmap(const uint16_t *map_pixels,

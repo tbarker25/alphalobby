@@ -20,7 +20,7 @@
 #include <inttypes.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "client_message.h"
 #include "common.h"

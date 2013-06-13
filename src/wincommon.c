@@ -19,7 +19,7 @@
 #include <inttypes.h>
 
 #include <windows.h>
-#include <Commctrl.h>
+#include <commctrl.h>
 
 #include "common.h"
 #include "layoutmetrics.h"
