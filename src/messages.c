@@ -406,7 +406,7 @@ client_status(void)
 	if (!u->battle)
 		return;
 
-	if (previous.ingame == u->ingame
+	if (previous.ingame != u->ingame
 			&& u == u->battle->founder) {
 		BattleList_update_battle(u->battle);
 
