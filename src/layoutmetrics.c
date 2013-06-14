@@ -20,18 +20,20 @@
 
 #include <windows.h>
 
+static void _init(void);
+
 HFONT g_font;
-uint16_t base_unit_x;
-uint16_t base_unit_y;
-uint32_t scroll_width;
+uint16_t g_base_unit_x;
+uint16_t g_base_unit_y;
+uint32_t g_scroll_width;
 
 static void __attribute__((constructor))
-init(void)
+_init(void)
 {
 	NONCLIENTMETRICS info = {.cbSize = sizeof(NONCLIENTMETRICS)};
 
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, &info, 0);
-	scroll_width = info.iScrollWidth;
+	g_scroll_width = info.iScrollWidth;
 	g_font = CreateFontIndirect(&info.lfMessageFont);
 
 	HDC dc = GetDC(NULL);
@@ -39,7 +41,7 @@ init(void)
 	TEXTMETRIC tmp;
 	GetTextMetrics(dc, &tmp);
 	ReleaseDC(NULL, dc);
-	base_unit_x = tmp.tmAveCharWidth;
-	base_unit_y = tmp.tmHeight;
+	g_base_unit_x = tmp.tmAveCharWidth;
+	g_base_unit_y = tmp.tmHeight;
 }
 

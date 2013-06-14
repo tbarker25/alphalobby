@@ -30,43 +30,44 @@
 #include "mybattle.h"
 
 #define ALLOC_STEP 10
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static size_t battle_len;
-static Battle **battles;
+static size_t g_battles_len;
+static Battle **g_battles;
 
-Battle * Battles_find(uint32_t id)
+Battle *
+Battles_find(uint32_t id)
 {
-	for (size_t i=0; i<battle_len; ++i)
-		if (battles[i] && battles[i]->id == id)
-			return battles[i];
+	for (size_t i=0; i<g_battles_len; ++i)
+		if (g_battles[i] && g_battles[i]->id == id)
+			return g_battles[i];
 	return NULL;
 }
 
-Battle *Battles_new(void)
+Battle *
+Battles_new(void)
 {
 	size_t i=0;
 
-	for (; i<battle_len; ++i) {
-		if (battles[i] == NULL)
+	for (; i<g_battles_len; ++i) {
+		if (g_battles[i] == NULL)
 			break;
 	}
-	if (i == battle_len) {
-		if (battle_len % ALLOC_STEP == 0)
-			battles = realloc(battles, (battle_len + ALLOC_STEP) * sizeof(Battle *));
-		++battle_len;
+	if (i == g_battles_len) {
+		if (g_battles_len % ALLOC_STEP == 0)
+			g_battles = realloc(g_battles, (g_battles_len + ALLOC_STEP) * sizeof(Battle *));
+		++g_battles_len;
 	}
-	battles[i] = calloc(1, sizeof(Battle));
-	return battles[i];
+	g_battles[i] = calloc(1, sizeof(Battle));
+	return g_battles[i];
 }
 
 void
 Battles_del(Battle *b)
 {
 	free(b);
-	for (size_t i=0; i<battle_len; ++i) {
-		if (battles[i] == b) {
-			battles[i] = NULL;
+	for (size_t i=0; i<g_battles_len; ++i) {
+		if (g_battles[i] == b) {
+			g_battles[i] = NULL;
 			return;
 		}
 	}
@@ -76,9 +77,9 @@ Battles_del(Battle *b)
 void
 Battles_reset(void)
 {
-	for (size_t i=0; i<battle_len; ++i)
-		free(battles[i]);
-	battle_len = 0;
-	free(battles);
-	battles = NULL;
+	for (size_t i=0; i<g_battles_len; ++i)
+		free(g_battles[i]);
+	g_battles_len = 0;
+	free(g_battles);
+	g_battles = NULL;
 }

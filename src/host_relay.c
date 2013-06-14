@@ -18,6 +18,9 @@
 #include "sync.h"
 #include "user.h"
 
+#define RelayMessage(format, ...) \
+	(Server_send("SAYPRIVATE %s " format, g_relay_hoster, ## __VA_ARGS__))
+
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
 static void kick(const char *name);
@@ -25,10 +28,9 @@ static void said_battle(const char *username, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
-
 static void handle_manager_list(char *command);
 
-const HostType g_host_relay = {
+const HostType HOST_RELAY = {
 	.force_ally = force_ally,
 	.force_team = force_team,
 	.kick = kick,
@@ -41,13 +43,10 @@ const HostType g_host_relay = {
 const char **g_relay_managers;
 int g_relay_manager_len;
 
-static char relay_cmd[1024];
-static char relay_hoster[MAX_NAME_LENGTH_NUL];
-static char relay_manager[MAX_NAME_LENGTH_NUL];
-static char relay_password[1024];
-
-#define RelayMessage(format, ...) \
-	(Server_send("SAYPRIVATE %s " format, relay_hoster, ## __VA_ARGS__))
+static char g_relay_cmd[1024];
+static char g_relay_hoster[MAX_NAME_LENGTH_NUL];
+static char g_relay_manager[MAX_NAME_LENGTH_NUL];
+static char g_relay_password[1024];
 
 bool
 RelayHost_on_private_message(const char *username, char *command)
@@ -59,15 +58,15 @@ RelayHost_on_private_message(const char *username, char *command)
 	}
 
 	// If we are starting a relayhost game, then manager sends the name of the host to join:
-	if (!strcmp(username, relay_manager)){
-		strcpy(relay_hoster, command);
-		*relay_manager = '\0';
+	if (!strcmp(username, g_relay_manager)){
+		strcpy(g_relay_hoster, command);
+		*g_relay_manager = '\0';
 		return true;
 
 	}
 
 	// Relayhoster sending a users script password:
-	if (!strcmp(username, relay_hoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)){
+	if (!strcmp(username, g_relay_hoster) && !memcmp(command, "JOINEDBATTLE ", sizeof("JOINEDBATTLE ") - 1)){
 		/* command += sizeof("JOINEDBATTLE ") - 1; */
 		/* size_t len = strcspn(command, " "); */
 		/* get_next_word(); */
@@ -105,35 +104,35 @@ void
 RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager)
 //OPENBATTLE type nat_type password port maxplayers hashcode rank maphash {map} {title} {modname}
 {
-	sprintf(relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
-	strcpy(relay_password, password ?: "*");
-	strcpy(relay_manager, manager);
-	Server_send("SAYPRIVATE %s !spawn", relay_manager);
+	sprintf(g_relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
+	strcpy(g_relay_password, password ?: "*");
+	strcpy(g_relay_manager, manager);
+	Server_send("SAYPRIVATE %s !spawn", g_relay_manager);
 }
 
 void
 RelayHost_on_add_user(const char *username)
 {
-	if (!strcmp(username, relay_hoster) && *relay_cmd) {
-		Server_send(relay_cmd);
-		*relay_cmd = '\0';
+	if (!strcmp(username, g_relay_hoster) && *g_relay_cmd) {
+		Server_send(g_relay_cmd);
+		*g_relay_cmd = '\0';
 	}
 }
 
 void
 RelayHost_on_battle_opened(const Battle *b)
 {
-	if (!strcmp(b->founder->name, relay_hoster))
-		JoinBattle(b->id, relay_password);
+	if (!strcmp(b->founder->name, g_relay_hoster))
+		JoinBattle(b->id, g_relay_password);
 }
 
 /* void
-relay_message() */
+g_relay_message() */
 		/* { */
-		/* extern char relay_hoster[1024]; */
-		/* if (*relay_hoster) */
+		/* extern char g_relay_hoster[1024]; */
+		/* if (*g_relay_hoster) */
 			/* command_start = sprintf(buf, "SAYPRIVATE %s ", */
-					/* relay_hoster); */
+					/* g_relay_hoster); */
 		/* else */
 			/* ++format; */
 	/* } */

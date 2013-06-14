@@ -50,6 +50,9 @@
 #define MAX_REQUESTS 10
 #define MIN_REQUEST_SIZE (512 * 1024)
 
+#define THREAD_ONFINISH_FLAG 0x80000000
+#define DEFINE_THREADED(_func) ((typeof(_func) *)((intptr_t)_func | THREAD_ONFINISH_FLAG))
+
 typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
 	DL_ACTIVE                 = 0x01,
@@ -63,7 +66,6 @@ typedef enum DownloadStatus {
 	DL_HAVE_PACKAGE_MASK      = 0x10,
 }DownloadStatus;
 
-
 typedef struct RequestContext {
 	struct SessionContext *ses;
 	struct ConnectContext *con;
@@ -76,13 +78,13 @@ typedef struct RequestContext {
 		uint8_t md5_param[0][MD5_LENGTH];
 		char char_param[0];
 	};
-}RequestContext;
+} RequestContext;
 
 typedef struct ConnectContext {
 	HINTERNET handle;
 	struct SessionContext *ses;
 	LONG requests;
-}ConnectContext;
+} ConnectContext;
 
 typedef struct SessionContext {
 	intptr_t status;
@@ -95,13 +97,7 @@ typedef struct SessionContext {
 	void *package_bytes; size_t package_len;
 	char *error;
 	void (*on_finish)(void);
-}SessionContext;
-
-static SessionContext sessions[10];
-
-
-#define THREAD_ONFINISH_FLAG 0x80000000
-#define DEFINE_THREADED(_func) ((typeof(_func) *)((intptr_t)_func | THREAD_ONFINISH_FLAG))
+} SessionContext;
 
 static void _handle_stream(RequestContext *req);
 #define handle_stream DEFINE_THREADED(_handle_stream)
@@ -113,8 +109,8 @@ static void _handle_package(RequestContext *req);
 static void handle_repo_list(RequestContext *req);
 static void handle_repo(const wchar_t *path, SessionContext *ses);
 static void handle_repo_2(const wchar_t *path);
-void Downloader_get_selected_packages(void);
 
+static SessionContext g_sessions[10];
 
 	__attribute__((optimize(("O3"))))
 static inline void
@@ -382,7 +378,7 @@ Downloader_init(void)
 			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
 			WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS,
 			WINHTTP_FLAG_ASYNC);
-	SessionContext *ses = &sessions[0];
+	SessionContext *ses = &g_sessions[0];
 
 	*ses = (SessionContext){
 		.status = DL_ACTIVE,
@@ -554,7 +550,7 @@ GetDownloadMessage(char *text) */
 /* if (g_my_battle == NULL) */
 /* return; */
 /* text[0] = '\0'; */
-/* FOR_EACH(s, sessions) { */
+/* FOR_EACH(s, g_sessions) { */
 /* if (s->status && !wcscmp(s->name, utf8to16(g_my_battle->map_name))) { */
 /* text += sprintf(text, "Downloading map:\n%.1f of %.1f MB\n(%.2f%%)\n\n", */
 /* (float)s->fetched_bytes / 1000000, */
@@ -562,7 +558,7 @@ GetDownloadMessage(char *text) */
 /* (float)100 * s->fetched_bytes / (s->total_bytes?:1)); */
 /* } */
 /* } */
-/* FOR_EACH(s, sessions) { */
+/* FOR_EACH(s, g_sessions) { */
 /* if (s->status && !wcscmp(s->name, utf8to16(g_my_battle->mod_name))) { */
 /* sprintf(text, "Downloading mod:\n%.1f of %.1f MB\n(%.2f%%)\n", */
 /* (float)s->fetched_bytes / 1000000, */
@@ -578,10 +574,10 @@ Downloader_get_file(const char *name, enum DLTYPE type)
 	SessionContext *ses = NULL;
 	wchar_t buf[128];
 	_swprintf(buf, L"%hs", name);
-	for (size_t i=0; i<LENGTH(sessions); ++i) {
-		if (sessions[i].status && !wcscmp(sessions[i].name, buf))
+	for (size_t i=0; i<LENGTH(g_sessions); ++i) {
+		if (g_sessions[i].status && !wcscmp(g_sessions[i].name, buf))
 			return;
-		ses = ses ?: !sessions[i].status ? &sessions[i] : NULL;
+		ses = ses ?: !g_sessions[i].status ? &g_sessions[i] : NULL;
 	}
 	if (!ses)
 		return;
@@ -592,8 +588,8 @@ Downloader_get_file(const char *name, enum DLTYPE type)
 
 	*ses = (SessionContext){
 		.status = DL_ACTIVE | (type == DLTYPE_MAP ? DL_MAP : type == DLTYPE_SHORTMOD ? DL_USE_SHORT_NAME : 0),
-			// .progress_bar = (HWND)SendMessage(g_main_window, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&dialog_items[DLG_PROGRESS]),
-			// .button = (HWND)SendMessage(g_main_window, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&dialog_items[DLG_PROGRESS_BUTTON_]),
+			// .progress_bar = (HWND)SendMessage(g_main_window, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BAR, (LPARAM)&DIALOG_ITEMS[DLG_PROGRESS]),
+			// .button = (HWND)SendMessage(g_main_window, WM_CREATE_DLG_ITEM, DLG_PROGRESS_BUTTON, (LPARAM)&DIALOG_ITEMS[DLG_PROGRESS_BUTTON_]),
 			.handle = handle,
 	};
 	_swprintf(ses->name, L"%hs", name);

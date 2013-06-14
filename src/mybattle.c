@@ -35,13 +35,16 @@
 #include "dialogboxes.h"
 #include "host_spads.h"
 #include "mainwindow.h"
+#include "minimap.h"
 #include "mybattle.h"
 #include "settings.h"
 #include "sync.h"
 #include "user.h"
 
-uint32_t g_udp_help_port;
+static void set_options_from_script(void);
+static void set_option_from_tag(char *restrict key, const char *restrict val);
 
+uint32_t g_udp_help_port;
 uint32_t g_battle_to_join;
 
 Battle *g_my_battle;
@@ -62,7 +65,7 @@ size_t g_map_len = 0;
 char **g_mods;
 size_t g_mod_len = 0;
 
-static char *current_script;
+static char *g_script;
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -141,8 +144,8 @@ MyBattle_left_battle(void)
 	for (size_t i=0; i<LENGTH(g_battle_options.positions); ++i)
 		g_battle_options.positions[i] = INVALID_STARTPOS;
 
-	free(current_script);
-	current_script = NULL;
+	free(g_script);
+	g_script = NULL;
 
 	BattleRoom_on_set_mod_details();
 
@@ -273,7 +276,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 
 	if (!strcmp(section, "hosttype")) {
 		if (!_stricmp(val, "spads")) {
-			g_host_type = &g_host_spads;
+			g_host_type = &HOST_SPADS;
 			return;
 		}
 		printf("unknown hosttype %s\n", val);
@@ -329,7 +332,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 static void
 set_options_from_script(void)
 {
-	char *script = _strdup(current_script);
+	char *script = _strdup(g_script);
 	char *to_free = script;
 
 	char *key, *val;
@@ -342,16 +345,16 @@ set_options_from_script(void)
 void
 MyBattle_append_script(char *restrict s)
 {
-	if (!current_script) {
-		current_script = _strdup(s);
+	if (!g_script) {
+		g_script = _strdup(s);
 
 	} else {
-		size_t current_len = strlen(current_script) + 1;
+		size_t current_len = strlen(g_script) + 1;
 		size_t extra_len = strlen(s) + 1;
-		current_script = realloc(current_script,
+		g_script = realloc(g_script,
 				current_len + extra_len);
-		current_script[current_len - 1] = '\t';
-		memcpy(current_script + current_len, s, extra_len);
+		g_script[current_len - 1] = '\t';
+		memcpy(g_script + current_len, s, extra_len);
 	}
 
 	if (g_mod_hash)
@@ -363,7 +366,7 @@ MyBattle_update_mod_options(void)
 {
 	BattleRoom_on_set_mod_details();
 
-	if (!current_script)
+	if (!g_script)
 		return;
 
 	set_options_from_script();

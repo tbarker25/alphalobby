@@ -35,11 +35,14 @@ enum DialogId {
 	DLG_LAST = DLG_RAPID,
 };
 
+static void _init (void);
+static LRESULT CALLBACK download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static void resize_columns(void);
+
 HWND g_download_list;
+static const wchar_t *const COLUMN_TITLES[] = {L"Name", L"Status"};
 
-static const wchar_t *const columns[] = {L"Name", L"Status"};
-
-static const DialogItem dialog_items[] = {
+static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_LIST] = {
 		.class = WC_LISTVIEW,
 		.style = WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS | LVS_SINGLESEL,
@@ -57,10 +60,10 @@ resize_columns(void)
 	HWND list = GetDlgItem(g_download_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int column_rem = rect.right % LENGTH(columns);
-	int column_width = rect.right / LENGTH(columns);
+	int column_rem = rect.right % LENGTH(COLUMN_TITLES);
+	int column_width = rect.right / LENGTH(COLUMN_TITLES);
 
-	for (int i=0, n = LENGTH(columns); i < n; ++i)
+	for (int i=0, n = LENGTH(COLUMN_TITLES); i < n; ++i)
 		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
@@ -100,14 +103,14 @@ download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		return 0;
 	case WM_CREATE:
 		g_download_list = window;
-		CreateDlgItems(window, dialog_items, DLG_LAST + 1);
+		CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 
 		HWND list_dlg = GetDlgItem(g_download_list, DLG_LIST);
 
-		for (int i=0, n=sizeof(columns) / sizeof(char *); i < n; ++i) {
+		for (int i=0, n=sizeof(COLUMN_TITLES) / sizeof(char *); i < n; ++i) {
 			ListView_InsertColumn(list_dlg, i, (&(LVCOLUMN){
 				.mask = LVCF_TEXT | LVCF_SUBITEM,
-				.pszText = (wchar_t *)columns[i],
+				.pszText = (wchar_t *)COLUMN_TITLES[i],
 				.iSubItem = i,
 			}));
 		}
@@ -131,14 +134,15 @@ download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 
 static void __attribute__((constructor))
-init (void)
+_init(void)
 {
-	RegisterClassEx((&(WNDCLASSEX){
+	WNDCLASSEX window_class = {
 		.lpszClassName = WC_DOWNLOADTAB,
 		.cbSize        = sizeof(WNDCLASSEX),
 		.lpfnWndProc   = download_list_proc,
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
-	}));
-}
+	};
 
+	RegisterClassEx(&window_class);
+}

@@ -35,5 +35,4 @@ void Minimap_set_bitmap(const uint16_t *map_pixels,
 		const uint8_t *metal_map_pixels, uint16_t height_map_width,
 		uint16_t height_map_height, const uint8_t *height_map_pixels);
 
-
 #endif /* end of include guard: MINIMAP_H */

@@ -26,52 +26,56 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "common.h"
+#include "minimap.h"
 #include "mybattle.h"
 #include "user.h"
 
 #define ALLOC_STEP 10
 
 User g_my_user;
-static User **users;
-static size_t user_len;
+static User **g_users;
+static size_t g_user_len;
 
-User * Users_find(const char *name)
+User *
+Users_find(const char *name)
 {
 	if (!strcmp(name, g_my_user.name))
 		return &g_my_user;
-	for (size_t i=0; i<user_len; ++i)
-		if (!strcmp(users[i]->name, name))
-			return &(*users[i]);
+	for (size_t i=0; i<g_user_len; ++i)
+		if (!strcmp(g_users[i]->name, name))
+			return &(*g_users[i]);
 	return NULL;
 }
 
-User *Users_get_next(void)
+User *
+Users_get_next(void)
 {
 	static size_t last;
-	return last < user_len ? users[last++] : (last = 0, NULL);
+	return last < g_user_len ? g_users[last++] : (last = 0, NULL);
 }
 
-User * Users_new(uint32_t id, const char *name)
+User *
+Users_new(uint32_t id, const char *name)
 {
 	if (!strcmp(g_my_user.name, name)) {
 		g_my_user.id = id;
 		return &g_my_user;
 	}
 	size_t i=0;
-	for (; i<user_len; ++i)
-		if (users[i]->id == id)
+	for (; i<g_user_len; ++i)
+		if (g_users[i]->id == id)
 			break;
 
-	if (i == user_len) {
-		if (user_len % ALLOC_STEP == 0)
-			users = realloc(users, (user_len + ALLOC_STEP) * sizeof(User *));
-		++user_len;
-		users[i] = calloc(1, sizeof(User));
-		users[i]->id = id;
-		strcpy(users[i]->alias, UNTAGGED_NAME(name));
+	if (i == g_user_len) {
+		if (g_user_len % ALLOC_STEP == 0)
+			g_users = realloc(g_users, (g_user_len + ALLOC_STEP) * sizeof(User *));
+		++g_user_len;
+		g_users[i] = calloc(1, sizeof(User));
+		g_users[i]->id = id;
+		strcpy(g_users[i]->alias, UNTAGGED_NAME(name));
 	}
-	SetWindowTextA(users[i]->chat_window, name);
-	return users[i];
+	SetWindowTextA(g_users[i]->chat_window, name);
+	return g_users[i];
 }
 
 void
@@ -131,6 +135,6 @@ Users_del_bot(const char *name)
 void
 Users_reset(void)
 {
-	for (size_t i=0; i<user_len; ++i)
-		*users[i]->name = '\0';
+	for (size_t i=0; i<g_user_len; ++i)
+		*g_users[i]->name = '\0';
 }

@@ -48,10 +48,7 @@
 #include "usermenu.h"
 #include "wincommon.h"
 
-HWND g_battle_room;
-
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
-
 #define NUM_SIDE_BUTTONS 4
 
 enum PlayerListColumn {
@@ -82,10 +79,31 @@ enum DialogId {
 	DLG_LAST = DLG_INFOLIST,
 };
 
-/* If the cursor moves outside this area, then remove it */
-static RECT tooltip_bounding_rect;
+static void             _init(void);
+static int              add_user_to_playerlist(union UserOrBot *u);
+static LRESULT CALLBACK battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static int              find_user(const void *u);
+static const char *     get_effective_name(const union UserOrBot *s);
+static wchar_t *        get_tooltip(const User *u);
+static void             on_create(HWND window);
+static LRESULT          on_command(WPARAM w_param, HWND window);
+static LRESULT          on_notify(WPARAM w_param, NMHDR *note);
+static void             on_size(LPARAM l_param);
+static void             refresh_playerlist(void);
+static void             set_details(const Option *options, ssize_t option_len);
+static void             set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon);
+static void             set_player_icon(const UserOrBot *u, int list_index);
+static void             set_side_icons(void);
+static int CALLBACK     sort_listview(const union UserOrBot *u1, const union UserOrBot *u2, LPARAM unused);
+static LRESULT CALLBACK tooltip_subclass(HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+static void             update_group(uint8_t group_id);
 
-static const DialogItem dialog_items[] = {
+HWND g_battle_room;
+
+/* If the cursor moves outside this area, then remove it */
+static RECT g_tooltip_bounding_rect;
+
+static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_CHAT] = {
 		.class = WC_CHATBOX,
 		.style = WS_VISIBLE,
@@ -291,13 +309,13 @@ set_player_icon(const UserOrBot *u, int list_index)
 		: u->ready ? ICON_READY
 		: ICON_UNREADY;
 
-	status_overlay = USER_MASK;
-	if (u->sync != 1)
-		status_overlay |= SYNC_MASK;
+	status_overlay = ICONMASK_USER;
+	if (u->sync != SYNC_SYNCED)
+		status_overlay |= ICONMASK_SYNC;
 	if (u->user.away)
-		status_overlay |= AWAY_MASK;
+		status_overlay |= ICONMASK_AWAY;
 	if (u->user.ignore)
-		status_overlay |= IGNORE_MASK;
+		status_overlay |= ICONMASK_IGNORE;
 	set_icon(list_index, COLUMN_STATUS, status_icon, status_overlay);
 }
 
@@ -453,10 +471,10 @@ tooltip_subclass(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 		__attribute__((unused)) UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	if (msg == WM_MOUSEMOVE
-			&& (GET_X_LPARAM(l_param) < tooltip_bounding_rect.left
-				|| GET_X_LPARAM(l_param) > tooltip_bounding_rect.right
-				|| GET_Y_LPARAM(l_param) < tooltip_bounding_rect.top
-				|| GET_Y_LPARAM(l_param) > tooltip_bounding_rect.bottom))
+			&& (GET_X_LPARAM(l_param) < g_tooltip_bounding_rect.left
+				|| GET_X_LPARAM(l_param) > g_tooltip_bounding_rect.right
+				|| GET_Y_LPARAM(l_param) < g_tooltip_bounding_rect.top
+				|| GET_Y_LPARAM(l_param) > g_tooltip_bounding_rect.bottom))
 		SendMessage((HWND)dwRefData, TTM_POP, 0, 0);
 
 	return DefSubclassProc(window, msg, w_param, l_param);
@@ -466,7 +484,7 @@ static void
 on_create(HWND window)
 {
 	g_battle_room = window;
-	CreateDlgItems(window, dialog_items, DLG_LAST + 1);
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 	for (int i=0; i<16; ++i) {
 		wchar_t buf[LENGTH("Team 16")];
 		_swprintf(buf, L"Team %d", i+1);
@@ -594,9 +612,9 @@ on_notify(WPARAM w_param, NMHDR *note)
 		if (item.iItem == -1)
 			return 0;
 
-		tooltip_bounding_rect.left = LVIR_BOUNDS;
+		g_tooltip_bounding_rect.left = LVIR_BOUNDS;
 		SendMessage((HWND)note->idFrom, LVM_GETITEMRECT, item.iItem,
-				(LPARAM)&tooltip_bounding_rect);
+				(LPARAM)&g_tooltip_bounding_rect);
 
 		SendMessage((HWND)note->idFrom, LVM_GETITEM, 0, (LPARAM)&item);
 		if (!item.lParam)

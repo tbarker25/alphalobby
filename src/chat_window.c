@@ -36,17 +36,20 @@
 #include "user.h"
 #include "wincommon.h"
 
-HWND g_chat_window;
-
-static HWND active_tab;
-HWND tab_control;
-
 enum DialogId {
 	DLG_TAB,
 	DLG_LAST = DLG_TAB,
 };
 
-static const DialogItem dialog_items[] = {
+static LRESULT CALLBACK chat_window_proc  (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static void             _init             (void);
+static void             resize_active_tab (void);
+
+HWND g_chat_window;
+HWND g_tab_control;
+static HWND active_tab;
+
+static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_TAB] = {
 		.class = WC_TABCONTROL,
 		.style = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN,
@@ -57,8 +60,8 @@ static void
 resize_active_tab(void)
 {
 	RECT rect;
-	GetClientRect(tab_control, &rect);
-	TabCtrl_AdjustRect(tab_control, FALSE, &rect);
+	GetClientRect(g_tab_control, &rect);
+	TabCtrl_AdjustRect(g_tab_control, FALSE, &rect);
 	MoveWindow(active_tab, rect.left, rect.top, rect.right - rect.left,
 			rect.bottom - rect.top, 1);
 }
@@ -69,9 +72,9 @@ get_tab_index(HWND tab_item)
 	TCITEM info;
 	info.mask = TCIF_PARAM;
 
-	int tab_len = TabCtrl_GetItemCount(tab_control);
+	int tab_len = TabCtrl_GetItemCount(g_tab_control);
 	for (int i=0; i<tab_len; ++i) {
-		TabCtrl_GetItem(tab_control, i, &info);
+		TabCtrl_GetItem(g_tab_control, i, &info);
 		if ((HWND)info.lParam == tab_item)
 			return i;
 	}
@@ -92,7 +95,7 @@ int ChatWindow_add_tab(HWND tab)
 	info.pszText = window_title;
 	info.lParam = (LPARAM)tab;
 
-	item_index = TabCtrl_InsertItem(tab_control, 1000, &info);
+	item_index = TabCtrl_InsertItem(g_tab_control, 1000, &info);
 	if (item_index == 0) {
 		active_tab = tab;
 		ShowWindow(tab, 1);
@@ -106,7 +109,7 @@ void
 ChatWindow_remove_tab(HWND tab_item)
 {
 	int index = get_tab_index(tab_item);
-	TabCtrl_DeleteItem(tab_control, index);
+	TabCtrl_DeleteItem(g_tab_control, index);
 
 	if (tab_item != active_tab)
 		return;
@@ -118,18 +121,18 @@ ChatWindow_remove_tab(HWND tab_item)
 
 	TCITEM info;
 	info.mask = TCIF_PARAM;
-	TabCtrl_GetItem(tab_control, index, &info);
+	TabCtrl_GetItem(g_tab_control, index, &info);
 
 	active_tab = (HWND)info.lParam;
 	ShowWindow(active_tab, 1);
-	TabCtrl_SetCurSel(tab_control, index);
+	TabCtrl_SetCurSel(g_tab_control, index);
 }
 
 void
 ChatWindow_set_active_tab(HWND tab)
 {
 	int item_index = ChatWindow_add_tab(tab);
-	TabCtrl_SetCurSel(tab_control, item_index);
+	TabCtrl_SetCurSel(g_tab_control, item_index);
 	ShowWindow(active_tab, 0);
 	active_tab = tab;
 	ShowWindow(active_tab, 1);
@@ -144,11 +147,11 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	case WM_CREATE:
 		g_chat_window = window;
 
-		CreateDlgItems(window, dialog_items, DLG_LAST + 1);
-		tab_control = GetDlgItem(window, DLG_TAB);
+		CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
+		g_tab_control = GetDlgItem(window, DLG_TAB);
 		return 0;
 	case WM_SIZE:
-		SetWindowPos(tab_control, HWND_BOTTOM, 0, 0,
+		SetWindowPos(g_tab_control, HWND_BOTTOM, 0, 0,
 				LOWORD(l_param), HIWORD(l_param), SWP_NOMOVE);
 		resize_active_tab();
 		break;
@@ -157,11 +160,11 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		return 0;
 	case WM_NOTIFY: {
 		NMHDR *info = (void *)l_param;
-		if (info->hwndFrom == tab_control && info->code == TCN_SELCHANGE) {
+		if (info->hwndFrom == g_tab_control && info->code == TCN_SELCHANGE) {
 			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
 			TCITEM info;
 			info.mask = TCIF_PARAM;
-			TabCtrl_GetItem(tab_control, tab_index, &info);
+			TabCtrl_GetItem(g_tab_control, tab_index, &info);
 			ChatWindow_set_active_tab((HWND)info.lParam);
 			return 0;
 		}
@@ -171,7 +174,7 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 static void __attribute__((constructor))
-init (void)
+_init(void)
 {	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATWINDOW,
 		.lpfnWndProc   = chat_window_proc,

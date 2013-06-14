@@ -19,12 +19,12 @@
 #ifndef HOST_RELAY_H
 #define HOST_RELAY_H
 
-extern const char **g_relay_managers;
-extern int g_relay_manager_len;
-
 void RelayHost_on_add_user(const char *username);
 void RelayHost_on_battle_opened(const Battle *);
 bool RelayHost_on_private_message(const char *username, char *command);
 void RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager);
+
+extern const char **g_relay_managers;
+extern int g_relay_manager_len;
 
 #endif /* end of include guard: HOST_RELAY_H */

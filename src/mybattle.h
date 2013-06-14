@@ -61,11 +61,6 @@ typedef enum StartPosType {
 	STARTPOS_CHOOSE_BEFORE = 3,
 } StartPosType;
 
-#define HOST_RELAY 0x01
-#define HOST_LOCAL 0x03
-// #define HOST_SP    0x05
-#define HOST_FLAG  0x01
-
 #define INVALID_STARTPOS (StartPos){-1, -1}
 #define GET_STARTPOS(_team) (g_battle_options.start_pos_type == STARTPOS_CHOOSE_BEFORE && *(uint64_t *)&g_battle_options.positions[_team] != -1\
 		? g_battle_options.positions[_team]\
@@ -103,34 +98,12 @@ typedef struct MapInfo_ {
 union UserOrBot;
 struct Battle;
 struct BattleStatus;
-
-extern MapInfo_ g_map_info;
-
 struct Battle;
-extern struct Battle *g_my_battle;
-extern uint32_t g_battle_to_join;
 
-extern size_t g_mod_option_len, g_map_option_len;
-extern Option *g_mod_options, *g_map_options;
-extern uint32_t g_map_hash, g_mod_hash;
-
-extern char **g_maps, **g_mods;
-extern size_t g_map_len, g_mod_len;
-
-extern BattleOption g_battle_options;
-extern const HostType *g_host_type;
-
-extern uint8_t g_side_len;
-extern char g_side_names[16][32];
-
-extern uint32_t g_udp_help_port;
-
-extern bool g_battle_info_finished;
 
 void MyBattle_append_script(char *restrict script);
 void MyBattle_change_option(struct Option *restrict opt);
-struct BattleStatus MyBattle_new_battle_status(void)
-	__attribute__((pure));
+struct BattleStatus MyBattle_new_battle_status(void) __attribute__((pure));
 void MyBattle_joined_battle(struct Battle *restrict b, uint32_t mod_hash);
 void MyBattle_leave(void);
 void MyBattle_left_battle(void);
@@ -140,6 +113,21 @@ void MyBattle_set_map(const char *name);
 void MyBattle_set_split(SplitType, int size);
 void MyBattle_update_battle_status(union UserOrBot *s, struct BattleStatus battle_status, uint32_t color);
 void MyBattle_update_mod_options(void);
+
+extern MapInfo_ g_map_info;
+extern struct Battle *g_my_battle;
+extern uint32_t g_battle_to_join;
+extern size_t g_mod_option_len, g_map_option_len;
+extern Option *g_mod_options, *g_map_options;
+extern uint32_t g_map_hash, g_mod_hash;
+extern char **g_maps, **g_mods;
+extern size_t g_map_len, g_mod_len;
+extern BattleOption g_battle_options;
+extern const HostType *g_host_type;
+extern uint8_t g_side_len;
+extern char g_side_names[16][32];
+extern uint32_t g_udp_help_port;
+extern bool g_battle_info_finished;
 
 
 #endif /* end of include guard: BATTLETOOLS_H */

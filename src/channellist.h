@@ -19,7 +19,7 @@
 #ifndef CHANNELLIST_H
 #define CHANNELLIST_H
 
-void ChannelList_show(void);
 void ChannelList_add_channel(const char *channame, const char *usercount, const char *description);
+void ChannelList_show(void);
 
 #endif /* end of include guard: CHANNELLIST_H */

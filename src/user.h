@@ -19,45 +19,37 @@
 #ifndef USER_H
 #define USER_H
 
+#define UNTAGGED_NAME(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))
+
 typedef struct HWND__* HWND;
 
 typedef struct __attribute__((packed)) BattleStatus {
-	unsigned int :1;
-	unsigned int ready:1;
-	unsigned int team:4;
-	unsigned int ally:4;
-	unsigned int mode:1;
-	unsigned int handicap:7;
-	unsigned int :4;
-	unsigned int sync:2;
-	unsigned int side:4;
-	unsigned int :4;
+	unsigned int          : 1;
+	unsigned int ready    : 1;
+	unsigned int team     : 4;
+	unsigned int ally     : 4;
+	unsigned int mode     : 1;
+	unsigned int handicap : 7;
+	unsigned int          : 4;
+	unsigned int sync     : 2;
+	unsigned int side     : 4;
+	unsigned int          : 4;
 } BattleStatus;
 
-typedef struct __attribute__((packed)) ClientStatus {
-	unsigned int ingame:1;
-	unsigned int away:1;
-	unsigned int rank:3;
-	unsigned int access:1;
-	unsigned int bot:1;
-	unsigned int :1;
+typedef struct __attribute__((packed, aligned(1))) ClientStatus {
+	unsigned int ingame : 1;
+	unsigned int away   : 1;
+	unsigned int rank   : 3;
+	unsigned int access : 1;
+	unsigned int bot    : 1;
+	unsigned int        : 1;
 } ClientStatus;
 
-#define TO_INGAME_MASK(x) ((x) << 0)
-#define TO_AWAY_MASK(x)   ((x) << 1)
-#define TO_RANK_MASK(x)   ((x) << 2)
-#define TO_ACCESS_MASK(x) ((x) << 5)
-#define TO_BOT_MASK(x)    ((x) << 6)
-
-#define FROM_RANK_MASK(x) (((x) & CS_RANK) >> 2)
-
-enum USER_SYNC_STATUS {
-	USER_SYNC_UNKNOWN = 0,
-	USER_SYNC_SYNCED = 1,
-	USER_SYNC_UNSYNCED = 2,
-};
-
-#define UNTAGGED_NAME(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))
+typedef enum SyncStatus {
+	SYNC_UNKNOWN = 0,
+	SYNC_SYNCED = 1,
+	SYNC_UNSYNCED = 2,
+} SyncStatus;
 
 typedef struct UserBot {
 	char name[MAX_NAME_LENGTH_NUL];
@@ -102,8 +94,6 @@ typedef union UserOrBot {
 	Bot bot;
 }UserOrBot;
 
-extern User g_my_user;
-
 void   Users_add_bot(const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *aiDll);
 void   Users_del(User *u);
 void   Users_del_bot(const char *name);
@@ -111,5 +101,10 @@ User * Users_find(const char username[]) __attribute__((pure));
 User * Users_get_next(void);
 User * Users_new(uint32_t id, const char *name);
 void   Users_reset(void);
+
+extern User g_my_user;
+
+_Static_assert(sizeof(BattleStatus) == 4, "BattleStatus should be 4 bytes");
+_Static_assert(sizeof(ClientStatus) == 4, "ClientStatus should be 1 byte");
 
 #endif /* end of include guard: USER_H */

@@ -38,8 +38,6 @@
 #include "user.h"
 #include "wincommon.h"
 
-HWND g_battle_list;
-
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 enum DialogId {
@@ -51,7 +49,20 @@ enum DialogId {
 	DLG_LAST = DLG_JOIN,
 };
 
-static const DialogItem dialog_items[] = {
+static void             _init           (void);
+static LRESULT CALLBACK battlelist_proc (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static int CALLBACK     compare_battle  (const Battle *b1, const Battle *b2, int sort_order);
+static int              get_icon_index  (const Battle *b);
+static int              get_index_from_battle(const Battle *b);
+static Battle *         get_battle_from_index(int index);
+static void             on_create       (HWND window);
+static void             on_get_info_tip (NMLVGETINFOTIP *info);
+static void             on_item_right_click(POINT pt);
+static void             resize_columns  (void);
+static void             set_item_text   (int index, int column, const char *text);
+static void             sort_listview   (int new_order);
+
+static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_LIST] = {
 		.class = WC_LISTVIEW,
 		.style = WS_VISIBLE | LVS_REPORT | LVS_SHAREIMAGELISTS | LVS_SINGLESEL,
@@ -70,20 +81,8 @@ static const DialogItem dialog_items[] = {
 	},
 };
 
-static const wchar_t *const column_titles[] = {L"host", L"description", L"mod", L"map", L"Players"};
-
-static LRESULT CALLBACK battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
-static int CALLBACK compare_battle(const Battle *b1, const Battle *b2, int sort_order);
-static int get_icon_index(const Battle *b);
-static int get_index_from_battle(const Battle *b);
-static Battle * get_battle_from_index(int index);
-static void __attribute__((constructor)) init(void);
-static void on_create(HWND window);
-static void on_get_info_tip(NMLVGETINFOTIP *info);
-static void on_item_right_click(POINT pt);
-static void resize_columns(void);
-static void set_item_text(int index, int column, const char *text);
-static void sort_listview(int new_order);
+static const wchar_t *const COLUMN_TITLES[] = {L"host", L"description", L"mod", L"map", L"Players"};
+HWND g_battle_list;
 
 static int CALLBACK
 compare_battle(const Battle *b1, const Battle *b2, int sort_order)
@@ -142,10 +141,10 @@ resize_columns(void)
 	list = GetDlgItem(g_battle_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	column_rem = rect.right % LENGTH(column_titles);
-	column_width = rect.right / LENGTH(column_titles);
+	column_rem = rect.right % LENGTH(COLUMN_TITLES);
+	column_width = rect.right / LENGTH(COLUMN_TITLES);
 
-	for (int i=0, n = LENGTH(column_titles); i < n; ++i)
+	for (int i=0, n = LENGTH(COLUMN_TITLES); i < n; ++i)
 		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
@@ -248,13 +247,13 @@ on_create(HWND window)
 	HWND list;
 
 	g_battle_list = window;
-	CreateDlgItems(window, dialog_items, DLG_LAST + 1);
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 	list = GetDlgItem(g_battle_list, DLG_LIST);
 
-	for (int i=0, n=sizeof(column_titles) / sizeof(char *); i < n; ++i) {
+	for (int i=0, n=sizeof(COLUMN_TITLES) / sizeof(char *); i < n; ++i) {
 		LVCOLUMN info;
 		info.mask = LVCF_TEXT | LVCF_SUBITEM;
-		info.pszText = (wchar_t *)column_titles[i];
+		info.pszText = (wchar_t *)COLUMN_TITLES[i];
 		info.iSubItem = i;
 		ListView_InsertColumn(list, i, &info);
 	}
@@ -357,11 +356,11 @@ get_icon_index(const Battle *b)
 	int icon_index = 0;
 
 	if (b->founder->ingame)
-		icon_index |= INGAME_MASK;
+		icon_index |= ICONMASK_INGAME;
 	if (b->passworded)
-		icon_index |= PW_MASK;
+		icon_index |= ICONMASK_PASSWORD;
 	if (!b->locked && b->max_players == GetNumPlayers(b))
-		icon_index |= FULL_MASK;
+		icon_index |= ICONMASK_FULL;
 
 	return icon_index;
 }
@@ -405,7 +404,7 @@ BattleList_on_end_login_info(void)
 }
 
 static void __attribute__((constructor))
-init(void)
+_init(void)
 {
 	WNDCLASSEX class_info = {
 		.lpszClassName = WC_BATTLELIST,
