@@ -393,22 +393,20 @@ static void
 on_draw(HWND window)
 {
 	PAINTSTRUCT ps;
-	HDC drawing_context;
 	HBITMAP bitmap;
 	HDC bitmap_context;
-	RECT rect;
 	uint32_t *pixels;
 	int width, height;
 
-	GetClientRect(window, &rect);
-	rect.top += MAP_Y(18);
-	rect.bottom -= MAP_Y(36);
+	BeginPaint(window, &ps);
 
-	width = rect.right;
-	height = rect.bottom;
+	ps.rcPaint.top += MAP_Y(18);
+	ps.rcPaint.bottom -= MAP_Y(36);
 
-	drawing_context = BeginPaint(window, &ps);
-	FillRect(drawing_context, &rect, (HBRUSH) (COLOR_BTNFACE+1));
+	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH) (COLOR_BTNFACE+1));
+
+	width = ps.rcPaint.right;
+	height = ps.rcPaint.bottom;
 
 	if (!g_map_info.width || !g_map_info.height || !width || !height) {
 		return;
@@ -433,14 +431,16 @@ on_draw(HWND window)
 	bitmap = CreateBitmap(width, height, 1, 32, pixels);
 	free(pixels);
 
-	bitmap_context = CreateCompatibleDC(drawing_context);
+	bitmap_context = CreateCompatibleDC(ps.hdc);
 	SelectObject(bitmap_context, bitmap);
 
-	BitBlt(drawing_context,
-			(rect.right - width) / 2,
-			rect.top + (rect.bottom - height) / 2,
-			rect.right, rect.bottom,
+	BitBlt(ps.hdc,
+			(ps.rcPaint.right - width) / 2,
+			ps.rcPaint.top + (ps.rcPaint.bottom - height) / 2,
+			ps.rcPaint.right, ps.rcPaint.bottom,
 			bitmap_context, 0, 0, SRCCOPY);
+
+	DeleteDC(bitmap_context);
 
 	DeleteObject(bitmap);
 	EndPaint(window, &ps);

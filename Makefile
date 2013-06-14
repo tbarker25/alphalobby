@@ -8,7 +8,7 @@ ifdef VERSION
 	LDFLAGS+= -lmsvcrt
 	CFLAGS+= -s -Os -mwindows -flto -fomit-frame-pointer
 else
-	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG
+	CFLAGS+= -DVERSION=$(VERSION)
 	BUILD_DIR:=debug
 	LDFLAGS+= -lmsvcrt
 	CFLAGS+= -g3 -Og

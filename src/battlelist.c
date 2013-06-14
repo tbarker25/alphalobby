@@ -268,27 +268,37 @@ static LRESULT CALLBACK
 battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 {
 	switch(msg) {
+
 	case WM_CLOSE:
 		return 0;
+
 	case WM_CREATE:
 		on_create(window);
 		return 0;
+
 	case WM_SIZE:
 		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, LOWORD(l_param), HIWORD(l_param), TRUE);
+		return 0;
+
+	case WM_EXITSIZEMOVE:
 		resize_columns();
 		return 0;
+
 	case WM_NOTIFY:
 		switch (((LPNMHDR)l_param)->code) {
 
 		case LVN_COLUMNCLICK:
 			sort_listview(((NMLISTVIEW *)l_param)->iSubItem + 1);
 			return 0;
+
 		case LVN_ITEMACTIVATE:
 			JoinBattle(get_battle_from_index(((LPNMITEMACTIVATE)l_param)->iItem)->id, NULL);
 			return 0;
+
 		case NM_RCLICK:
 			on_item_right_click(((LPNMITEMACTIVATE)l_param)->ptAction);
 			return 1;
+
 		case LVN_GETINFOTIP:
 			on_get_info_tip((void *)l_param);
 			return 0;
