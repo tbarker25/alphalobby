@@ -416,6 +416,10 @@ main_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			return create_dropdown((NMTOOLBAR *)l_param);
 		break;
 
+	case WM_EXITSIZEMOVE:
+		SendDlgItemMessage(window, DLG_BATTLELIST, WM_EXITSIZEMOVE, 0, 0);
+		return 0;
+
 	case WM_COMMAND:
 		return on_command(w_param);
 
