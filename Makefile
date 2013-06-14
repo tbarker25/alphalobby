@@ -1,20 +1,22 @@
 LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lShlwapi -lz -ldevil -lshell32 -Llib
-CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions
+CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions -mno-ms-bitfields
+CC:=gcc
 
 ifdef VERSION
 	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG
 	BUILD_DIR:=release
 	LDFLAGS+= -lmsvcrt
-	CFLAGS+= -s -Os -mwindows
+	CFLAGS+= -s -Os -mwindows -flto -fomit-frame-pointer
 else
 	BUILD_DIR:=debug
-	LDFLAGS+= -lmsvcrtd
-	CFLAGS+= -g3 -O0
+	LDFLAGS+= -lmsvcrt
+	CFLAGS+= -g3 -Og
 endif
 
 WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra
-WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DNO_STRICT -DNO_OLDNAMES
+WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DSTRICT -DNO_OLDNAMES
 CFLAGS+= -Iinclude -I$(BUILD_DIR) $(WIN_CFLAGS) $(WARNINGS)
+
 
 ICONS:=$(addsuffix .png, $(addprefix icons/, alphalobby battle_ingame battle_pw battle_ingame_pw battle_full battle_ingame_full battle_pw_full battle_ingame_pw_full))
 ICONS+= null:
