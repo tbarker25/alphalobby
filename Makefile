@@ -8,6 +8,7 @@ ifdef VERSION
 	LDFLAGS+= -lmsvcrt
 	CFLAGS+= -s -Os -mwindows -flto -fomit-frame-pointer
 else
+	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG
 	BUILD_DIR:=debug
 	LDFLAGS+= -lmsvcrt
 	CFLAGS+= -g3 -Og
@@ -48,7 +49,7 @@ $(BUILD_DIR)/rgba2c.exe : src/rgba2c.c
 $(BUILD_DIR)/res.o: src/res.rc
 	windres $< $@ $(WIN_CFLAGS)
 
-$(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h src/user.h src/battle.h
+$(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h src/user.h src/battle.h Makefile
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean :

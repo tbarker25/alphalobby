@@ -77,7 +77,7 @@ static const uint8_t *g_height_mappixels;
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_MAPMODE_MINIMAP] = {
 		.class = WC_BUTTON,
-		.name = L"g_minimap",
+		.name = L"Minimap",
 		.style = WS_VISIBLE | BS_AUTORADIOBUTTON | BS_PUSHLIKE,
 	}, [DLG_MAPMODE_METAL] = {
 		.class = WC_BUTTON,
