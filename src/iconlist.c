@@ -62,14 +62,14 @@ get_player_color_index(const union UserOrBot *u)
 	if (!u->mode)
 		return -1;
 
-	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
+	for (size_t i=0; i < LENGTH(player_colors); ++i) {
 		if (player_colors[i] == u) {
 			player_colors[i] = u;
 			return i;
 		}
 	}
 
-	for (size_t i=0; i <= LENGTH(player_colors); ++i) {
+	for (size_t i=0; i < LENGTH(player_colors); ++i) {
 		for (size_t j = 0; j < g_my_battle->user_len; ++j) {
 			if (g_my_battle->users[j]->mode
 					&& g_my_battle->users[j] == player_colors[i])
