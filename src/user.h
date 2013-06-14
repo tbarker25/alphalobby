@@ -105,6 +105,6 @@ void   Users_reset(void);
 extern User g_my_user;
 
 _Static_assert(sizeof(BattleStatus) == 4, "BattleStatus should be 4 bytes");
-_Static_assert(sizeof(ClientStatus) == 4, "ClientStatus should be 1 byte");
+_Static_assert(sizeof(ClientStatus) == 1, "ClientStatus should be 1 byte");
 
 #endif /* end of include guard: USER_H */
