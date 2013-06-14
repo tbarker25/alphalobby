@@ -36,22 +36,22 @@
 #define ICON_HEIGHT (16)
 #define ICON_WIDTH (sizeof(icon_data) / ICON_BBP / ICON_HEIGHT)
 
-static int get_player_color_index(const union UserOrBot *u);
-static void __attribute__((constructor)) init(void);
-static void set_icon_as_color(int index, uint32_t color);
+static void _init                  (void);
+static int  get_player_color_index (const union UserOrBot *u);
+static void set_icon_as_color      (int index, uint32_t color);
 
-static HIMAGELIST icon_list;
+static HIMAGELIST g_icon_list;
 
 void
 IconList_replace_icon(IconIndex index, HBITMAP bitmap)
 {
-	ImageList_Replace(icon_list, index, bitmap, NULL);
+	ImageList_Replace(g_icon_list, index, bitmap, NULL);
 }
 
 HICON
 IconList_get_icon(IconIndex icon_index)
 {
-	return ImageList_GetIcon(icon_list, icon_index, 0);
+	return ImageList_GetIcon(g_icon_list, icon_index, 0);
 }
 
 static int
@@ -100,7 +100,7 @@ set_icon_as_color(int index, uint32_t color)
 
 	DeleteDC(bitmap_dc);
 
-	ImageList_Replace(icon_list, index, bitmap, NULL);
+	ImageList_Replace(g_icon_list, index, bitmap, NULL);
 	DeleteObject(bitmap);
 }
 
@@ -123,33 +123,33 @@ IconList_set_window_image(HWND window, IconIndex icon_index)
 {
 	HICON icon;
 
-	icon = ImageList_GetIcon(icon_list, icon_index, 0);
+	icon = ImageList_GetIcon(g_icon_list, icon_index, 0);
 	SendMessage(window, BM_SETIMAGE, IMAGE_ICON, (WPARAM)icon);
 }
 
 void
 IconList_enable_for_listview(HWND window)
 {
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)icon_list);
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)g_icon_list);
 }
 
 void
 IconList_enable_for_toolbar(HWND window)
 {
-	SendMessage(window, TB_SETIMAGELIST, 0, (LPARAM)icon_list);
+	SendMessage(window, TB_SETIMAGELIST, 0, (LPARAM)g_icon_list);
 }
 
 static void __attribute__((constructor))
-init(void)
+_init(void)
 {
 	HBITMAP icons_bitmap;
 
-	icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
+	g_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
 	icons_bitmap = CreateBitmap(ICON_WIDTH, ICON_HEIGHT, 1, ICON_BBP*8, icon_data);
-	ImageList_Add(icon_list, icons_bitmap, NULL);
+	ImageList_Add(g_icon_list, icons_bitmap, NULL);
 	DeleteObject(icons_bitmap);
 
 	for (IconIndex i=1; i<=ICON_MASK; ++i)
-		if (i & ~ USER_MASK)
-			ImageList_SetOverlayImage(icon_list, i, i);
+		if (i & ~ ICONMASK_USER)
+			ImageList_SetOverlayImage(g_icon_list, i, i);
 }

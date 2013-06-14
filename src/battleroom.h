@@ -21,11 +21,12 @@
 
 #define WC_BATTLEROOM L"BattleRoom"
 
+#define GetBattleChat()\
+	GetDlgItem(g_battle_room, DEST_BATTLE)
+
 struct Option;
 union UserOrBot;
 typedef struct HWND__* HWND;
-
-extern HWND g_battle_room;
 
 void BattleRoom_hide(void);
 bool BattleRoom_is_auto_unspec(void);
@@ -37,7 +38,7 @@ void BattleRoom_resize_columns(void);
 void BattleRoom_show(void);
 void BattleRoom_update_user(union UserOrBot *);
 
-#define GetBattleChat()\
-	GetDlgItem(g_battle_room, DEST_BATTLE)
+extern HWND g_battle_room;
+
 
 #endif /* end of include guard: BATTLEROOM_H */

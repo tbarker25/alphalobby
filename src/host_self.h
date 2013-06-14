@@ -19,6 +19,6 @@
 #ifndef HOST_SELF_H
 #define HOST_SELF_H
 
-extern const struct HostType g_host_self;
+extern const struct HostType HOST_SELF;
 
 #endif /* end of include guard: HOST_SELF_H */

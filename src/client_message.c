@@ -43,12 +43,13 @@
 #include "sync.h"
 #include "user.h"
 
-int      g_last_auto_message;
+static void register_account(void);
+
+int g_last_auto_message;
 BattleStatus g_last_battle_status;
 ClientStatus g_last_client_status;
-
-static char my_password[BASE16_MD5_LENGTH];
-static char my_username[MAX_NAME_LENGTH+1];
+static char g_my_password[BASE16_MD5_LENGTH];
+static char g_my_username[MAX_NAME_LENGTH+1];
 
 void
 JoinBattle(uint32_t id, const char *password)
@@ -115,7 +116,7 @@ SetMyBattleStatus(struct BattleStatus battle_status)
 	/* TODO remove this */
 	if (!bs.as_int)
 		bs.BattleStatus = *(BattleStatus *)0;
-	bs.sync = Sync_is_synced() ? 1 : 2;
+	bs.sync = Sync_is_synced() ? SYNC_SYNCED : SYNC_UNSYNCED;
 	last_bs.BattleStatus = g_last_battle_status;
 
 	if (bs.as_int != last_bs.as_int) {
@@ -237,44 +238,45 @@ login(void)
 	#ifdef VERSION
 	" " STRINGIFY(VERSION)
 	#endif
-	"\t0\ta m sp", my_username, my_password);//, GetLocalIP() ?: "*");
+	"\t0\ta m sp", g_my_username, g_my_password);//, GetLocalIP() ?: "*");
 }
 
 static void
 register_account(void)
 {
-	Server_send("REGISTER %s %s", my_username, my_password);
+	Server_send("REGISTER %s %s", g_my_username, g_my_password);
 }
 
 void
 RegisterAccount(const char *username, const char *password)
 {
-	strcpy(my_username, username);
-	strcpy(my_password, password);
+	strcpy(g_my_username, username);
+	strcpy(g_my_password, password);
 	Server_connect(register_account);
 }
 
-char Autologin(void)
+bool
+Autologin(void)
 {
 	const char *s;
 	s = Settings_load_str("username");
 	if (!s)
-		return 0;
-	strcpy(my_username, s);
+		return false;
+	strcpy(g_my_username, s);
 	s = Settings_load_str("password");
 	if (!s)
-		return 0;
-	strcpy(my_password, s);
+		return false;
+	strcpy(g_my_password, s);
 	Server_connect(login);
-	return 1;
+	return true;
 }
 
 void
 Login(const char *username, const char *password)
 /* LOGIN username password cpu local_i_p {lobby name and version} [{user_id}] [{comp_flags}] */
 {
-	strcpy(my_username, username);
-	strcpy(my_password, password);
+	strcpy(g_my_username, username);
+	strcpy(g_my_password, password);
 	Server_connect(login);
 }
 

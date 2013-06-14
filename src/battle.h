@@ -22,6 +22,10 @@
 /* Also used for mapnames, modnames. Overflow is truncated to fit */
 #define MAX_TITLE 128
 
+#define GetNumPlayers(_b)\
+	((_b)->user_len - (_b)->spectator_len - (_b)->bot_len)
+
+
 enum BattleType {
 	BATTLE_NORMAL = 0,
 	BATTLE_REPLAY = 1,
@@ -49,8 +53,5 @@ void     Battles_del(Battle *);
 Battle * Battles_find(uint32_t id) __attribute__((pure));
 Battle * Battles_new(void);
 void     Battles_reset(void);
-
-#define GetNumPlayers(_b)\
-	((_b)->user_len - (_b)->spectator_len - (_b)->bot_len)
 
 #endif /* end of include guard: BATTLE_H */

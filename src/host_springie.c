@@ -13,10 +13,9 @@
 #include "mybattle.h"
 #include "user.h"
 
-static void
-said_battle(const char *username, char *text);
+static void said_battle(const char *username, char *text);
 
-const HostType g_host_springie = {
+const HostType HOST_SPRINGIE = {
 	.said_battle = said_battle,
 };
 

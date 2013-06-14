@@ -49,16 +49,13 @@
 #include "wincommon.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
+#define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 #ifndef NDEBUG
 #define TBSTATE_DISABLED TBSTATE_ENABLED
 #else
 #define TBSTATE_DISABLED (0)
 #endif
-
-HWND g_main_window;
-
-static HWND current_tab;
 
 enum {
 	DLG_TOOLBAR,
@@ -90,8 +87,19 @@ enum {
 	ID_RESYNC,
 };
 
+static void    _init              (void);
+static LRESULT CALLBACK main_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static LRESULT create_dropdown    (NMTOOLBAR *info);
+static LRESULT on_command         (int dialog_id);
+static void    on_create          (HWND window);
+static void    on_destroy         (void);
+static void    set_current_tab_checked(char enable);
+static void    resize_current_tab (int16_t width, int16_t height);
 
-static const DialogItem dialog_items[] = {
+HWND g_main_window;
+static HWND g_current_tab;
+
+static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_TOOLBAR] {
 		.class = TOOLBARCLASSNAME,
 		.style = WS_VISIBLE | WS_CHILD | TBSTYLE_FLAT | TBSTYLE_TRANSPARENT,
@@ -108,39 +116,57 @@ static const DialogItem dialog_items[] = {
 	}
 };
 
+static const TBBUTTON TOOLBAR_BUTTONS[] = {
+	{ ICON_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
+	{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
+	{ ICON_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
+
+	{ ICON_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
+#ifndef NDEBUG
+	{ ICON_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
+	{ ICON_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
+	{ ICON_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
+#endif
+	{ ICON_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
+	// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
+	{ ICON_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
+	{ ICON_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
+};
+
 static void
 resize_current_tab(int16_t width, int16_t height)
 {
 	RECT toolbar_rect;
 	GetClientRect(GetDlgItem(g_main_window, DLG_TOOLBAR), &toolbar_rect);
 
-	SetWindowPos(current_tab, NULL, 0, toolbar_rect.bottom, width, height - toolbar_rect.bottom, 0);
+	SetWindowPos(g_current_tab, NULL, 0, toolbar_rect.bottom, width, height - toolbar_rect.bottom, 0);
 }
 
 static void
-set_current_tab_checked(char enable) {
-	int tab_index = current_tab == g_battle_list   ? ID_BATTLELIST
-		: current_tab == g_battle_room        ? ID_BATTLEROOM
-		: current_tab == g_chat_window        ? ID_CHAT
-		: current_tab == g_download_list ? ID_DOWNLOADS
-		: -1;
+set_current_tab_checked(char enable)
+{
+	int tab_index = g_current_tab == g_battle_list   ? ID_BATTLELIST
+	              : g_current_tab == g_battle_room   ? ID_BATTLEROOM
+	              : g_current_tab == g_chat_window   ? ID_CHAT
+	              : g_current_tab == g_download_list ? ID_DOWNLOADS
+	              : -1;
 	WPARAM state = SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_GETSTATE, tab_index, 0);
 	if (enable)
 		state |= TBSTATE_CHECKED;
 	else
 		state &= ~TBSTATE_CHECKED;
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
-	ShowWindow(current_tab, enable);
+	ShowWindow(g_current_tab, enable);
 }
 
 void
 MainWindow_set_active_tab(HWND new_tab)
 {
-	if (new_tab == current_tab)
+	if (new_tab == g_current_tab)
 		return;
 
 	set_current_tab_checked(0);
-	current_tab = new_tab;
+	g_current_tab = new_tab;
 	set_current_tab_checked(1);
 
 	RECT rect;
@@ -164,7 +190,7 @@ MainWindow_ring(void)
 void
 MainWindow_disable_battleroom_button(void)
 {
-	if (current_tab == g_battle_room)
+	if (g_current_tab == g_battle_room)
 		MainWindow_set_active_tab(g_battle_list);
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
 }
@@ -176,25 +202,8 @@ MainWindow_enable_battleroom_button(void)
 	MainWindow_set_active_tab(g_battle_room);
 }
 
-static const TBBUTTON tb_buttons[] = {
-	{ ICON_OFFLINE,     ID_CONNECT,      TBSTATE_ENABLED, BTNS_DROPDOWN, {}, 0, (INT_PTR)L"Offline" },
-	{ I_IMAGENONE,       0,               TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_SEP, {}, 0, 0},
-	{ ICON_BATTLELIST,  ID_BATTLELIST,   TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle List"},
-
-	{ ICON_BATTLEROOM,  ID_BATTLEROOM,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Battle Room"},
-#ifndef NDEBUG
-	{ ICON_SINGLEPLAYER,ID_SINGLEPLAYER, TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Single player"},
-	{ ICON_REPLAY,      ID_REPLAY,       TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Replays"},
-	{ ICON_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Host Battle"},
-#endif
-	{ ICON_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Chat"},
-	// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Users"},
-	{ ICON_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (INT_PTR)L"Options"},
-	{ ICON_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (INT_PTR)L"Downloads"},
-};
-
 static void
-on_destroy()
+on_destroy(void)
 {
 	char window_placement_text[128];
 	WINDOWPLACEMENT window_placement;
@@ -222,15 +231,15 @@ static void
 on_create(HWND window)
 {
 	g_main_window = window;
-	CreateDlgItems(window, dialog_items, DLG_LAST+1);
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST+1);
 
 	HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
 	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
 
 	IconList_enable_for_toolbar(toolbar);
 
-	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*tb_buttons), 0);
-	SendMessage(toolbar, TB_ADDBUTTONS,       sizeof(tb_buttons) / sizeof(*tb_buttons), (LPARAM)&tb_buttons);
+	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*TOOLBAR_BUTTONS), 0);
+	SendMessage(toolbar, TB_ADDBUTTONS,       LENGTH(TOOLBAR_BUTTONS), (LPARAM)&TOOLBAR_BUTTONS);
 	SendMessage(toolbar, TB_AUTOSIZE, 0, 0);
 
 	MainWindow_set_active_tab(GetDlgItem(window, DLG_BATTLELIST));
@@ -480,21 +489,7 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 {
 	Settings_init();
 
-	srand(time(NULL));
-
-	/* InitializeSystemMetrics(); */
 	LoadLibrary(L"Riched20.dll");
-
-	WNDCLASSEX window_class = {
-		.cbSize = sizeof(WNDCLASSEX),
-		.lpszClassName = WC_ALPHALOBBY,
-		.lpfnWndProc	= main_window_proc,
-		.hIcon          = IconList_get_icon(ICON_ALPHALOBBY),
-		.hCursor        = LoadCursor(NULL, (void *)(IDC_ARROW)),
-		.hbrBackground  = (HBRUSH)(COLOR_BTNFACE+1),
-	};
-
-	RegisterClassEx(&window_class);
 
 	LONG left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
 	const char *window_placement = Settings_load_str("window_placement");
@@ -527,11 +522,24 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 #endif
 
 	for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {
-		if (msg.message == WM_KEYDOWN && msg.wParam == VK_F1)
-			CreateAboutDlg();
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
 
 	return 0;
+}
+
+static void __attribute__((constructor))
+_init(void)
+{
+	WNDCLASSEX window_class = {
+		.cbSize = sizeof(WNDCLASSEX),
+		.lpszClassName = WC_ALPHALOBBY,
+		.lpfnWndProc	= main_window_proc,
+		.hIcon          = IconList_get_icon(ICON_ALPHALOBBY),
+		.hCursor        = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.hbrBackground  = (HBRUSH)(COLOR_BTNFACE+1),
+	};
+
+	RegisterClassEx(&window_class);
 }

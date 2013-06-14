@@ -19,13 +19,13 @@
 #ifndef ICONLIST_H
 #define ICONLIST_H
 
-#define INGAME_MASK 1
-#define PW_MASK 2
-#define FULL_MASK 4
-#define USER_MASK 8
-#define SYNC_MASK 1
-#define AWAY_MASK 2
-#define IGNORE_MASK 4
+#define ICONMASK_INGAME 1
+#define ICONMASK_PASSWORD 2
+#define ICONMASK_FULL 4
+#define ICONMASK_USER 8
+#define ICONMASK_SYNC 1
+#define ICONMASK_AWAY 2
+#define ICONMASK_IGNORE 4
 
 typedef enum IconIndex {
 	ICON_ALPHALOBBY = 0,
@@ -77,7 +77,7 @@ typedef enum IconIndex {
 	ICON_OFFLINE = ICON_CLOSED,
 	ICON_BATTLEROOM = ICON_INGAME,
 	ICON_HOSTBATTLE = ICON_HOST,
-	ICON_SINGLEPLAYER = INGAME_MASK,
+	ICON_SINGLEPLAYER = ICONMASK_INGAME,
 } IconIndex;
 
 union UserOrBot;

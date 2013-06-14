@@ -41,10 +41,12 @@ typedef struct KeyPair{
 	char is_int;
 }KeyPair;
 
+static KeyPair get_line(FILE *fd);
+
 typeof(g_settings) g_settings;
 wchar_t g_data_dir[MAX_PATH];
 
-static const KeyPair default_settings[] = {
+static const KeyPair DEFAULT_SETTINGS[] = {
 	{"spring_path", "spring.exe", 0},
 	{"flags", (void *)0x17, 1},
 	{"autojoin", "main", 0},
@@ -134,18 +136,18 @@ Settings_init(void)
 		fclose(fd);
 	}
 
-	for(size_t i=0; i<LENGTH(default_settings); ++i)
-		((char **)&g_settings)[i] = default_settings[i].is_int ? default_settings[i].val
-		                         : default_settings[i].val ? _strdup(default_settings[i].val)
+	for(size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i)
+		((char **)&g_settings)[i] = DEFAULT_SETTINGS[i].is_int ? DEFAULT_SETTINGS[i].val
+		                         : DEFAULT_SETTINGS[i].val ? _strdup(DEFAULT_SETTINGS[i].val)
 								 : NULL;
 
 	fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
 		return;
 	for (KeyPair s; (s = get_line(fd)).key;)
-		for(size_t i=0; i<LENGTH(default_settings); ++i)
-			if (!strcmp(default_settings[i].key, s.key)) {
-				if (default_settings[i].is_int)
+		for(size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i)
+			if (!strcmp(DEFAULT_SETTINGS[i].key, s.key)) {
+				if (DEFAULT_SETTINGS[i].is_int)
 					((intptr_t *)&g_settings)[i] = atoi(s.val);
 				else {
 					free(((char **)&g_settings)[i]);
@@ -186,8 +188,8 @@ Settings_save_str(const char *key, const char *val)
 		for (KeyPair s; (s = get_line(old_config)).key;) {
 			if (key && !strcmp(key, s.key))
 				goto skip_key;
-			for(size_t i=0; i<LENGTH(default_settings); ++i)
-				if (!strcmp(default_settings[i].key, s.key))
+			for(size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i)
+				if (!strcmp(DEFAULT_SETTINGS[i].key, s.key))
 					goto skip_key;
 			fprintf(tmp_config, "%s=%s\n", s.key, s.val);
 			skip_key:;
@@ -198,11 +200,11 @@ Settings_save_str(const char *key, const char *val)
 	if (key && *val)
 		fprintf(tmp_config, "%s=%s\n", key, val);
 
-	for (size_t i=0; i<LENGTH(default_settings); ++i) {
-		if (default_settings[i].is_int)
-			fprintf(tmp_config, "%s=%d\n", default_settings[i].key, ((int *)&g_settings)[i]);
+	for (size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i) {
+		if (DEFAULT_SETTINGS[i].is_int)
+			fprintf(tmp_config, "%s=%d\n", DEFAULT_SETTINGS[i].key, ((int *)&g_settings)[i]);
 		else if (((void **)&g_settings)[i])
-			fprintf(tmp_config, "%s=%s\n", default_settings[i].key, ((char **)&g_settings)[i]);
+			fprintf(tmp_config, "%s=%s\n", DEFAULT_SETTINGS[i].key, ((char **)&g_settings)[i]);
 	}
 
 	fclose(tmp_config);

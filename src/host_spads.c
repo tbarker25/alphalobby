@@ -16,6 +16,9 @@
 #include "spring.h"
 #include "user.h"
 
+#define Server_send(format, ...)\
+	(g_last_auto_message = GetTickCount(), Server_send(format, ## __VA_ARGS__))
+
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
 static void kick(const char *name);
@@ -25,10 +28,7 @@ static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
 static void start_game(void);
 
-#define Server_send(format, ...)\
-	(g_last_auto_message = GetTickCount(), Server_send(format, ## __VA_ARGS__))
-
-const HostType g_host_spads = {
+const HostType HOST_SPADS = {
 	.force_ally = force_ally,
 	.force_team = force_team,
 	.kick = kick,

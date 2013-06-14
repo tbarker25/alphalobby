@@ -39,15 +39,6 @@ enum {
 	SETTING_AUTOCONNECT = 1 << (SETTING_HOST_BALANCE_OFFSET + 5),
 };
 
-extern struct Settings {
-	char *spring_path;
-	int flags;
-	char *autojoin;
-	char *selected_packages;
-} g_settings;
-
-extern wchar_t g_data_dir[MAX_PATH];
-
 wchar_t * Settings_get_data_dir(const wchar_t *file);
 void      Settings_init(void);
 int       Settings_load_int(const char *key);
@@ -57,5 +48,14 @@ void      Settings_reset(void);
 void      Settings_save_aliases(void);
 void      Settings_save_int(const char *key, int val);
 void      Settings_save_str(const char *key, const char *val);
+
+extern struct Settings {
+	char *spring_path;
+	int flags;
+	char *autojoin;
+	char *selected_packages;
+} g_settings;
+
+extern wchar_t g_data_dir[MAX_PATH];
 
 #endif /* end of include guard: SETTINGS_H */

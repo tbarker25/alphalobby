@@ -44,8 +44,6 @@
 #include <stdio.h>
 #include "md5.h"
 
-__thread uint8_t _md5Checksum[16];
-
 typedef struct {
 	uint32_t i[2];
 	uint32_t buf[4];
@@ -59,7 +57,9 @@ static void update();
 static void final();
 static void transform();
 
-static uint8_t PADDING[64] = {0x80};
+static const uint8_t PADDING[64] = {0x80};
+__thread uint8_t _md5Checksum[16];
+
 
 /* F, G and H are basic MD5 functions: selection, majority, parity */
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))

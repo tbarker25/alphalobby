@@ -23,8 +23,6 @@
 
 struct User;
 
-extern HWND g_chat_window;
-
 typedef enum ChatType {
 	CHAT_NORMAL,
 	CHAT_SELF,
@@ -56,5 +54,6 @@ void Chat_said(HWND window, const char *username, ChatType type, const char *tex
 void Chat_save_windows(void);
 void Chat_update_user(struct User *u);
 
+extern HWND g_chat_window;
 
 #endif /* end of include guard: CHAT_H */

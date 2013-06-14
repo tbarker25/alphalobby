@@ -41,7 +41,7 @@ static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
 
-const HostType g_host_self = {
+const HostType HOST_SELF = {
 	.force_ally = force_ally,
 	.force_team = force_team,
 	.kick = kick,

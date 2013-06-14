@@ -40,6 +40,7 @@
 #include "host_spads.h"
 #include "host_springie.h"
 #include "mainwindow.h"
+#include "minimap.h"
 #include "mybattle.h"
 #include "settings.h"
 #include "spring.h"
@@ -49,60 +50,62 @@
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
-static void accepted(void);
-static void add_bot(void);
-static void add_user(void);
-static void add_start_rect(void);
-static void agreement(void);
-static void agreement_end(void);
-static void battle_opened(void);
-static void battle_closed(void);
-static void broadcast(void);
-static void channel(void);
-static void channel_topic(void);
-static void client_battle_status(void);
-static void clients(void);
-static void client_status(void);
-static void denied(void);
-static void force_quit_battle(void);
-static void join(void);
-static void join_battle(void);
-static void join_battle_failed(void);
-static void joined(void);
-static void joined_battle(void);
-static void join_failed(void);
-static void left(void);
-static void left_battle(void);
-static void login_info_end(void);
-static void message_of_the_day(void);
-static void open_battle(void);
-static void registration_accepted(void);
-static void remove_bot(void);
-static void remove_start_rect(void);
-static void remove_user(void);
-static void request_battle_status(void);
-static void ring(void);
-static void said(void);
-static void said_battle(void);
-static void said_battle_ex(void);
-static void said_ex(void);
-static void said_private(void);
-static void say_private(void);
-static void server_msg(void);
-static void server_message_box(void);
-static void set_script_tags(void);
-static void TAS_server(void);
-static void update_battle_info(void);
-static void update_bot(void);
-
-static FILE *agreement_file;
-static DWORD time_battle_joined;
-static char *command;
-
-static const struct {
+typedef struct Command {
 	char name[20];
 	void (*func)(void);
-} server_commands[] = {
+} Command;
+
+static void accepted              (void);
+static void add_bot               (void);
+static void add_user              (void);
+static void add_start_rect        (void);
+static void agreement             (void);
+static void agreement_end         (void);
+static void battle_opened         (void);
+static void battle_closed         (void);
+static void broadcast             (void);
+static void channel               (void);
+static void channel_topic         (void);
+static void client_battle_status  (void);
+static void clients               (void);
+static void client_status         (void);
+static void denied                (void);
+static void force_quit_battle     (void);
+static void join                  (void);
+static void join_battle           (void);
+static void join_battle_failed    (void);
+static void joined                (void);
+static void joined_battle         (void);
+static void join_failed           (void);
+static void left                  (void);
+static void left_battle           (void);
+static void login_info_end        (void);
+static void message_of_the_day    (void);
+static void open_battle           (void);
+static void registration_accepted (void);
+static void remove_bot            (void);
+static void remove_start_rect     (void);
+static void remove_user           (void);
+static void request_battle_status (void);
+static void ring                  (void);
+static void said                  (void);
+static void said_battle           (void);
+static void said_battle_ex        (void);
+static void said_ex               (void);
+static void said_private          (void);
+static void say_private           (void);
+static void server_msg            (void);
+static void server_message_box    (void);
+static void set_script_tags       (void);
+static void TAS_server            (void);
+static void update_battle_info    (void);
+static void update_bot            (void);
+
+static FILE *g_agreement_file;
+static DWORD g_time_battle_joined;
+static char *g_command;
+
+static const Command SERVER_COMMANDS[] = {
 	{"ACCEPTED", accepted},
 	{"ADDBOT", add_bot},
 	{"ADDSTARTRECT", add_start_rect},
@@ -152,18 +155,18 @@ static const struct {
 
 static void
 copy_next_word(char *buf) {
-	size_t len = strcspn(command, " ");
-	char *word = command;
-	command += len + !!command[len];
+	size_t len = strcspn(g_command, " ");
+	char *word = g_command;
+	g_command += len + !!g_command[len];
 	word[len] = '\0';
 	memcpy(buf, word, len + 1);
 }
 
 static char *
 get_next_word(void) {
-	size_t len = strcspn(command, " ");
-	char *word = command;
-	command += len + !!command[len];
+	size_t len = strcspn(g_command, " ");
+	char *word = g_command;
+	g_command += len + !!g_command[len];
 	word[len] = '\0';
 	return word;
 }
@@ -175,21 +178,21 @@ get_next_int(void) {
 
 static void
 copy_next_sentence(char *buf) {
-	size_t len = strcspn(command, "\t");
-	char *word = command;
-	command += len + !!command[len];
+	size_t len = strcspn(g_command, "\t");
+	char *word = g_command;
+	g_command += len + !!g_command[len];
 	word[len] = '\0';
 	memcpy(buf, word, len + 1);
 }
 
 void
-Messages_handle(char *s)
+Messages_handle(char *command)
 {
-	command = s;
+	g_command = command;
 	char *command_name = get_next_word();
-	typeof(*server_commands) *com =
-		bsearch(command_name, server_commands, LENGTH(server_commands),
-				sizeof(*server_commands), (void *)strcmp);
+	typeof(*SERVER_COMMANDS) *com =
+		bsearch(command_name, SERVER_COMMANDS, LENGTH(SERVER_COMMANDS),
+				sizeof(*SERVER_COMMANDS), (void *)strcmp);
 	if (com)
 		com->func();
 }
@@ -218,7 +221,7 @@ add_bot(void)
 	assert(owner);
 	bs.as_int = get_next_int();
 	uint32_t color = get_next_int();
-	Users_add_bot(name, owner, bs.BattleStatus, color, command);
+	Users_add_bot(name, owner, bs.BattleStatus, color, g_command);
 }
 
 static void
@@ -226,8 +229,8 @@ add_user(void)
 {
 	char *name = get_next_word();
 
-	uint8_t country = Country_get_id(command);
-	command += 3;
+	uint8_t country = Country_get_id(g_command);
+	g_command += 3;
 
 	uint32_t cpu = get_next_int();
 
@@ -257,16 +260,16 @@ add_start_rect(void)
 static void
 agreement(void)
 {
-	agreement_file = agreement_file ?: tmpfile();
-	fputs(command, agreement_file);
+	g_agreement_file = g_agreement_file ?: tmpfile();
+	fputs(g_command, g_agreement_file);
 }
 
 static void
 agreement_end(void)
 {
-	rewind(agreement_file);
-	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)agreement_file);
-	agreement_file = NULL;
+	rewind(g_agreement_file);
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)g_agreement_file);
+	g_agreement_file = NULL;
 }
 
 static void
@@ -334,7 +337,7 @@ channel(void)
 {
 	const char *channame = get_next_word();
 	const char *usercount = get_next_word();
-	const char *description = command;
+	const char *description = g_command;
 	ChannelList_add_channel(channame, usercount, description);
 }
 
@@ -345,9 +348,9 @@ channel_topic(void)
 	/* const char *username =  */get_next_word();
 	/* const char *unix_time =  */get_next_word();
 	char *s;
-	while ((s = strstr(command, "\\n")))
+	while ((s = strstr(g_command, "\\n")))
 		*(uint16_t *)s = *(uint16_t *)(char [2]){'\r', '\n'};
-	Chat_said(Chat_get_channel_window(channel_name), NULL, CHAT_TOPIC, command);
+	Chat_said(Chat_get_channel_window(channel_name), NULL, CHAT_TOPIC, g_command);
 }
 
 static void
@@ -419,7 +422,7 @@ static void
 denied(void)
 {
 	Server_disconnect();
-	MainWindow_msg_box("Connection denied", command);
+	MainWindow_msg_box("Connection denied", g_command);
 }
 
 static void
@@ -442,14 +445,14 @@ join_battle(void)
 {
 	Battle *b = Battles_find(get_next_int());
 	MyBattle_joined_battle(b, get_next_int());
-	time_battle_joined = GetTickCount();
+	g_time_battle_joined = GetTickCount();
 }
 
 static void
 join_battle_failed(void)
 {
 	BattleRoom_hide();
-	MainWindow_msg_box("Failed to join battle", command);
+	MainWindow_msg_box("Failed to join battle", g_command);
 }
 
 static void
@@ -498,7 +501,7 @@ join_failed(void)
 	HWND chan_window = Chat_get_channel_window(get_next_word());
 	if (chan_window){
 		SendMessage(chan_window, WM_CLOSE, 0, 0);
-		MainWindow_msg_box("Couldn't join channel", command);
+		MainWindow_msg_box("Couldn't join channel", g_command);
 	}
 }
 
@@ -563,7 +566,7 @@ login_info_end(void)
 static void
 message_of_the_day(void)
 {
-	Chat_said(Chat_get_server_window(), NULL, 0, command);
+	Chat_said(Chat_get_server_window(), NULL, 0, g_command);
 }
 
 static void
@@ -636,7 +639,7 @@ said(void)
 {
 	const char *channel_name = get_next_word();
 	const char *username = get_next_word();
-	const char *text = command;
+	const char *text = g_command;
 	Chat_said(Chat_get_channel_window(channel_name), username, 0, text);
 }
 
@@ -644,7 +647,7 @@ static void
 said_battle(void)
 {
 	const char *username = get_next_word();
-	char *text = command;
+	char *text = g_command;
 
 	if (g_host_type && g_host_type->said_battle)
 		g_host_type->said_battle(username, text);
@@ -656,14 +659,14 @@ static void
 said_battle_ex(void)
 {
 	const char *username = get_next_word();
-	char *text = command;
+	char *text = g_command;
 
 	// Check for autohost
 	// welcome message is configurable, but chance_of_autohost should usually be between 5 and 8.
 	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
-	if (g_my_battle && !strcmp(username, g_my_battle->founder->name) && GetTickCount() - time_battle_joined < 10000){
+	if (g_my_battle && !strcmp(username, g_my_battle->founder->name) && GetTickCount() - g_time_battle_joined < 10000){
 		int chance_of_autohost = 0;
-		chance_of_autohost += GetTickCount() - time_battle_joined < 2000;
+		chance_of_autohost += GetTickCount() - g_time_battle_joined < 2000;
 		chance_of_autohost += text[0] == '*' && text[1] == ' ';
 		chance_of_autohost += StrStrIA(text, "hi ") != NULL;
 		chance_of_autohost += StrStrIA(text, "welcome ") != NULL;
@@ -678,9 +681,9 @@ said_battle_ex(void)
 
 		if (chance_of_autohost > 3){
 			if (said_spads) {
-				g_host_type = &g_host_spads;
+				g_host_type = &HOST_SPADS;
 			} else if (said_springie) {
-				g_host_type = &g_host_springie;
+				g_host_type = &HOST_SPRINGIE;
 			} else {
 				g_last_auto_message = GetTickCount();
 				Server_send("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
@@ -696,7 +699,7 @@ said_ex(void)
 {
 	const char *channel_name = get_next_word();
 	const char *username = get_next_word();
-	const char *text = command;
+	const char *text = g_command;
 	Chat_said(Chat_get_channel_window(channel_name), username, CHAT_EX, text);
 }
 
@@ -705,18 +708,18 @@ said_private(void)
 {
 	const char *username = get_next_word();
 
-	if (RelayHost_on_private_message(username, command))
+	if (RelayHost_on_private_message(username, g_command))
 		return;
 
 	User *user = Users_find(username);
 	if (!user || user->ignore)
 		return;
 
-	// Zero-K juggler sends matchmaking command "!join <host>"
+	// Zero-K juggler sends matchmaking g_command "!join <host>"
 	if (g_my_battle
 			&& user == g_my_battle->founder
-			&& !memcmp(command, "!join ", sizeof("!join ") - 1)) {
-		User *user = Users_find(command + sizeof("!join ") - 1);
+			&& !memcmp(g_command, "!join ", sizeof("!join ") - 1)) {
+		User *user = Users_find(g_command + sizeof("!join ") - 1);
 		if (user && user->battle)
 			JoinBattle(user->battle->id, NULL);
 		return;
@@ -724,27 +727,27 @@ said_private(void)
 
 	// Check for pms that identify an autohost
 	if (g_my_battle && user == g_my_battle->founder
-			&& strstr(command, username)
-			&& strstr(command, "running")) {
+			&& strstr(g_command, username)
+			&& strstr(g_command, "running")) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
-		if (strstr(command, "Springie")) {
-			g_host_type = &g_host_springie;
+		if (strstr(g_command, "Springie")) {
+			g_host_type = &HOST_SPRINGIE;
 			return;
 		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
-		if (strstr(command, "SPADS")) {
-			g_host_type = &g_host_spads;
+		if (strstr(g_command, "SPADS")) {
+			g_host_type = &HOST_SPADS;
 			return;
 		}
 	}
 
 	// Normal chat message:
 	HWND window = Chat_get_private_window(user);
-	Chat_said(window, username, 0, command);
+	Chat_said(window, username, 0, g_command);
 	if (!g_my_battle
 			|| strcmp(username, g_my_battle->founder->name)
 			|| GetTickCount() - g_last_auto_message > 2000)
@@ -755,7 +758,7 @@ static void
 say_private(void)
 {
 	char *username = get_next_word();
-	char *text = command;
+	char *text = g_command;
 	User *u = Users_find(username);
 	if (u)
 		Chat_said(Chat_get_private_window(u), g_my_user.name, 0, text);
@@ -770,13 +773,13 @@ server_msg(void)
 static void
 server_message_box(void)
 {
-	MainWindow_msg_box("Message from the server", command);
+	MainWindow_msg_box("Message from the server", g_command);
 }
 
 static void
 set_script_tags(void)
 {
-	MyBattle_append_script(command);
+	MyBattle_append_script(g_command);
 }
 
 static void

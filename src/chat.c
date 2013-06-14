@@ -80,14 +80,24 @@ typedef struct InputBoxData {
 	wchar_t buf[8192], *input_hint, *buffTail;
 }InputBoxData;
 
-static const char *chat_strings[] = {"SAYBATTLE", "SAYPRIVATE ", "SAY "};
-static const char *chat_ex_strings[] = {"SAYBATTLEEX", "SAYPRIVATE ", "SAYEX "};
+static void             _init             (void);
+static void             put_text          (HWND window, const char *text, COLORREF color, DWORD effects);
+static LRESULT CALLBACK chat_box_proc     (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static void             on_create         (HWND window, LPARAM l_param);
+static void             on_size           (HWND window, int width, int height);
+static LRESULT CALLBACK log_proc          (HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
+static LRESULT CALLBACK input_box_proc    (HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR type, InputBoxData *data);
+static void             on_escape_command (char *s, UINT_PTR type, const wchar_t *dest_name, HWND window);
+static void             on_tab            (HWND window, UINT_PTR type, InputBoxData *data);
+static BOOL CALLBACK    enum_child_proc   (HWND window, LPARAM user);
+static void             update_user       (HWND window, User *u, int index);
 
-static HWND channel_windows[128];
-static HWND server_chat_window;
-extern HWND tab_control;
+static const char *CHAT_STRINGS[] = {"SAYBATTLE", "SAYPRIVATE ", "SAY "};
+static const char *CHATEX_STRINGS[] = {"SAYBATTLEEX", "SAYPRIVATE ", "SAYEX "};
+static HWND g_channel_windows[128];
+static HWND g_server_chat_window;
 
-static const COLORREF chat_colors[CHAT_LAST+1] = {
+static const COLORREF CHAT_COLORS[CHAT_LAST+1] = {
 	[CHAT_EX] = RGB(225,152,163),
 	[CHAT_INGAME] = RGB(90,122,150),
 	[CHAT_SELF] = RGB(50,170,230),
@@ -99,7 +109,7 @@ static const COLORREF chat_colors[CHAT_LAST+1] = {
 	[CHAT_SERVEROUT] = RGB(215,190,153),
 };
 
-static DialogItem dialog_items[] = {
+static DialogItem DIALOG_ITEMS[] = {
 	[DLG_LOG] = {
 		.class = RICHEDIT_CLASS,
 		.ex_style = WS_EX_WINDOWEDGE,
@@ -141,15 +151,15 @@ update_user(HWND window, User *u, int index)
 	item.iSubItem = 0;
 	item.pszText = name;
 	item.iImage = u->ingame ? ICON_INGAME
-		    : u->battle ? INGAME_MASK
+		    : u->battle ? ICONMASK_INGAME
 		    : -1;
 	item.stateMask = LVIS_OVERLAYMASK;
 
-	int icon_index = USER_MASK;
+	int icon_index = ICONMASK_USER;
 	if (u->away)
-		icon_index |= AWAY_MASK;
+		icon_index |= ICONMASK_AWAY;
 	if (u->ignore)
-		icon_index |= IGNORE_MASK;
+		icon_index |= ICONMASK_IGNORE;
 
 	item.state = INDEXTOOVERLAYMASK(icon_index);
 
@@ -179,7 +189,7 @@ enum_child_proc(HWND window, LPARAM user)
 void
 Chat_update_user(User *u)
 {
-	EnumChildWindows(tab_control, enum_child_proc, (LPARAM)u);
+	EnumChildWindows(g_tab_control, enum_child_proc, (LPARAM)u);
 }
 
 void
@@ -263,7 +273,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 	char *code = strsep(&s, " ");
 
 	if (!strcmp(code, "me"))
-		Server_send("%s%s %s", chat_ex_strings[type], utf16to8(dest_name), s + LENGTH("me ") - 1);
+		Server_send("%s%s %s", CHATEX_STRINGS[type], utf16to8(dest_name), s + LENGTH("me ") - 1);
 	else if (!strcmp(code, "resync"))
 		Sync_reload();
 	else if (!strcmp(code, "dlmap"))
@@ -359,7 +369,7 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 		} else if (type == DEST_SERVER)
 			Server_send("%s", text_a);
 		else
-			Server_send("%s%s %s", chat_strings[type], utf16to8(dest_name), text_a);
+			Server_send("%s%s %s", CHAT_STRINGS[type], utf16to8(dest_name), text_a);
 
 		SetWindowLongPtr(GetDlgItem(GetParent(window), DLG_LOG), GWLP_USERDATA, 0);
 		data->buffTail += len+1;
@@ -400,27 +410,28 @@ on_size(HWND window, int width, int height)
 	SendMessage(list, LVM_SETCOLUMNWIDTH, 1, ICON_SIZE);
 }
 
-static void on_create(HWND window, LPARAM l_param)
+static void
+on_create(HWND window, LPARAM l_param)
 {
 	static ChatWindowData battle_room_data = {NULL, DEST_BATTLE};
 	ChatWindowData *data = ((CREATESTRUCT *)l_param)->lpCreateParams ?: &battle_room_data;
 	SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
 	if (data->name)
 		SetWindowTextA(window, data->name);
-	HWND log_window = CreateDlgItem(window, &dialog_items[DLG_LOG], DLG_LOG);
+	HWND log_window = CreateDlgItem(window, &DIALOG_ITEMS[DLG_LOG], DLG_LOG);
 	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
 	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
 	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
 	SetWindowSubclass(log_window, log_proc, 0, 0);
 
-	HWND input_box = CreateDlgItem(window, &dialog_items[DLG_INPUT], DLG_INPUT);
+	HWND input_box = CreateDlgItem(window, &DIALOG_ITEMS[DLG_INPUT], DLG_INPUT);
 	InputBoxData *input_box_data = calloc(1, sizeof(*input_box_data));
 	input_box_data->buffTail = input_box_data->buf;
 
 	SetWindowSubclass(input_box, (void *)input_box_proc, (UINT_PTR)data->type, (DWORD_PTR)input_box_data);
 
 	if (data->type >= DEST_CHANNEL) {
-		HWND list = CreateDlgItem(window, &dialog_items[DLG_LIST], DLG_LIST);
+		HWND list = CreateDlgItem(window, &DIALOG_ITEMS[DLG_LIST], DLG_LIST);
 		for (int i=0; i<=COLUMN_LAST; ++i) {
 			LVCOLUMN info;
 			info.mask = 0;
@@ -599,7 +610,7 @@ Chat_said(HWND window, const char *username, ChatType type, const char *text)
 		put_text(window, buf, COLOR_TIMESTAMP, 0);
 	}
 
-	COLORREF color = chat_colors[type];
+	COLORREF color = CHAT_COLORS[type];
 	if (type == CHAT_SERVERIN || type == CHAT_SERVEROUT)
 		put_text(window, type == CHAT_SERVERIN ? "> " : "< ", color, 0);
 
@@ -626,18 +637,18 @@ Chat_said(HWND window, const char *username, ChatType type, const char *text)
 HWND
 Chat_get_channel_window(const char *name)
 {
-	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
-		if (!channel_windows[i]) {
+	for (size_t i=0; i<LENGTH(g_channel_windows); ++i) {
+		if (!g_channel_windows[i]) {
 			ChatWindowData *data = malloc(sizeof(*data));
 			*data = (ChatWindowData){_strdup(name), DEST_CHANNEL};
-			channel_windows[i] = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
+			g_channel_windows[i] = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 0, 0,
-			tab_control, (HMENU)DEST_CHANNEL, NULL, (void *)data);
-			return channel_windows[i];
+			g_tab_control, (HMENU)DEST_CHANNEL, NULL, (void *)data);
+			return g_channel_windows[i];
 		}
-		ChatWindowData *data = (void *)GetWindowLongPtr(channel_windows[i], GWLP_USERDATA);
+		ChatWindowData *data = (void *)GetWindowLongPtr(g_channel_windows[i], GWLP_USERDATA);
 		if (!strcmp(name, data->name))
-			return channel_windows[i];
+			return g_channel_windows[i];
 	}
 	return NULL;
 }
@@ -650,7 +661,7 @@ Chat_get_private_window(User *u)
 		*data = (ChatWindowData){u->name, DEST_PRIVATE};
 		u->chat_window = CreateWindow(WC_CHATBOX, NULL, WS_CHILD,
 			0, 0, 400, 400,
-			tab_control, (HMENU)DEST_PRIVATE, NULL, (void *)data);
+			g_tab_control, (HMENU)DEST_PRIVATE, NULL, (void *)data);
 	}
 	return u->chat_window;
 }
@@ -658,13 +669,13 @@ Chat_get_private_window(User *u)
 HWND
 Chat_get_server_window(void)
 {
-	if (!server_chat_window) {
+	if (!g_server_chat_window) {
 		ChatWindowData *data = malloc(sizeof(*data));
 		*data = (ChatWindowData){"TAS Server", DEST_SERVER};
-		server_chat_window = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, tab_control, (HMENU)0, NULL, (void *)data);
-		ChatWindow_add_tab(server_chat_window);
+		g_server_chat_window = CreateWindow(WC_CHATBOX, NULL, WS_CHILD, 0, 0, 0, 0, g_tab_control, (HMENU)0, NULL, (void *)data);
+		ChatWindow_add_tab(g_server_chat_window);
 	}
-	return server_chat_window;
+	return g_server_chat_window;
 }
 
 void
@@ -673,11 +684,11 @@ Chat_save_windows(void)
 	char autojoin_channels[10000];
 	autojoin_channels[0] = 0;
 	size_t len = 0;
-	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
+	for (size_t i=0; i<LENGTH(g_channel_windows); ++i) {
 		extern int get_tab_index(HWND tab_item);
-		if (get_tab_index(channel_windows[i]) >= 0) {
+		if (get_tab_index(g_channel_windows[i]) >= 0) {
 			ChatWindowData *data = (void *)GetWindowLongPtr(
-					channel_windows[i], GWLP_USERDATA);
+					g_channel_windows[i], GWLP_USERDATA);
 			len += sprintf(&autojoin_channels[len],
 					len ? ";%s" : "%s", data->name);
 		}
@@ -687,7 +698,7 @@ Chat_save_windows(void)
 }
 
 static void __attribute__((constructor))
-init (void)
+_init(void)
 {
 	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATBOX,
@@ -702,11 +713,11 @@ init (void)
 void
 Chat_on_disconnect(void)
 {
-	SendDlgItemMessage(server_chat_window, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
-	for (size_t i=0; i<LENGTH(channel_windows); ++i) {
-		if (!channel_windows[i])
+	SendDlgItemMessage(g_server_chat_window, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
+	for (size_t i=0; i<LENGTH(g_channel_windows); ++i) {
+		if (!g_channel_windows[i])
 			continue;
-		SendDlgItemMessage(channel_windows[i], DLG_LIST,
+		SendDlgItemMessage(g_channel_windows[i], DLG_LIST,
 				LVM_DELETEALLITEMS, 0, 0);
 	}
 }

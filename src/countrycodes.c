@@ -23,7 +23,7 @@
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
 __attribute__((aligned(2)))
-static const char country_codes[242][2] = {
+static const char COUNTRY_CODES[242][2] = {
 	{'?', '?'},
 	{'A', 'D'},
 	{'A', 'E'},
@@ -516,9 +516,9 @@ static const char *country_names[242] = {
 uint8_t
 Country_get_id(const char *code)
 {
-	for (size_t i=0; i < LENGTH(country_codes); ++i) {
-		if (code[0] == country_codes[i][0]
-				&& code[1] == country_codes[i][1]) {
+	for (size_t i=0; i < LENGTH(COUNTRY_CODES); ++i) {
+		if (code[0] == COUNTRY_CODES[i][0]
+				&& code[1] == COUNTRY_CODES[i][1]) {
 			return i;
 		}
 	}

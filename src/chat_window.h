@@ -21,10 +21,11 @@
 
 #define WC_CHATWINDOW L"ChatWindow"
 
-extern HWND g_chat_window;
+int  ChatWindow_add_tab        (HWND tab);
+void ChatWindow_remove_tab     (HWND tab);
+void ChatWindow_set_active_tab (HWND tab);
 
-int  ChatWindow_add_tab(HWND tab);
-void ChatWindow_remove_tab(HWND tab);
-void ChatWindow_set_active_tab(HWND tab);
+extern HWND g_chat_window;
+extern HWND g_tab_control;
 
 #endif /* end of include guard: CHAT_WINDOW_H */

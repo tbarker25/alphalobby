@@ -23,28 +23,26 @@ union UserOrBot;
 struct BattleStatus;
 struct ClientStatus;
 
-void JoinBattle(uint32_t id, const char *password);
-
-void SetMyColor(uint32_t color);
-void SetMyBattleStatus(struct BattleStatus);
+bool Autologin(void);
+void ConfirmAgreement(void);
+void ChangeMap(const char *map_name);
+void Change_password(const char *old_password, const char *new_password);
 void Kick(union UserOrBot *);
-
-void SetMyClientStatus(struct ClientStatus status);
-void RequestChannels(void);
+void JoinBattle(uint32_t id, const char *password);
 void JoinChannel(const char *channel_name, int focus);
 void LeaveChannel(const char *channel_name);
-void RenameAccount(const char *new_username);
-void Change_password(const char *old_password, const char *new_password);
-void RegisterAccount(const char *username, const char *password);
-char Autologin(void);
 void Login(const char *username, const char *password);
 void OpenBattle(const char *title, const char *password, const char *mod_name, const char *map_name, uint16_t port);
+void RequestChannels(void);
+void RenameAccount(const char *new_username);
+void RegisterAccount(const char *username, const char *password);
 void RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager);
-void ConfirmAgreement(void);
 void RequestIngame_time(const char *username);
-void ChangeMap(const char *map_name);
+void SetMyColor(uint32_t color);
+void SetMyBattleStatus(struct BattleStatus);
+void SetMyClientStatus(struct ClientStatus status);
 
-extern int      g_last_auto_message;
+extern int g_last_auto_message;
 extern struct BattleStatus g_last_battle_status;
 extern struct ClientStatus g_last_client_status;
 

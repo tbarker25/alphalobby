@@ -37,7 +37,9 @@
 #define LAUNCH_SPRING(path)\
 	CreateThread(NULL, 0, spring_proc, (LPVOID)(_wcsdup(path)), 0, NULL);
 
-static bool ingame;
+static DWORD WINAPI spring_proc(LPVOID path);
+
+static bool g_ingame;
 
 static DWORD WINAPI
 spring_proc(LPVOID path)
@@ -48,12 +50,12 @@ spring_proc(LPVOID path)
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
-		ingame = true;
+		g_ingame = true;
 		SetMyClientStatus(g_last_client_status);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
-		ingame = false;
+		g_ingame = false;
 		SetMyClientStatus(g_last_client_status);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
@@ -65,7 +67,7 @@ spring_proc(LPVOID path)
 bool
 Spring_is_ingame(void)
 {
-	return ingame;
+	return g_ingame;
 }
 
 void
