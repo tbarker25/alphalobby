@@ -44,4 +44,3 @@ _init(void)
 	g_base_unit_x = tmp.tmAveCharWidth;
 	g_base_unit_y = tmp.tmHeight;
 }
-
