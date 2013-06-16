@@ -672,7 +672,7 @@ on_command(WPARAM w_param, HWND window)
 		return 0;
 
 	case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
-		button_state = Button_GetState(window);
+		button_state = Button_GetCheck(window);
 		if (!button_state)
 			SendDlgItemMessage(g_battle_room, DLG_AUTO_UNSPEC,
 					BM_SETCHECK, BST_UNCHECKED, 0);

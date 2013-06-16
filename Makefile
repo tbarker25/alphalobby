@@ -11,7 +11,7 @@ else
 	CFLAGS+= -DVERSION=$(VERSION)
 	BUILD_DIR:=debug
 	LDFLAGS+= -lmsvcrt
-	CFLAGS+= -g3 -Og
+	CFLAGS+= -g3 -O0
 endif
 
 WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra
@@ -35,6 +35,7 @@ all: $(BUILD_DIR)/alphalobby.exe
 
 release/alphalobby.exe: $(BUILD_DIR) $(FILES)
 	$(CC) $(FILES) -o $@-big $(CFLAGS) $(LDFLAGS)
+	rm $@
 	upx $@-big -o$@ -qq --ultra-brute
 
 debug/alphalobby.exe: $(BUILD_DIR) $(FILES)
