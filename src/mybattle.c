@@ -29,8 +29,7 @@
 #include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "host_spads.h"
@@ -158,7 +157,7 @@ MyBattle_left_battle(void)
 
 	g_my_battle = NULL;
 	if (g_battle_to_join)
-		JoinBattle(g_battle_to_join, NULL);
+		TasServer_send_join_battle(g_battle_to_join, NULL);
 
 	/* TODO: */
 	/* *relay_hoster = '\0'; */
@@ -193,7 +192,7 @@ MyBattle_update_battle_status(UserOrBot *restrict u, BattleStatus bs, uint32_t c
 			&& BattleRoom_is_auto_unspec()) {
 		BattleStatus new_bs = g_last_battle_status;
 		new_bs.mode = 1;
-		SetMyBattleStatus(new_bs);
+		TasServer_send_my_battle_status(new_bs);
 	}
 
 	g_my_battle->spectator_len = 0;
@@ -379,11 +378,4 @@ MyBattle_update_mod_options(void)
 	for (size_t i=0; i<g_map_option_len; ++i)
 		if (!g_map_options[i].val)
 			BattleRoom_on_set_option(&g_map_options[i]);
-}
-
-void
-MyBattle_leave(void)
-{
-	assert(g_my_battle);
-	Server_send("LEAVEBATTLE");
 }

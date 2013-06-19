@@ -26,7 +26,7 @@
 #include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "mybattle.h"
@@ -122,7 +122,7 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 		CreateColorDlg(s);
 		break;
 	case KICK:
-		Kick(s);
+		TasServer_send_kick(s);
 		break;
 	case SPEC:
 		break;
@@ -154,7 +154,7 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 				// break;
 			// }
 		} else
-			/* SetMyBattleStatus(s, */
+			/* TasServer_send_my_battle_status(s, */
 					/* (clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET), */
 					/* clicked & FLAG_TEAM ? BS_TEAM : clicked & FLAG_ALLY ? BS_ALLY : BS_SIDE); */
 

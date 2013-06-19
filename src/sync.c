@@ -27,7 +27,7 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
@@ -151,7 +151,7 @@ syncProc (__attribute__((unused)) LPVOID lp_parameter)
 			create_map_file(s);
 			free(s);
 		} else if (task_set_battle_status) {
-			SetMyBattleStatus(g_last_battle_status);
+			TasServer_send_my_battle_status(g_last_battle_status);
 			task_set_battle_status = 0;
 		} else {
 			WaitForSingleObject(g_event, INFINITE);

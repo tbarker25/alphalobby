@@ -23,7 +23,8 @@
 #include <windows.h>
 #include <commctrl.h>
 
-#include "client_message.h"
+#include "chat.h"
+#include "tasserver.h"
 #include "common.h"
 #include "layoutmetrics.h"
 #include "resource.h"
@@ -41,7 +42,7 @@ activate(int item_index)
 {
 	wchar_t name[MAX_NAME_LENGTH_NUL];
 	ListView_GetItemText(g_channel_list, item_index, 0, name, LENGTH(name));
-	JoinChannel(utf16to8(name), 1);
+	Chat_join_channel(utf16to8(name), 1);
 }
 
 static void
@@ -127,5 +128,5 @@ ChannelList_show(void)
 	/* DestroyWindow(GetParent(g_channel_list)); */
 	assert(g_channel_list == NULL);
 	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, channel_list_proc);
-	RequestChannels();
+	TasServer_send_get_channels();
 }

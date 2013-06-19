@@ -26,10 +26,10 @@ typedef struct _iobuf FILE;
 
 void   CreateAboutDlg(void);
 void   CreateAgreementDlg(FILE *text);
-void   CreateChange_password_dlg(void);
+void   CreateChangePasswordDlg(void);
 void   CreateColorDlg(union UserOrBot *);
 void   CreateHostBattleDlg(void);
-void   CreateLoginBox(void);
+void   CreateLoginDlg(void);
 void   CreatePreferencesDlg(void);
 void   CreateRapidDlg(void);
 void   CreateReplayDlg(void);

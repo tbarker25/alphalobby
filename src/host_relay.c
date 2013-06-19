@@ -10,20 +10,18 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "host_relay.h"
 #include "mybattle.h"
 #include "sync.h"
 #include "user.h"
 
-#define RelayMessage(format, ...) \
-	(Server_send("SAYPRIVATE %s " format, g_relay_hoster, ## __VA_ARGS__))
+static void relay_command(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
 
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
-static void kick(const char *name);
+static void kick(const UserOrBot *);
 static void said_battle(const char *username, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
@@ -107,14 +105,15 @@ RelayHost_open_battle(const char *title, const char *password, const char *mod_n
 	sprintf(g_relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
 	strcpy(g_relay_password, password ?: "*");
 	strcpy(g_relay_manager, manager);
-	Server_send("SAYPRIVATE %s !spawn", g_relay_manager);
+	TasServer_send_say_private((User *)g_relay_manager, "!spawn");
 }
 
 void
 RelayHost_on_add_user(const char *username)
 {
 	if (!strcmp(username, g_relay_hoster) && *g_relay_cmd) {
-		Server_send(g_relay_cmd);
+		/* TODO */
+		/* TasServer_send(g_relay_cmd); */
 		*g_relay_cmd = '\0';
 	}
 }
@@ -123,7 +122,7 @@ void
 RelayHost_on_battle_opened(const Battle *b)
 {
 	if (!strcmp(b->founder->name, g_relay_hoster))
-		JoinBattle(b->id, g_relay_password);
+		TasServer_send_join_battle(b->id, g_relay_password);
 }
 
 /* void
@@ -141,25 +140,25 @@ g_relay_message() */
 static void
 force_ally(const char *name, int ally_id)
 {
-	RelayMessage("FORCEALLYNO %s %d" , name, ally_id);
+	relay_command("FORCEALLYNO %s %d" , name, ally_id);
 }
 
 static void
 force_team(const char *name, int team)
 {
-	RelayMessage("FORCETEAMNO %s %d" , name, team);
+	relay_command("FORCETEAMNO %s %d" , name, team);
 }
 
 /* static void
 force_color(const char *name, uint32_t color)    */
 /* {                                                           */
-/*         RelayMessage("FORCETEAMCOLOR %s %d", name, color); */
+/*         relay_command("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
 
 static void
-kick(const char *name)
+kick(const UserOrBot *u)
 {
-	RelayMessage("KICKFROMBATTLE %s", name);
+	relay_command("KICKFROMBATTLE %s", u->name);
 }
 
 static void
@@ -171,7 +170,7 @@ said_battle(const char *username, char *text)
 static void
 set_map(const char *map_name)
 {
-	RelayMessage("UPDATEBATTLEINFO 0 0 %d %s",
+	relay_command("UPDATEBATTLEINFO 0 0 %d %s",
 			Sync_map_hash(map_name), map_name);
 }
 
@@ -179,10 +178,10 @@ static void
 set_option(Option *opt, const char *val)
 {
 	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_len)
-		RelayMessage("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, val);
+		relay_command("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, val);
 
 	else if (opt >= g_map_options && opt < g_map_options + g_map_option_len)
-		RelayMessage("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, val);
+		relay_command("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, val);
 
 	else
 		assert(0);
@@ -192,13 +191,13 @@ set_option(Option *opt, const char *val)
 static void
 add_start_box(int i, int left, int top, int right, int bottom)
 {
-	RelayMessage("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
+	relay_command("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
 }
 
 static void
 del_start_box(int i)
 {
-	RelayMessage("REMOVESTARTRECT %d", i);
+	relay_command("REMOVESTARTRECT %d", i);
 }
 
 static void
@@ -233,4 +232,17 @@ set_split(int size, SplitType type)
 		assert(0);
 		break;
 	}
+}
+
+static void
+relay_command(const char *format, ...)
+{
+	char buf[1024];
+	va_list args;
+
+	va_start (args, format);
+	vsprintf(buf, format, args);
+	va_end(args);
+
+	TasServer_send_say_private((User *)g_relay_hoster, buf);
 }

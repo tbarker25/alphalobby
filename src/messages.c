@@ -31,8 +31,7 @@
 #include "channellist.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "countrycodes.h"
 #include "dialogboxes.h"
@@ -421,7 +420,7 @@ client_status(void)
 static void
 denied(void)
 {
-	Server_disconnect();
+	TasServer_disconnect();
 	MainWindow_msg_box("Connection denied", g_command);
 }
 
@@ -545,7 +544,7 @@ left_battle(void)
 	if (b == g_my_battle) {
 		if (u->mode && BattleRoom_is_auto_unspec()) {
 			BattleStatus bs = g_last_battle_status;
-			SetMyBattleStatus(bs);
+			TasServer_send_my_battle_status(bs);
 		}
 		if (g_settings.flags & (1<<DEST_BATTLE)){
 			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
@@ -560,7 +559,7 @@ login_info_end(void)
 	Settings_open_default_channels();
 	BattleList_on_end_login_info();
 	MainWindow_change_connect(CONNECTION_ONLINE);
-	/* Server_send("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
+	/* TasServer_send("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
 }
 
 static void
@@ -580,8 +579,7 @@ open_battle(void)
 static void
 registration_accepted(void)
 {
-	extern void login(void);
-	login();
+	TasServer_send_login(NULL, NULL);
 	MainWindow_msg_box("Registration accepted", "Logging in now.");
 }
 
@@ -624,7 +622,7 @@ request_battle_status(void)
 {
 	g_battle_info_finished = 1;
 
-	SetMyBattleStatus(MyBattle_new_battle_status());
+	TasServer_send_my_battle_status(MyBattle_new_battle_status());
 	BattleRoom_resize_columns();
 }
 
@@ -658,20 +656,28 @@ said_battle(void)
 static void
 said_battle_ex(void)
 {
-	const char *username = get_next_word();
-	char *text = g_command;
+	User * u;
+	char *text;
+
+	u = Users_find(get_next_word());
+	text =  g_command;
+
+	assert(u);
+	if (!u)
+		return;
 
 	// Check for autohost
 	// welcome message is configurable, but chance_of_autohost should usually be between 5 and 8.
 	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
-	if (g_my_battle && !strcmp(username, g_my_battle->founder->name) && GetTickCount() - g_time_battle_joined < 10000){
+	if (g_my_battle && u == g_my_battle->founder
+	    && GetTickCount() - g_time_battle_joined < 10000) {
 		int chance_of_autohost = 0;
 		chance_of_autohost += GetTickCount() - g_time_battle_joined < 2000;
 		chance_of_autohost += text[0] == '*' && text[1] == ' ';
 		chance_of_autohost += StrStrIA(text, "hi ") != NULL;
 		chance_of_autohost += StrStrIA(text, "welcome ") != NULL;
 		chance_of_autohost += strstr(text, g_my_user.name) != NULL;
-		chance_of_autohost += strstr(text, username) != NULL;
+		chance_of_autohost += strstr(text, u->name) != NULL;
 		chance_of_autohost += strstr(text, "!help") != NULL;
 
 		char said_spads = strstr(text, "SPADS") != NULL;
@@ -686,12 +692,13 @@ said_battle_ex(void)
 				g_host_type = &HOST_SPRINGIE;
 			} else {
 				g_last_auto_message = GetTickCount();
-				Server_send("SAYPRIVATE %s !version\nSAYPRIVATE %s !springie", username, username);
+				TasServer_send_say_private(u, "!version");
+				TasServer_send_say_private(u, "!springie");
 			}
 		}
 	}
 
-	Chat_said(GetBattleChat(), username, CHAT_EX, text);
+	Chat_said(GetBattleChat(), u->name, CHAT_EX, text);
 }
 
 static void
@@ -708,11 +715,12 @@ said_private(void)
 {
 	const char *username = get_next_word();
 
-	if (RelayHost_on_private_message(username, g_command))
+	User *user = Users_find(username);
+	assert(user);
+	if (!user || user->ignore)
 		return;
 
-	User *user = Users_find(username);
-	if (!user || user->ignore)
+	if (RelayHost_on_private_message(username, g_command))
 		return;
 
 	// Zero-K juggler sends matchmaking g_command "!join <host>"
@@ -721,7 +729,7 @@ said_private(void)
 			&& !memcmp(g_command, "!join ", sizeof("!join ") - 1)) {
 		User *user = Users_find(g_command + sizeof("!join ") - 1);
 		if (user && user->battle)
-			JoinBattle(user->battle->id, NULL);
+			TasServer_send_join_battle(user->battle->id, NULL);
 		return;
 	}
 
@@ -793,7 +801,7 @@ TAS_server(void)
 		char buf[128];
 		sprintf(buf, "Server requires %s.\nYou are using %s.\n", server_spring_version, my_spring_version);
 		MainWindow_msg_box("Wrong Spring version", buf);
-		Server_disconnect();
+		TasServer_disconnect();
 		return;
 	}
 	g_udp_help_port = get_next_int();

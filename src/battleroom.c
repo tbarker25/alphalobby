@@ -33,7 +33,7 @@
 #include "battleroom.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "countrycodes.h"
 #include "iconlist.h"
@@ -680,20 +680,20 @@ on_command(WPARAM w_param, HWND window)
 		new_battle_status = g_last_battle_status;
 		new_battle_status.mode = button_state;
 
-		SetMyBattleStatus(new_battle_status);
+		TasServer_send_my_battle_status(new_battle_status);
 		return 0;
 
 	case MAKEWPARAM(DLG_ALLY, CBN_SELCHANGE):
 		new_battle_status = g_last_battle_status;
 		new_battle_status.ally = SendMessage(window, CB_GETCURSEL, 0, 0);
-		SetMyBattleStatus(new_battle_status);
+		TasServer_send_my_battle_status(new_battle_status);
 		SendMessage(window, CB_SETCURSEL, g_my_user.ally, 0);
 		return 0;
 
 	case MAKEWPARAM(DLG_SIDE_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SIDE_LAST, BN_CLICKED):
 		new_battle_status = g_last_battle_status;
 		new_battle_status.side = LOWORD(w_param) - DLG_SIDE_FIRST;
-		SetMyBattleStatus(new_battle_status);
+		TasServer_send_my_battle_status(new_battle_status);
 		return 0;
 	}
 	return 1;
@@ -818,7 +818,7 @@ battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 	case WM_CLOSE:
 		MainWindow_disable_battleroom_button();
-		MyBattle_leave();
+		TasServer_send_leave_battle();
 		return 0;
 
 	case WM_COMMAND:
