@@ -109,7 +109,8 @@ on_login(HWND window, int is_registering)
 	char confirm_password[sizeof(password)];
 retry:
 	confirm_password[0] = 0;
-	if (GetTextDialog2_create(window, "Confirm password", confirm_password, LENGTH(confirm_password)))
+	if (GetTextDialog2_create(window, "Confirm password", confirm_password,
+		LENGTH(confirm_password)))
 		return 1;
 
 	to_md5(confirm_password);
@@ -133,7 +134,8 @@ login_proc(HWND window, UINT msg, WPARAM w_param,
 		if (pw) {
 			SetDlgItemText(window, IDC_LOGIN_PASSWORD, utf8to16(pw));
 			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 1, 0);
-			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_SETCHECK, g_settings.flags & SETTING_AUTOCONNECT, 0);
+			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT,
+			    BM_SETCHECK, g_settings.flags & SETTING_AUTOCONNECT, 0);
 		} else
 			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), 0);
 		return 1;
@@ -148,7 +150,8 @@ login_proc(HWND window, UINT msg, WPARAM w_param,
 			EndDialog(window, 0);
 			return 1;
 		case MAKEWPARAM(IDC_LOGIN_SAVE, BN_CLICKED):
-			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0));
+			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT),
+			    SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0));
 			return 1;
 		} break;
 	}
