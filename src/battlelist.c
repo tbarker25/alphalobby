@@ -334,9 +334,10 @@ BattleList_add_battle(Battle *b)
 
 	assert(get_index_from_battle(b) < 0);
 
-	item.mask = LVIF_PARAM | LVIF_TEXT;
+	item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_IMAGE;
 	item.iItem = 0;
 	item.iSubItem = 0;
+	item.iImage = -1;
 	item.lParam = (LPARAM)b;
 	item.pszText = utf8to16(b->founder->name);
 
