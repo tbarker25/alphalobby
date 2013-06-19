@@ -34,7 +34,6 @@
 #include "tasserver.h"
 #include "common.h"
 #include "countrycodes.h"
-#include "dialogboxes.h"
 #include "host_relay.h"
 #include "host_spads.h"
 #include "host_springie.h"
@@ -46,6 +45,7 @@
 #include "sync.h"
 #include "user.h"
 #include "userlist.h"
+#include "dialogs/agreementdialog.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -267,7 +267,7 @@ static void
 agreement_end(void)
 {
 	rewind(g_agreement_file);
-	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)CreateAgreementDlg, (LPARAM)g_agreement_file);
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)AgreementDialog_create, (LPARAM)g_agreement_file);
 	g_agreement_file = NULL;
 }
 

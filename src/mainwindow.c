@@ -34,7 +34,6 @@
 #include "chat_window.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "downloader.h"
 #include "downloadtab.h"
 #include "iconlist.h"
@@ -46,6 +45,12 @@
 #include "user.h"
 #include "userlist.h"
 #include "wincommon.h"
+#include "dialogs/aboutdialog.h"
+#include "dialogs/changepassworddialog.h"
+#include "dialogs/hostdialog.h"
+#include "dialogs/logindialog.h"
+#include "dialogs/preferencesdialog.h"
+#include "dialogs/replaydialog.h"
 
 #define WC_ALPHALOBBY L"AlphaLobby"
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
@@ -255,12 +260,12 @@ on_command(int dialog_id)
 			TasServer_disconnect();
 
 		} else if (!autologin()) {
-			CreateLoginDlg();
+			LoginDialog_create();
 		}
 		return 0;
 
 	case ID_LOGINBOX:
-		CreateLoginDlg();
+		LoginDialog_create();
 		return 0;
 
 	case ID_BATTLEROOM:
@@ -278,10 +283,11 @@ on_command(int dialog_id)
 		/* case ID_SINGLEPLAYER: */
 
 	case ID_REPLAY:
+		ReplayDialog_create();
 		return 0;
 
 	case ID_HOSTBATTLE:
-		CreateHostBattleDlg();
+		HostDialog_create();
 		return 0;
 
 	case ID_CHAT:
@@ -305,11 +311,11 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_LOBBY_PREFERENCES:
-		CreatePreferencesDlg();
+		PreferencesDialog_create();
 		return 0;
 
 	case ID_ABOUT:
-		CreateAboutDlg();
+		AboutDialog_create();
 		return 0;
 
 	case ID_RESYNC:
@@ -334,12 +340,12 @@ on_command(int dialog_id)
 		// case IDM_RENAME: {
 		// char name[MAX_NAME_LENGTH_NUL];
 		// *name = '\0';
-		// if (!GetTextDlg("Change username", name, MAX_NAME_LENGTH_NUL))
+		// if (!GetTextDialog_create("Change username", name, MAX_NAME_LENGTH_NUL))
 		// TasServer_send_rename(name);
 		// } return 0;
-		// case IDM_CHANGE_PASSWORD:
-		// CreateChangePasswordDlg();
-		// return 0;
+	/* case ID_CHANGE_PASSWORD: */
+		/* ChangePasswordDialog_create(); */
+		/* return 0; */
 	}
 	return 1;
 }
@@ -503,7 +509,7 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 
 	Chat_get_server_window();
 	Downloader_init();
-	/* CreateRapidDlg(); */
+	/* RapidDialog_create(); */
 
 	if (g_settings.flags & SETTING_AUTOCONNECT)
 		autologin();

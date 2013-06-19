@@ -29,7 +29,6 @@
 #include "battleroom.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "downloader.h"
 #include "iconlist.h"
 #include "mainwindow.h"

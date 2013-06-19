@@ -24,6 +24,8 @@
 #define NUM_TEAMS 16
 #define NUM_ALLIANCES 16
 
+union UserOrBot;
+
 typedef enum SplitType {
 	SPLIT_HORZ,
 	SPLIT_VERT,

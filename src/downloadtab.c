@@ -21,7 +21,7 @@
 #include <windows.h>
 #include <commctrl.h>
 
-#include "dialogboxes.h"
+#include "dialogs/rapiddialog.h"
 #include "downloadtab.h"
 #include "layoutmetrics.h"
 #include "resource.h"
@@ -124,7 +124,7 @@ download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(DLG_RAPID, BN_CLICKED):
-			CreateRapidDlg();
+			RapidDialog_create();
 			return 0;
 		}
 		return 0;
