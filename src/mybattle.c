@@ -31,7 +31,6 @@
 #include "battleroom.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "host_spads.h"
 #include "mainwindow.h"
 #include "minimap.h"
@@ -39,6 +38,7 @@
 #include "settings.h"
 #include "sync.h"
 #include "user.h"
+#include "dialogs/gettextdialog.h"
 
 static void set_options_from_script(void);
 static void set_option_from_tag(char *restrict key, const char *restrict val);
@@ -214,7 +214,7 @@ MyBattle_change_option(Option *restrict opt)
 		break;
 	case opt_number:
 		val[0] = '\0';
-		if (GetTextDlg(opt->name, val, 128))
+		if (GetTextDialog_create(opt->name, val, 128))
 			return;
 		break;
 	case opt_list:

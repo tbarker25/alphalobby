@@ -19,8 +19,10 @@
 #ifndef HOST_RELAY_H
 #define HOST_RELAY_H
 
+struct Battle;
+
 void RelayHost_on_add_user(const char *username);
-void RelayHost_on_battle_opened(const Battle *);
+void RelayHost_on_battle_opened(const struct Battle *);
 bool RelayHost_on_private_message(const char *username, char *command);
 void RelayHost_open_battle(const char *title, const char *password, const char *mod_name, const char *map_name, const char *manager);
 

@@ -16,25 +16,11 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DIALOGBOXES_H
-#define DIALOGBOXES_H
+#ifndef RAPID_H
+#define RAPID_H
 
-struct Option;
-struct User;
-union  UserOrBot;
-typedef struct _iobuf FILE;
 
-void   CreateAboutDlg(void);
-void   CreateAgreementDlg(FILE *text);
-void   CreateChangePasswordDlg(void);
-void   CreateColorDlg(union UserOrBot *);
-void   CreateHostBattleDlg(void);
-void   CreateLoginDlg(void);
-void   CreatePreferencesDlg(void);
-void   CreateRapidDlg(void);
-void   CreateReplayDlg(void);
-void   CreateSinglePlayerDlg(void);
-LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len);
-LPARAM GetTextDlg2(HWND window, const char *title, char *buf, size_t buf_len);
+void RapidDialog_create(void);
 
-#endif /* end of include guard: DIALOGBOXES_H */
+#endif /* end of include guard: RAPID_H */
+

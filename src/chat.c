@@ -36,7 +36,6 @@
 #include "chat_window.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "downloader.h"
 #include "iconlist.h"
 #include "layoutmetrics.h"
@@ -47,6 +46,7 @@
 #include "sync.h"
 #include "user.h"
 #include "wincommon.h"
+#include "dialogs/gettextdialog.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -531,7 +531,7 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			} else if (clicked == 3) {
 				char title[128], buf[MAX_NAME_LENGTH_NUL];
 				sprintf(title, "Set alias for %s", u->name);
-				if (!GetTextDlg(title, strcpy(buf, UNTAGGED_NAME(u->name)), MAX_NAME_LENGTH_NUL)) {
+				if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(u->name)), MAX_NAME_LENGTH_NUL)) {
 					strcpy(u->alias, buf);
 				}
 			}

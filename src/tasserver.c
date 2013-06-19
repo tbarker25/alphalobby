@@ -35,7 +35,6 @@
 #include "chat_window.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "host_relay.h"
 #include "mainwindow.h"
 #include "md5.h"
@@ -45,6 +44,7 @@
 #include "spring.h"
 #include "sync.h"
 #include "user.h"
+#include "dialogs/gettextdialog.h"
 
 #define RECV_SIZE 8192
 #define MAX_MESSAGE_LENGTH 1024 //Hardcoded into server
@@ -254,7 +254,7 @@ TasServer_send_join_battle(uint32_t id, const char *password)
 		if (b->passworded && !password) {
 			char *buf = _alloca(1024);
 			buf[0] = '\0';
-			if (GetTextDlg("Enter password", buf, 1024))
+			if (GetTextDialog_create("Enter password", buf, 1024))
 				return;
 			password = buf;
 		}

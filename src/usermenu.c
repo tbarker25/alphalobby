@@ -28,7 +28,6 @@
 #include "chat_window.h"
 #include "tasserver.h"
 #include "common.h"
-#include "dialogboxes.h"
 #include "mybattle.h"
 #include "sync.h"
 #include "user.h"
@@ -113,7 +112,7 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 	case ALIAS: {
 		char title[128], buf[MAX_NAME_LENGTH_NUL];
 		sprintf(title, "Set alias for %s", s->name);
-		if (!GetTextDlg(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof(buf))) {
+		if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof(buf))) {
 			strcpy(s->user.alias, buf);
 			/* UpdateUser(&s->user); */
 		}
@@ -145,7 +144,7 @@ UserMenu_spawn(union UserOrBot *s, HWND window)
 				// strcpy(opt->val, opt->list_items[clicked >> 8 & 0xFF].key);
 				// break;
 			// case opt_number:
-				// GetTextDlg(opt->name, opt->val, opt->val - opt->extra_data + sizeof(opt->extra_data));
+				// GetTextDialog_create(opt->name, opt->val, opt->val - opt->extra_data + sizeof(opt->extra_data));
 				// break;
 			// case opt_bool:
 				// opt->val[0] ^= '0' ^ '1';
