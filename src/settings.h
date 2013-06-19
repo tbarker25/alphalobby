@@ -43,6 +43,7 @@ wchar_t * Settings_get_data_dir(const wchar_t *file);
 void      Settings_init(void);
 int       Settings_load_int(const char *key);
 char *    Settings_load_str(const char *key);
+bool      Settings_load_str2(char *buf, const char *key);
 void      Settings_open_default_channels(void);
 void      Settings_reset(void);
 void      Settings_save_aliases(void);

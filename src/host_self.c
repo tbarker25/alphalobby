@@ -26,54 +26,31 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
-#include "client.h"
+#include "tasserver.h"
 #include "common.h"
 #include "host_self.h"
 #include "mybattle.h"
 #include "sync.h"
 #include "user.h"
 
-static void force_ally(const char *name, int ally);
-static void force_team(const char *name, int team);
-static void kick(const char *name);
 static void said_battle(const char *username, char *text);
-static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
 
 const HostType HOST_SELF = {
-	.force_ally = force_ally,
-	.force_team = force_team,
-	.kick = kick,
+	.force_ally = TasServer_send_force_ally,
+	.force_team = TasServer_send_force_team,
+	.kick = TasServer_send_kick,
 	.said_battle = said_battle,
-	.set_map = set_map,
+	.set_map = TasServer_send_set_map,
 	.set_option = set_option,
 	.set_split = set_split,
 };
 
-static void
-force_ally(const char *name, int ally)
-{
-	Server_send("FORCEALLYNO %s %d" , name, ally);
-}
-
-static void
-force_team(const char *name, int team)
-{
-	Server_send("FORCETEAMNO %s %d" , name, team);
-}
-
 /* static void
 force_color(const char *name, uint32_t color)    */
 /* {                                                           */
-/*         Server_send("FORCETEAMCOLOR %s %d", name, color); */
 /* }                                                           */
-
-static void
-kick(const char *name)
-{
-	Server_send("KICKFROMBATTLE %s", name);
-}
 
 static void
 said_battle(const char *username, char *text)
@@ -82,34 +59,21 @@ said_battle(const char *username, char *text)
 }
 
 static void
-set_map(const char *map_name)
-{
-	Server_send("UPDATEBATTLEINFO 0 0 %d %s",
-			Sync_map_hash(map_name), map_name);
-}
-
-static void
 set_option(Option *opt, const char *val)
 {
-	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_len)
-		Server_send("SETSCRIPTTAGS game/modoptions/%s=%s", opt->key, val);
+	if (opt >= g_mod_options && opt < g_mod_options + g_mod_option_len) {
+		char buf[128];
+		sprintf(buf, "game/modoptions/%s=%s", opt->key, val);
+		TasServer_send_script_tags(buf);
 
-	else if (opt >= g_map_options && opt < g_map_options + g_map_option_len)
-		Server_send("SETSCRIPTTAGS game/mapoptions/%s=%s", opt->key, val);
-	else
+	} else if (opt >= g_map_options && opt < g_map_options + g_map_option_len) {
+		char buf[128];
+		sprintf(buf, "game/mapoptions/%s=%s", opt->key, val);
+		TasServer_send_script_tags(buf);
+
+	} else {
 		assert(0);
-}
-
-static void
-add_start_box(int i, int left, int top, int right, int bottom)
-{
-	Server_send("ADDSTARTRECT %d %d %d %d %d", i, left, top, right, bottom);
-}
-
-static void
-del_start_box(int i)
-{
-	Server_send("REMOVESTARTRECT %d", i);
+	}
 }
 
 static void
@@ -117,28 +81,28 @@ set_split(int size, SplitType type)
 {
 	switch (type) {
 	case SPLIT_HORZ:
-		add_start_box(0, 0, 0, size, 200);
-		add_start_box(1, 200 - size, 0, 200, 200);
-		del_start_box(2);
-		del_start_box(3);
+		TasServer_send_add_start_box(0, 0, 0, size, 200);
+		TasServer_send_add_start_box(1, 200 - size, 0, 200, 200);
+		TasServer_send_del_start_box(2);
+		TasServer_send_del_start_box(3);
 		break;
 	case SPLIT_VERT:
-		add_start_box(0, 0, 0, 200, size);
-		add_start_box(1, 0, 200 - size, 200, 200);
-		del_start_box(2);
-		del_start_box(3);
+		TasServer_send_add_start_box(0, 0, 0, 200, size);
+		TasServer_send_add_start_box(1, 0, 200 - size, 200, 200);
+		TasServer_send_del_start_box(2);
+		TasServer_send_del_start_box(3);
 		break;
 	case SPLIT_CORNERS1:
-		add_start_box(0, 0, 0, size, size);
-		add_start_box(1, 200 - size, 200 - size, 200, 200);
-		add_start_box(2, 0, 200 - size, size, 200);
-		add_start_box(3, 200 - size, 0, 200, size);
+		TasServer_send_add_start_box(0, 0, 0, size, size);
+		TasServer_send_add_start_box(1, 200 - size, 200 - size, 200, 200);
+		TasServer_send_add_start_box(2, 0, 200 - size, size, 200);
+		TasServer_send_add_start_box(3, 200 - size, 0, 200, size);
 		break;
 	case SPLIT_CORNERS2:
-		add_start_box(0, 0, 200 - size, size, 200);
-		add_start_box(1, 200 - size, 0, 200, size);
-		add_start_box(2, 0, 0, size, size);
-		add_start_box(3, 200 - size, 200 - size, 200, 200);
+		TasServer_send_add_start_box(0, 0, 200 - size, size, 200);
+		TasServer_send_add_start_box(1, 200 - size, 0, 200, size);
+		TasServer_send_add_start_box(2, 0, 0, size, size);
+		TasServer_send_add_start_box(3, 200 - size, 200 - size, 200, 200);
 		break;
 	default:
 		assert(0);

@@ -7,7 +7,6 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
-#include "client_message.h"
 #include "common.h"
 #include "host_spads.h"
 #include "mybattle.h"

@@ -32,8 +32,7 @@
 #include "channellist.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
@@ -88,8 +87,10 @@ enum {
 };
 
 static void    _init              (void);
+static bool    autologin          (void);
 static LRESULT CALLBACK main_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
 static LRESULT create_dropdown    (NMTOOLBAR *info);
+static void    launch_spring_settings(void);
 static LRESULT on_command         (int dialog_id);
 static void    on_create          (HWND window);
 static void    on_destroy         (void);
@@ -209,7 +210,7 @@ on_destroy(void)
 	WINDOWPLACEMENT window_placement;
 	RECT *r;
 
-	Server_disconnect();
+	TasServer_disconnect();
 	Chat_save_windows();
 	window_placement.length = sizeof(window_placement);
 	GetWindowPlacement(g_main_window, &window_placement);
@@ -250,14 +251,16 @@ on_command(int dialog_id)
 {
 	switch (dialog_id) {
 	case ID_CONNECT:
-		if (Server_status())
-			Server_disconnect();
-		else if (!Autologin())
-			CreateLoginBox();
+		if (TasServer_status()) {
+			TasServer_disconnect();
+
+		} else if (!autologin()) {
+			CreateLoginDlg();
+		}
 		return 0;
 
 	case ID_LOGINBOX:
-		CreateLoginBox();
+		CreateLoginDlg();
 		return 0;
 
 	case ID_BATTLEROOM:
@@ -298,14 +301,7 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_SPRING_SETTINGS:
-		{
-			STARTUPINFO startup_info = {0};
-			PROCESS_INFORMATION process_info;
-			startup_info.cb= sizeof(startup_info);
-			CreateProcess(L"springsettings.exe", L"springsettings.exe",
-				NULL, NULL, 0, 0, NULL,NULL,
-				&startup_info, &process_info);
-		}
+		launch_spring_settings();
 		return 0;
 
 	case ID_LOBBY_PREFERENCES:
@@ -339,10 +335,10 @@ on_command(int dialog_id)
 		// char name[MAX_NAME_LENGTH_NUL];
 		// *name = '\0';
 		// if (!GetTextDlg("Change username", name, MAX_NAME_LENGTH_NUL))
-		// RenameAccount(name);
+		// TasServer_send_rename(name);
 		// } return 0;
 		// case IDM_CHANGE_PASSWORD:
-		// CreateChange_password_dlg();
+		// CreateChangePasswordDlg();
 		// return 0;
 	}
 	return 1;
@@ -355,7 +351,7 @@ create_dropdown(NMTOOLBAR *info)
 
 	switch (info->iItem) {
 	case ID_CONNECT:
-		AppendMenu(menu, 0, ID_CONNECT, Server_status() ? L"Server_disconnect" : L"Server_connect");
+		AppendMenu(menu, 0, ID_CONNECT, TasServer_status() ? L"Disconnect" : L"Connect");
 		SetMenuDefaultItem(menu, ID_CONNECT, 0);
 		AppendMenu(menu, MF_SEPARATOR, 0, NULL);
 		AppendMenu(menu, 0, ID_LOGINBOX, L"Login as a different user");
@@ -434,7 +430,7 @@ main_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		return 0;
 
 	case WM_POLL_SERVER:
-		Server_poll();
+		TasServer_poll();
 		return 0;
 
 	case WM_EXECFUNC:
@@ -450,7 +446,7 @@ main_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 	case WM_TIMER:
 		if (w_param == 1) {
-			// Server_ping();
+			// TasServer_ping();
 			return 0;
 		}
 		break;
@@ -509,13 +505,11 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 	Downloader_init();
 	/* CreateRapidDlg(); */
 
-	char username[MAX_NAME_LENGTH_NUL], *s;
-	if (g_settings.flags & SETTING_AUTOCONNECT
-			&& (s = Settings_load_str("username")) && strcpy(username, s)
-			&& (s = Settings_load_str("password")))
-		Login(username, s);
+	if (g_settings.flags & SETTING_AUTOCONNECT)
+		autologin();
 
 #ifndef NDEBUG
+	char *s;
 	if ((s = Settings_load_str("last_map")))
 		Sync_on_changed_map(_strdup(s));
 	if ((s = Settings_load_str("last_mod")))
@@ -533,6 +527,21 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 	return 0;
 }
 
+static bool
+autologin(void)
+{
+	char username[MAX_NAME_LENGTH_NUL], password[1024];
+
+	if (Settings_load_str2(username, "username"))
+		return false;
+
+	if (Settings_load_str2(password, "password"))
+		return false;
+
+	TasServer_send_login(username, password);
+	return true;
+}
+
 static void __attribute__((constructor))
 _init(void)
 {
@@ -546,4 +555,15 @@ _init(void)
 	};
 
 	RegisterClassEx(&window_class);
+}
+
+static void
+launch_spring_settings(void)
+{
+	STARTUPINFO startup_info = {0};
+	PROCESS_INFORMATION process_info;
+	startup_info.cb= sizeof(startup_info);
+	CreateProcess(L"springsettings.exe", L"springsettings.exe",
+			NULL, NULL, 0, 0, NULL,NULL,
+			&startup_info, &process_info);
 }

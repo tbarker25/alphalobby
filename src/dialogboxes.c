@@ -30,7 +30,7 @@
 #include <shellapi.h>
 
 #include "battle.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
@@ -101,7 +101,7 @@ on_login(HWND window, int is_registering)
 	g_settings.flags = (g_settings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT, BM_GETCHECK, 0, 0);
 
 	if (is_registering) {
-		Login(username, password);
+		TasServer_send_login(username, password);
 		return 0;
 
 	}
@@ -118,7 +118,7 @@ retry:
 		goto retry;
 	}
 
-	RegisterAccount(username, password);
+	TasServer_send_register(username, password);
 	return 0;
 }
 
@@ -222,7 +222,7 @@ on_host_ok(HWND window)
 			else
 				return 1;
 		}
-		OpenBattle(description, password, mod, map, port);
+		TasServer_send_open_battle(*password ? password : NULL, port, mod, map, description);
 	}
 	return 0;
 }
@@ -300,7 +300,7 @@ color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			/* TODO */
 			/* union UserOrBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA); */
 			/* uint32_t color = get_rgb(window); */
-			/* SetMyColor(s, color); */
+			/* TasServer_send_my_color(s, color); */
 		} // fallthrough:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
@@ -365,7 +365,7 @@ change_password_proc(HWND window, UINT msg, WPARAM w_param,
 			if (strcmp(new_password, confirm_password))
 				MessageBox(window, L"_passwords don't match", L"Couldn't Change _password", 0);
 			else {
-				Change_password(old_password, new_password);
+				TasServer_send_change_password(old_password, new_password);
 				EndDialog(window, 0);
 			}
 			return 1;
@@ -436,7 +436,7 @@ agreement_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			ConfirmAgreement();
+			TasServer_send_confirm_agreement();
 			//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
@@ -729,13 +729,13 @@ LPARAM GetTextDlg(const char *title, char *buf, size_t buf_len)
 }
 
 void
-CreateChange_password_dlg(void)
+CreateChangePasswordDlg(void)
 {
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_CHANGEPASSWORD), g_main_window, change_password_proc);
 }
 
 void
-CreateLoginBox(void)
+CreateLoginDlg(void)
 {
 	DialogBox(NULL, MAKEINTRESOURCE(IDD_LOGIN), g_main_window, login_proc);
 }

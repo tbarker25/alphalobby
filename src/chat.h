@@ -48,6 +48,7 @@ void Chat_add_user(HWND window, struct User *u);
 HWND Chat_get_channel_window(const char *name);
 HWND Chat_get_private_window(struct User *);
 HWND Chat_get_server_window(void);
+void Chat_join_channel(const char *channel_name, int focus);
 void Chat_on_disconnect(void);
 void Chat_on_left_battle(HWND window, struct User *u);
 void Chat_said(HWND window, const char *username, ChatType type, const char *text);

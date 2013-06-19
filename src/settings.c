@@ -27,7 +27,7 @@
 #include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "mybattle.h"
 #include "settings.h"
@@ -67,22 +67,30 @@ get_line(FILE *fd)
 	return (KeyPair){buf, delim+1, 0};
 }
 
+bool
+Settings_load_str2(char *restrict buf, const char *restrict key)
+{
+	FILE *fd = _wfopen(CONFIG_PATH, L"r");
+	if (!fd)
+		return true;
+
+	for (KeyPair s; (s = get_line(fd)).key;) {
+		if (strcmp(key, s.key))
+			continue;
+
+		strcpy(buf, s.val);
+		fclose(fd);
+		return false;
+	}
+	fclose(fd);
+	return true;
+}
+
 char *
 Settings_load_str(const char *key)
 {
-	static __thread char val[1024];
-	FILE *fd = _wfopen(CONFIG_PATH, L"r");
-	if (fd) {
-		for (KeyPair s; (s = get_line(fd)).key;) {
-			if (!strcmp(key, s.key)) {
-				strcpy(val, s.val);
-				fclose(fd);
-				return val;
-			}
-		}
-		fclose(fd);
-	}
-	return NULL;
+	static __thread char buf[1024];
+	return Settings_load_str2(buf, key) ? NULL : buf;
 }
 
 int
@@ -112,7 +120,7 @@ Settings_open_default_channels(void)
 		if (*s == '*')
 			ChatWindow_set_active_tab(Chat_get_server_window());
 		else
-			JoinChannel(s, 0);
+			Chat_join_channel(s, 0);
 	}
 }
 

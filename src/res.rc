@@ -17,8 +17,8 @@ IDR_MENU MENUEX
 {
     POPUP "&Server", 0, 0, 0
     {
-        MENUITEM "&Server_connect", IDM_CONNECT, 0, 0
-        MENUITEM "&Server_disconnect", IDM_DISCONNECT, 0, 0
+        MENUITEM "&Connect", IDM_CONNECT, 0, 0
+        MENUITEM "&Disconnect", IDM_DISCONNECT, 0, 0
         MENUITEM "Server &Log", IDM_SERVER_LOG, 0, 0
         MENUITEM "", 0, MFT_SEPARATOR, 0
         MENUITEM "&Quit\tAlt+F4", IDM_QUIT, 0, 0
@@ -164,12 +164,12 @@ FONT 8, "Ms Shell Dlg 2"
     EDITTEXT        IDC_LOGIN_USERNAME, 45, 7, 91, 14, ES_AUTOHSCROLL
     EDITTEXT        IDC_LOGIN_PASSWORD, 45, 25, 91, 14, ES_AUTOHSCROLL | ES_PASSWORD
     AUTOCHECKBOX    "Remember password", IDC_LOGIN_SAVE, 7, 46, 83, 10
-    AUTOCHECKBOX    "Server_connect on startup", IDC_LOGIN_AUTOCONNECT, 7, 60, 78, 10
+    AUTOCHECKBOX    "Connect on startup", IDC_LOGIN_AUTOCONNECT, 7, 60, 78, 10
     DEFPUSHBUTTON   "Login", IDOK, 29, 75, 50, 14
     PUSHBUTTON      "Cancel", IDCANCEL, 86, 75, 50, 14
     PUSHBUTTON      "Create\r\nAccount", IDC_LOGIN_REGISTER, 100, 46, 36, 22, BS_MULTILINE
-    LTEXT           "_username:", IDC_LOGIN_USERNAME_L, 7, 10, 36, 8, SS_LEFT
-    LTEXT           "_password:", IDC_LOGIN_PASSWORD_L, 7, 28, 34, 8, SS_LEFT
+    LTEXT           "username:", IDC_LOGIN_USERNAME_L, 7, 10, 36, 8, SS_LEFT
+    LTEXT           "password:", IDC_LOGIN_PASSWORD_L, 7, 28, 34, 8, SS_LEFT
 }
 
 
@@ -180,7 +180,7 @@ CAPTION "Lobby Preferences"
 FONT 8, "Ms Shell Dlg"
 {
     EDITTEXT        IDC_PREFERENCES_PATH, 7, 18, 200, 14, ES_AUTOHSCROLL
-    AUTOCHECKBOX    "Server_connect on start", IDC_PREFERENCES_AUTOCONNECT, 7, 42, 68, 10
+    AUTOCHECKBOX    "Connect on start", IDC_PREFERENCES_AUTOCONNECT, 7, 42, 68, 10
     PUSHBUTTON      "Reset preferences", IDC_PREFERENCES_RESET, 7, 59, 63, 14
     DEFPUSHBUTTON   "Apply", IDOK, 100, 59, 50, 14
     PUSHBUTTON      "Cancel", IDCANCEL, 157, 59, 50, 14

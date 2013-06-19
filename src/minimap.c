@@ -25,7 +25,7 @@
 #include <commctrl.h>
 
 #include "battle.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "iconlist.h"
 #include "minimap.h"
@@ -459,7 +459,7 @@ on_command(WPARAM w_param)
 		GetCursorPos(&pt);
 		int map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, g_minimap, NULL);
 		if (map_index > 0)
-			ChangeMap(g_maps[map_index - 1]);
+			TasServer_send_change_map(g_maps[map_index - 1]);
 		DestroyMenu(menu);
 		return 0;
 

@@ -8,20 +8,18 @@
 #include "battle.h"
 #include "battleroom.h"
 #include "chat.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "host_spads.h"
 #include "mybattle.h"
 #include "spring.h"
 #include "user.h"
 
-#define Server_send(format, ...)\
-	(g_last_auto_message = GetTickCount(), Server_send(format, ## __VA_ARGS__))
+static void relay_command(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
 
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
-static void kick(const char *name);
+static void kick(const union UserOrBot *);
 static void said_battle(const char *username, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
@@ -42,22 +40,21 @@ const HostType HOST_SPADS = {
 static void
 force_ally(const char *name, int ally)
 {
-	Server_send("SAYPRIVATE %s !force %s team %d",
-			g_my_battle->founder->name, name, ally);
+	relay_command("!force %s team %d",
+			name, ally);
 }
 
 static void
 force_team(const char *name, int team)
 {
-	Server_send("SAYPRIVATE %s !force %s id %d",
-			g_my_battle->founder->name, name, team);
+	relay_command("!force %s id %d",
+			name, team);
 }
 
 static void
-kick(const char *name)
+kick(const UserOrBot *u)
 {
-	Server_send("SAYPRIVATE %s !kick %s",
-			g_my_battle->founder->name, name);
+	relay_command("!kick %s", u->name);
 }
 
 static void
@@ -78,25 +75,24 @@ said_battle(const char *username, char *text)
 static void
 set_map(const char *map_name)
 {
-	Server_send("SAYPRIVATE %s !map %s",
-			g_my_battle->founder->name, map_name);
+	relay_command("!map %s",
+	    map_name);
 }
 
 static void
 set_option(Option *opt, const char *val)
 {
-	Server_send("SAYPRIVATE %s !b_set %s %s",
-			g_my_battle->founder->name, opt->key, val);
+	relay_command("!b_set %s %s",
+	    opt->key, val);
 }
 
 static void
 set_split(int size, SplitType type)
 {
 	if (STARTPOS_CHOOSE_INGAME != g_battle_options.start_pos_type)
-		Server_send("SAYPRIVATE %s !b_set startpostype 2",
-				g_my_battle->founder->name);
-	Server_send("SAYPRIVATE %s !split %s %d",
-			g_my_battle->founder->name,
+		relay_command("!b_set startpostype 2");
+
+	relay_command("!split %s %d",
 			(char [][3]){"h", "v", "c1", "c2"}[type],
 			size/2);
 }
@@ -107,6 +103,19 @@ start_game(void)
 	if (g_my_battle->founder->ingame)
 		Spring_launch();
 	else
-		Server_send("SAYPRIVATE %s !start",
-				g_my_battle->founder->name);
+		relay_command("!start");
+}
+
+static void
+relay_command(const char *format, ...)
+{
+	char buf[1024];
+	va_list args;
+
+	va_start (args, format);
+	vsprintf(buf, format, args);
+	va_end(args);
+
+	TasServer_send_say_private((User *)g_my_battle->founder, buf);
+	g_last_auto_message = GetTickCount();
 }

@@ -73,7 +73,7 @@ typedef struct StartRect {
 typedef struct HostType {
 	void (*force_ally)(const char *name, int ally_id);
 	void (*force_team)(const char *name, int team_id);
-	void (*kick)(const char *name);
+	void (*kick)(const union UserOrBot *);
 	void (*said_battle)(const char *username, char *text);
 	void (*set_map)(const char *map_name);
 	void (*set_option)(Option *opt, const char *val);
@@ -105,7 +105,7 @@ void MyBattle_append_script(char *restrict script);
 void MyBattle_change_option(struct Option *restrict opt);
 struct BattleStatus MyBattle_new_battle_status(void) __attribute__((pure));
 void MyBattle_joined_battle(struct Battle *restrict b, uint32_t mod_hash);
-void MyBattle_leave(void);
+void TasServer_send_leave_battle(void);
 void MyBattle_left_battle(void);
 void Rebalance(void);
 void ResetBattleOptions(void);

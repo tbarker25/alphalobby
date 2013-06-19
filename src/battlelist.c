@@ -29,7 +29,7 @@
 #include "battlelist.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "downloader.h"
 #include "iconlist.h"
@@ -211,7 +211,7 @@ on_item_right_click(POINT pt)
 	case FAIL:
 		break;
 	case JOIN:
-		JoinBattle(b->id, NULL);
+		TasServer_send_join_battle(b->id, NULL);
 		break;
 	case DL_MAP:
 		DownloadMap(b->map_name);
@@ -292,7 +292,7 @@ battlelist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			return 0;
 
 		case LVN_ITEMACTIVATE:
-			JoinBattle(get_battle_from_index(((LPNMITEMACTIVATE)l_param)->iItem)->id, NULL);
+			TasServer_send_join_battle(get_battle_from_index(((LPNMITEMACTIVATE)l_param)->iItem)->id, NULL);
 			return 0;
 
 		case NM_RCLICK:

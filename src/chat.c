@@ -34,8 +34,7 @@
 #include "battle.h"
 #include "chat.h"
 #include "chat_window.h"
-#include "client.h"
-#include "client_message.h"
+#include "tasserver.h"
 #include "common.h"
 #include "dialogboxes.h"
 #include "downloader.h"
@@ -92,8 +91,6 @@ static void             on_tab            (HWND window, UINT_PTR type, InputBoxD
 static BOOL CALLBACK    enum_child_proc   (HWND window, LPARAM user);
 static void             update_user       (HWND window, User *u, int index);
 
-static const char *CHAT_STRINGS[] = {"SAYBATTLE", "SAYPRIVATE ", "SAY "};
-static const char *CHATEX_STRINGS[] = {"SAYBATTLEEX", "SAYPRIVATE ", "SAYEX "};
 static HWND g_channel_windows[128];
 static HWND g_server_chat_window;
 
@@ -254,7 +251,7 @@ on_tab(HWND window, UINT_PTR type, InputBoxData *data)
 		const char *name = ((User *)info.lParam)->name;
 		const char *s = NULL;
 		if (!_strnicmp(name, text+start, strlen(text+start))
-				|| ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
+		    || ((s = strchr(name, ']')) && !_strnicmp(s + 1, text+start, strlen(text+start)))) {
 			data->last_index = info.iItem + 1;
 			SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
 			data->offset = s ? s - name + 1 : 0;
@@ -272,9 +269,29 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 {
 	char *code = strsep(&s, " ");
 
-	if (!strcmp(code, "me"))
-		Server_send("%s%s %s", CHATEX_STRINGS[type], utf16to8(dest_name), s + LENGTH("me ") - 1);
-	else if (!strcmp(code, "resync"))
+	if (!strcmp(code, "me")) {
+		const char *message = s + LENGTH("me ") - 1;
+		switch (type) {
+
+		case DEST_BATTLE:
+			TasServer_send_say_battle_ex(message);
+			break;
+
+		case DEST_PRIVATE:
+			TasServer_send_say_private((User *)utf16to8(dest_name), message);
+			break;
+
+		case DEST_CHANNEL:
+			TasServer_send_say_channel_ex(utf16to8(dest_name), message);
+			break;
+
+		case DEST_SERVER:
+			/* TODO */
+			/* TasServer_send("%s", message); */
+			break;
+		}
+
+	} else if (!strcmp(code, "resync"))
 		Sync_reload();
 	else if (!strcmp(code, "dlmap"))
 		DownloadMap(s);
@@ -284,7 +301,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		char *username = strsep(&s, " ");
 		User *u = Users_find(username);
 		if (u) {
-			Server_send("SAYPRIVATE %s %s", u->name, s);
+			TasServer_send_say_private(u, s);
 			ChatWindow_set_active_tab(Chat_get_private_window(u));
 		} else {
 			char buf[128];
@@ -292,13 +309,13 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 			Chat_said(GetParent(window), NULL, CHAT_SYSTEM, buf);
 		}
 	} else if (!strcmp(code, "j") || !strcmp(code, "join"))
-		JoinChannel(s, 1);
+		Chat_join_channel(s, 1);
 	else if (!strcmp(code, "away")) {
 		ClientStatus cs = g_last_client_status;
 		cs.away = !cs.away;
-		SetMyClientStatus(cs);
+		TasServer_send_my_client_status(cs);
 	} else if (!strcmp(code, "ingametime"))
-		Server_send("GETINGAMETIME");
+		TasServer_send_get_ingame_time();
 	else if (!strcmp(code, "split")) {
 		char *split_type = strsep(&s, " ");
 		SplitType type = !strcmp(split_type, "h") ? SPLIT_HORZ
@@ -311,7 +328,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 	} else if (!strcmp(code, "ingame")) {
 		ClientStatus cs = g_last_client_status;
 		cs.ingame = !cs.ingame;
-		SetMyClientStatus(cs);
+		TasServer_send_my_client_status(cs);
 	}
 }
 
@@ -366,10 +383,23 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 		GetWindowText(GetParent(window), dest_name, sizeof(dest_name));
 		if (text_a[0] == '/') {
 			on_escape_command(text_a + 1, type, dest_name, window);
-		} else if (type == DEST_SERVER)
-			Server_send("%s", text_a);
-		else
-			Server_send("%s%s %s", CHAT_STRINGS[type], utf16to8(dest_name), text_a);
+
+		} else if (type == DEST_BATTLE) {
+			TasServer_send_say_battle(text_a);
+
+		} else if (type == DEST_PRIVATE) {
+			TasServer_send_say_private((User *)utf16to8(dest_name), text_a);
+
+		} else if (type == DEST_CHANNEL) {
+			TasServer_send_say_channel(utf16to8(dest_name), text_a);
+
+		} else if (type == DEST_SERVER) {
+			/* TODO */
+			/* TasServer_send("%s", text_a); */
+
+		} else {
+			assert(0);
+		}
 
 		SetWindowLongPtr(GetDlgItem(GetParent(window), DLG_LOG), GWLP_USERDATA, 0);
 		data->buffTail += len+1;
@@ -453,7 +483,7 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	case WM_CLOSE: {
 		ChatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 		if (data->type == DEST_CHANNEL)
-			LeaveChannel(data->name);
+			TasServer_send_leave_channel(data->name);
 		ChatWindow_remove_tab(window);
 	}	return 0;
 	case WM_SIZE:
@@ -721,3 +751,21 @@ Chat_on_disconnect(void)
 				LVM_DELETEALLITEMS, 0, 0);
 	}
 }
+
+void
+Chat_join_channel(const char *channel_name, int focus)
+{
+	channel_name += *channel_name == '#';
+
+	for (const char *c=channel_name; *c; ++c) {
+		if (!isalnum(*c) && *c != '[' && *c != ']') {
+			MainWindow_msg_box("Couldn't join channel", "Unicode channels are not allowed.");
+			return;
+		}
+	}
+
+	TasServer_send_join_channel(channel_name);
+	if (focus)
+		ChatWindow_set_active_tab(Chat_get_channel_window(channel_name));
+}
+
