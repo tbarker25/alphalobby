@@ -470,7 +470,6 @@ on_create(HWND window, LPARAM l_param)
 		ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
 		IconList_enable_for_listview(list);
 	}
-	// return 0;
 }
 
 static LRESULT CALLBACK
@@ -767,5 +766,4 @@ Chat_join_channel(const char *channel_name, int focus)
 	TasServer_send_join_channel(channel_name);
 	if (focus)
 		ChatWindow_set_active_tab(Chat_get_channel_window(channel_name));
-}
-
+	}

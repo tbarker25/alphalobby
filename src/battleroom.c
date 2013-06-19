@@ -264,10 +264,11 @@ set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon)
 {
 	LVITEM item;
 	item.iItem = list_index;
-	item.mask = state_icon == (IconIndex)-1 ? LVIF_IMAGE : LVIF_IMAGE | LVIF_STATE;
+	item.mask = state_icon ? LVIF_IMAGE : LVIF_IMAGE | LVIF_STATE;
 	item.iSubItem = column_index;
-	item.iImage = icon != (IconIndex)-1 ? icon : -1;
+	item.iImage = icon ?: -1;
 	item.state = INDEXTOOVERLAYMASK(state_icon);
+	item.stateMask = LVIS_OVERLAYMASK;
 	SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_SETITEM,
 			0, (LPARAM)&item);
 }
@@ -283,10 +284,10 @@ set_player_icon(const UserOrBot *u, int list_index)
 	if (u->mode && *g_side_names[u->side])
 		side_icon = ICON_FIRST_SIDE + u->side;
 
-	set_icon(list_index, COLUMN_SIDE, side_icon, -1);
-	set_icon(list_index, COLUMN_COLOR, IconList_get_user_color(u), -1);
-	set_icon(list_index, COLUMN_FLAG, ICON_FIRST_FLAG + u->user.country, -1);
-	set_icon(list_index, COLUMN_RANK, ICON_FIRST_RANK + u->user.rank, -1);
+	set_icon(list_index, COLUMN_SIDE, side_icon, 0);
+	set_icon(list_index, COLUMN_COLOR, IconList_get_user_color(u), 0);
+	set_icon(list_index, COLUMN_FLAG, ICON_FIRST_FLAG + u->user.country, 0);
+	set_icon(list_index, COLUMN_RANK, ICON_FIRST_RANK + u->user.rank, 0);
 
 	{
 		LVITEM item;
