@@ -86,7 +86,7 @@ Users_del(User *u)
 
 void
 Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
-		uint32_t color, const char *aiDll)
+		uint32_t color, const char *dll)
 {
 	Bot *bot = calloc(1, sizeof(*bot));
 	strcpy(bot->name, name);
@@ -95,7 +95,7 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 	bot->ai = 1;
 	bot->mode = 1;
 	bot->color = color;
-	bot->dll = _strdup(aiDll);
+	bot->dll = _strdup(dll);
 
 	Battle *b = g_my_battle;
 	int i=b->user_len - b->bot_len;
