@@ -80,11 +80,11 @@ enum DialogId {
 };
 
 static void             _init(void);
-static int              add_user_to_playerlist(union UserOrBot *u);
+static int              add_user_to_playerlist(const UserBot *);
 static LRESULT CALLBACK battle_room_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
-static int              find_user(const void *u);
-static const char *     get_effective_name(const union UserOrBot *s);
-static wchar_t *        get_tooltip(const User *u);
+static int              find_user(const void *);
+static const char *     get_effective_name(const UserBot *);
+static wchar_t *        get_tooltip(const User *);
 static void             on_create(HWND window);
 static LRESULT          on_command(WPARAM w_param, HWND window);
 static LRESULT          on_notify(WPARAM w_param, NMHDR *note);
@@ -92,9 +92,9 @@ static void             on_size(LPARAM l_param);
 static void             refresh_playerlist(void);
 static void             set_details(const Option *options, ssize_t option_len);
 static void             set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon);
-static void             set_player_icon(const UserOrBot *u, int list_index);
+static void             set_player_icon(const UserBot *, int list_index);
 static void             set_side_icons(void);
-static int CALLBACK     sort_listview(const union UserOrBot *u1, const union UserOrBot *u2, LPARAM unused);
+static int CALLBACK     sort_listview(const UserBot *u1, const UserBot *u2, LPARAM unused);
 static LRESULT CALLBACK tooltip_subclass(HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 static void             update_group(uint8_t group_id);
 
@@ -180,22 +180,22 @@ find_user(const void *u)
 }
 
 void
-BattleRoom_on_left_battle(const union UserOrBot *s)
+BattleRoom_on_left_battle(const UserBot *u)
 {
-	SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_DELETEITEM, find_user(s), 0);
+	SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_DELETEITEM, find_user(u), 0);
 }
 
 static const char *
-get_effective_name(const union UserOrBot *s)
+get_effective_name(const UserBot *u)
 {
-	if (s->ai)
-		return s->bot.owner->name;
+	if (u->ai)
+		return ((Bot *)u)->owner->name;
 
-	return s->name;
+	return u->name;
 }
 
 static int CALLBACK
-sort_listview(const union UserOrBot *u1, const union UserOrBot *u2,
+sort_listview(const UserBot *u1, const UserBot *u2,
 		__attribute__((unused)) LPARAM unused)
 {
 	return _stricmp(get_effective_name(u1), get_effective_name(u2));
@@ -233,7 +233,7 @@ BattleRoom_is_auto_unspec(void)
 }
 
 static int
-add_user_to_playerlist(union UserOrBot *u)
+add_user_to_playerlist(const UserBot *u)
 {
 	LVITEM item;
 	wchar_t buf[MAX_NAME_LENGTH * 2 + 4];
@@ -250,10 +250,10 @@ add_user_to_playerlist(union UserOrBot *u)
 	buf_end = buf + _swprintf(buf, L"%hs", u->name);
 	if (u->ai)
 		_snwprintf(buf_end, LENGTH(buf) - (buf_end - buf),
-				L" (%hs)", u->bot.dll);
+				L" (%hs)", ((Bot *)u)->dll);
 	else
 		_snwprintf(buf_end, LENGTH(buf) - (buf_end - buf),
-				L" (%hs)", u->user.alias);
+				L" (%hs)", ((User *)u)->alias);
 
 	return SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_INSERTITEM, 0,
 			(LPARAM)&item);
@@ -264,7 +264,7 @@ set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon)
 {
 	LVITEM item;
 	item.iItem = list_index;
-	item.mask = state_icon ? LVIF_IMAGE : LVIF_IMAGE | LVIF_STATE;
+	item.mask = state_icon ? LVIF_IMAGE | LVIF_STATE : LVIF_IMAGE;
 	item.iSubItem = column_index;
 	item.iImage = icon ?: -1;
 	item.state = INDEXTOOVERLAYMASK(state_icon);
@@ -274,7 +274,7 @@ set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon)
 }
 
 static void
-set_player_icon(const UserOrBot *u, int list_index)
+set_player_icon(const UserBot *u, int list_index)
 {
 	IconIndex side_icon;
 	IconIndex status_icon;
@@ -286,8 +286,14 @@ set_player_icon(const UserOrBot *u, int list_index)
 
 	set_icon(list_index, COLUMN_SIDE, side_icon, 0);
 	set_icon(list_index, COLUMN_COLOR, IconList_get_user_color(u), 0);
-	set_icon(list_index, COLUMN_FLAG, ICON_FIRST_FLAG + u->user.country, 0);
-	set_icon(list_index, COLUMN_RANK, ICON_FIRST_RANK + u->user.rank, 0);
+
+	if (u->ai)
+		return;
+
+	User *user = (User *)u;
+
+	set_icon(list_index, COLUMN_FLAG, ICON_FIRST_FLAG + user->country, 0);
+	set_icon(list_index, COLUMN_RANK, ICON_FIRST_RANK + user->rank, 0);
 
 	{
 		LVITEM item;
@@ -300,12 +306,9 @@ set_player_icon(const UserOrBot *u, int list_index)
 				0, (LPARAM)&item);
 	}
 
-	if (u->ai)
-		return;
-
-	status_icon = &u->user == g_my_battle->founder
+	status_icon = user == g_my_battle->founder
 		? (u->mode ? ICON_HOST : ICON_HOST_SPECTATOR)
-		: u->user.ingame ? ICON_INGAME
+		: user->ingame ? ICON_INGAME
 		: !u->mode ? ICON_SPECTATOR
 		: u->ready ? ICON_READY
 		: ICON_UNREADY;
@@ -313,9 +316,9 @@ set_player_icon(const UserOrBot *u, int list_index)
 	status_overlay = ICONMASK_USER;
 	if (u->sync != SYNC_SYNCED)
 		status_overlay |= ICONMASK_SYNC;
-	if (u->user.away)
+	if (user->away)
 		status_overlay |= ICONMASK_AWAY;
-	if (u->user.ignore)
+	if (user->ignore)
 		status_overlay |= ICONMASK_IGNORE;
 	set_icon(list_index, COLUMN_STATUS, status_icon, status_overlay);
 }
@@ -335,7 +338,7 @@ refresh_playerlist(void)
 		wchar_t buf[128], *buf_end;
 
 		buf_end = buf;
-		u = &g_my_battle->users[i]->user;
+		u = (User *)g_my_battle->users[i];
 
 		if (u->mode && team_sizes[u->team] > 1)
 			buf_end += _swprintf(buf_end, L"%d: ", u->team+1);
@@ -361,7 +364,7 @@ refresh_playerlist(void)
 }
 
 void
-BattleRoom_update_user(union UserOrBot *u)
+BattleRoom_update_user(const UserBot *u)
 {
 	int list_index;
 
@@ -648,7 +651,7 @@ on_notify(WPARAM w_param, NMHDR *note)
 			return 0;
 
 		SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
-		UserMenu_spawn((UserOrBot *)item.lParam, g_battle_room);
+		UserMenu_spawn((UserBot *)item.lParam, g_battle_room);
 		return 1;
 	}
 	return DefWindowProc(g_battle_room, WM_NOTIFY, w_param, (LPARAM)note);
@@ -790,9 +793,9 @@ BattleRoom_on_change_mod(void)
 		SendMessage(player_list, LVM_GETITEM, 0, (LPARAM)&item);
 		item.mask = LVIF_IMAGE;
 		item.iSubItem = COLUMN_SIDE;
-		union UserOrBot *s = (void *)item.lParam;
-		item.iImage = s->mode
-			&& *g_side_names[s->side] ? ICON_FIRST_SIDE + (int)s->side : -1;
+		UserBot *u = (void *)item.lParam;
+		item.iImage = u->mode
+			&& *g_side_names[u->side] ? ICON_FIRST_SIDE + (int)u->side : -1;
 		SendMessage(player_list, LVM_SETITEM, 0, (LPARAM)&item);
 	}
 }

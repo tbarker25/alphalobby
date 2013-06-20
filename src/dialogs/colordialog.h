@@ -19,8 +19,8 @@
 #ifndef COLORDIALOG_H
 #define COLORDIALOG_H
 
-union UserOrBot;
+struct UserBot;
 
-void ColorDialog_create(union UserOrBot *);
+void ColorDialog_create(struct UserBot *);
 
 #endif /* end of include guard: COLORDIALOG_H */

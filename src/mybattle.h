@@ -24,7 +24,7 @@
 #define NUM_TEAMS 16
 #define NUM_ALLIANCES 16
 
-union UserOrBot;
+struct UserBot;
 
 typedef enum SplitType {
 	SPLIT_HORZ,
@@ -75,7 +75,7 @@ typedef struct StartRect {
 typedef struct HostType {
 	void (*force_ally)(const char *name, int ally_id);
 	void (*force_team)(const char *name, int team_id);
-	void (*kick)(const union UserOrBot *);
+	void (*kick)(const struct UserBot *);
 	void (*said_battle)(const char *username, char *text);
 	void (*set_map)(const char *map_name);
 	void (*set_option)(Option *opt, const char *val);
@@ -97,7 +97,8 @@ typedef struct MapInfo_ {
 	char _author[201];
 } MapInfo_;
 
-union UserOrBot;
+struct UserBot;
+struct UserBot;
 struct Battle;
 struct BattleStatus;
 struct Battle;
@@ -113,7 +114,7 @@ void Rebalance(void);
 void ResetBattleOptions(void);
 void MyBattle_set_map(const char *name);
 void MyBattle_set_split(SplitType, int size);
-void MyBattle_update_battle_status(union UserOrBot *s, struct BattleStatus battle_status, uint32_t color);
+void MyBattle_update_battle_status(struct UserBot *, struct BattleStatus battle_status, uint32_t color);
 void MyBattle_update_mod_options(void);
 
 extern MapInfo_ g_map_info;

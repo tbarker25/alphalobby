@@ -81,11 +81,11 @@ typedef enum IconIndex {
 	ICON_SINGLEPLAYER = ICONMASK_INGAME,
 } IconIndex;
 
-union UserOrBot;
+struct UserBot;
 
 void  IconList_replace_icon        (IconIndex, HBITMAP);
 HICON IconList_get_icon            (IconIndex);
-int   IconList_get_user_color      (const union UserOrBot *);
+int   IconList_get_user_color      (const struct UserBot *);
 void  IconList_set_window_image    (HWND, IconIndex);
 void  IconList_enable_for_listview (HWND);
 void  IconList_enable_for_toolbar  (HWND);

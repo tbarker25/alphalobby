@@ -44,7 +44,7 @@ typedef struct Battle {
 	uint8_t passworded, locked, type, max_players, rank, user_len, spectator_len, bot_len;
 	enum NatType nat_type;
 	union {
-		union UserOrBot *users[128];
+		struct UserBot *users[128];
 		struct User *founder;
 	};
 } Battle;

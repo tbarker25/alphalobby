@@ -493,7 +493,7 @@ TasServer_send_force_team(const char *name, int team)
 }
 
 void
-TasServer_send_kick(const UserOrBot *u)
+TasServer_send_kick(const UserBot *u)
 {
 	if (u->ai) {
 		send_to_server("REMOVEBOT %s", u->name);

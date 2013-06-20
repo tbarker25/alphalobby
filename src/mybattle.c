@@ -149,7 +149,7 @@ MyBattle_left_battle(void)
 	BattleRoom_on_set_mod_details();
 
 	while (g_my_battle->bot_len)
-		Users_del_bot(g_my_battle->users[g_my_battle->user_len - 1]->bot.name);
+		Users_del_bot(g_my_battle->users[g_my_battle->user_len - 1]->name);
 
 	g_my_user.BattleStatus = (BattleStatus){0};
 	g_last_battle_status = (BattleStatus){0};
@@ -165,7 +165,7 @@ MyBattle_left_battle(void)
 
 
 void
-MyBattle_update_battle_status(UserOrBot *restrict u, BattleStatus bs, uint32_t color)
+MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t color)
 {
 	BattleStatus last_bs = u->BattleStatus;
 	u->BattleStatus = bs;
@@ -178,17 +178,17 @@ MyBattle_update_battle_status(UserOrBot *restrict u, BattleStatus bs, uint32_t c
 
 	BattleRoom_update_user(u);
 
-	if (&u->user == &g_my_user)
+	if (u == &g_my_user.UserBot)
 		g_last_battle_status = bs;
 
 	if (last_bs.mode != bs.mode
-			|| (last_bs.ally != bs.ally && &u->user == &g_my_user))
+			|| (last_bs.ally != bs.ally && u == &g_my_user.UserBot))
 		Minimap_on_start_position_change();
 
 	if (last_bs.mode == bs.mode)
 		return;
 
-	if (!bs.mode && (User *)u != &g_my_user
+	if (!bs.mode && u != &g_my_user.UserBot
 			&& BattleRoom_is_auto_unspec()) {
 		BattleStatus new_bs = g_last_battle_status;
 		new_bs.mode = 1;
@@ -290,10 +290,10 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 			return;
 		}
 		for (uint8_t i=0; i<g_my_battle->user_len; ++i) {
-			UserOrBot *u = g_my_battle->users[i];
+			UserBot *u = g_my_battle->users[i];
 			if (!u->ai && !_stricmp(u->name, username)) {
-				free(u->user.skill);
-				u->user.skill = _strdup(val);
+				free(((User *)u)->skill);
+				((User *)u)->skill = _strdup(val);
 			}
 		}
 		return;

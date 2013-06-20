@@ -19,7 +19,7 @@
 #ifndef TASSERVER_H
 #define TASSERVER_H
 
-union UserOrBot;
+struct UserBot;
 struct User;
 struct BattleStatus;
 struct ClientStatus;
@@ -47,7 +47,7 @@ void TasServer_send_get_channels(void);
 void TasServer_send_get_ingame_time(void);
 void TasServer_send_join_battle(uint32_t id, const char *password);
 void TasServer_send_join_channel(const char *channel_name);
-void TasServer_send_kick(const union UserOrBot *);
+void TasServer_send_kick(const struct UserBot *);
 void TasServer_send_leave_channel(const char *channel_name);
 void TasServer_send_login(const char *username, const char *password);
 void TasServer_send_my_battle_status(struct BattleStatus);

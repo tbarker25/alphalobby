@@ -478,23 +478,40 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
     switch (msg) {
 	case WM_CREATE:
 		on_create(window, l_param);
-		break;
+		return 0;
+
 	case WM_CLOSE: {
 		ChatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 		if (data->type == DEST_CHANNEL)
 			TasServer_send_leave_channel(data->name);
 		ChatWindow_remove_tab(window);
-	}	return 0;
+		return 0;
+	}
 	case WM_SIZE:
 		on_size(window, LOWORD(l_param), HIWORD(l_param));
-		return 1;
+		return 0;
+
 	case WM_COMMAND:
 		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL))
 			SetWindowLongPtr((HWND)l_param, GWLP_USERDATA, GetTickCount());
 		return 0;
+
 	case WM_NOTIFY: {
 		NMHDR *note = (NMHDR *)l_param;
 		if (note->idFrom == DLG_LIST) {
+			if (note->code == LVN_ITEMACTIVATE) {
+				LVITEM item;
+				item.mask = LVIF_PARAM;
+				item.iItem = ((LPNMITEMACTIVATE)l_param)->iItem;
+
+				if (item.iItem < 0)
+					return 0;
+
+				SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
+				ChatWindow_set_active_tab(Chat_get_private_window((User *)item.lParam));
+				return 0;
+			}
+
 			LVITEM item = {
 					.mask = LVIF_PARAM,
 					.iItem = -1,
@@ -511,8 +528,10 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			User *u = (void *)item.lParam;
 			if (u == &g_my_user)
 				return 0;
-			if (note->code == LVN_ITEMACTIVATE)
-				goto addtab;
+			if (note->code == LVN_ITEMACTIVATE) {
+				ChatWindow_set_active_tab(Chat_get_private_window(u));
+				return 0;
+			}
 			HMENU menu = CreatePopupMenu();
 			AppendMenu(menu, 0, 1, L"Private chat");
 			AppendMenu(menu, u->ignore * MF_CHECKED, 2, L"Ignore");
@@ -522,10 +541,9 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, ((LPNMITEMACTIVATE)l_param)->ptAction.x, ((LPNMITEMACTIVATE)l_param)->ptAction.y, window, NULL);
 			DestroyMenu(menu);
 			if (clicked == 1)
-				addtab:
 				ChatWindow_set_active_tab(Chat_get_private_window(u));
 			else if (clicked == 2) {
-				u->ignore ^= 1;
+				u->ignore = !u->ignore;
 				/* UpdateUser(u); */
 			} else if (clicked == 3) {
 				char title[128], buf[MAX_NAME_LENGTH_NUL];
@@ -685,6 +703,9 @@ Chat_get_channel_window(const char *name)
 HWND
 Chat_get_private_window(User *u)
 {
+	if (u == &g_my_user)
+		return NULL;
+
 	if (!u->chat_window) {
 		ChatWindowData *data = malloc(sizeof(*data));
 		*data = (ChatWindowData){u->name, DEST_PRIVATE};

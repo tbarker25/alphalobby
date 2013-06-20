@@ -19,7 +19,7 @@ static void relay_command(const char *format, ...) __attribute__ ((format (ms_pr
 
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
-static void kick(const union UserOrBot *);
+static void kick(const UserBot *);
 static void said_battle(const char *username, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
@@ -52,7 +52,7 @@ force_team(const char *name, int team)
 }
 
 static void
-kick(const UserOrBot *u)
+kick(const UserBot *u)
 {
 	relay_command("!kick %s", u->name);
 }

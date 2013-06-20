@@ -53,7 +53,7 @@ static void copy_start_positions (uint32_t *dst, int width, int height);
 static void copy_start_boxes     (uint32_t *pixels, int width, int height);
 static void copy_start_positions (uint32_t *dst, int width, int height);
 static void copy_metalmap        (uint32_t *dst, int width, int height);
-static uint32_t * copy_minimap   (int width, int height);
+static void copy_minimap         (uint32_t *dst, int width, int height);
 static void copy_normalmap       (uint32_t *dst, int width, int height);
 static void copy_metalmap        (uint32_t *dst, int width, int height);
 static void copy_heightmap       (uint32_t *dst, int width, int height);
@@ -352,41 +352,31 @@ copy_start_positions(uint32_t *dst, int width, int height)
 	}
 }
 
-static uint32_t *
-copy_minimap(int width, int height)
+static void
+copy_minimap(uint32_t *dst, int width, int height)
 {
-	uint32_t *ret;
-
-	if (!g_minimap_pixels)
-		return NULL;
-
-
-	ret = malloc(width * height * sizeof(*ret));
-
 	switch (g_minimap_type) {
 
 	case MINIMAP_HEIGHT:
-		copy_heightmap(ret, width, height);
+		copy_heightmap(dst, width, height);
 		break;
 
 	case MINIMAP_METAL:
-		copy_metalmap(ret, width, height);
+		copy_metalmap(dst, width, height);
 		break;
 
 	case MINIMAP_NORMAL:
-		copy_normalmap(ret, width, height);
+		copy_normalmap(dst, width, height);
 		break;
 	}
 
 	if (!g_my_battle)
-		return ret;
+		return;
 
 	if (g_battle_options.start_pos_type == STARTPOS_CHOOSE_INGAME)
-		copy_start_boxes(ret, width, height);
+		copy_start_boxes(dst, width, height);
 	else
-		copy_start_positions(ret, width, height);
-
-	return ret;
+		copy_start_positions(dst, width, height);
 }
 
 static void
@@ -395,9 +385,11 @@ on_draw(HWND window)
 	PAINTSTRUCT ps;
 	HBITMAP bitmap;
 	HDC bitmap_context;
-	uint32_t *pixels;
 	int width, height;
+	uint32_t *pixels;
+	RECT rect;
 
+	GetClientRect(window, &rect);
 	BeginPaint(window, &ps);
 
 	ps.rcPaint.top += MAP_Y(18);
@@ -405,25 +397,29 @@ on_draw(HWND window)
 
 	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH) (COLOR_BTNFACE+1));
 
-	width = ps.rcPaint.right;
-	height = ps.rcPaint.bottom;
-
-	if (!g_map_info.width || !g_map_info.height || !width || !height) {
+	if (!g_minimap_pixels)
 		return;
-	}
 
+	width = rect.right;
+	height = rect.bottom;
 
-	if (height * g_map_info.width > width * g_map_info.height)
+	if (!g_map_info.width || !g_map_info.height || !width || !height)
+		return;
+
+	if (height * g_map_info.width > width * g_map_info.height) {
 		height = width * g_map_info.height / g_map_info.width;
-	else
+
+	} else {
 		width = height * g_map_info.width / g_map_info.height;
+	}
 
 	if (!width || !height) {
 		assert(0);
 		return;
 	}
 
-	pixels = copy_minimap(width, height);
+	pixels = malloc(width * height * sizeof(*pixels));
+	copy_minimap(pixels, width, height);
 
 	if (!pixels)
 		return;
@@ -434,11 +430,10 @@ on_draw(HWND window)
 	bitmap_context = CreateCompatibleDC(ps.hdc);
 	SelectObject(bitmap_context, bitmap);
 
-	BitBlt(ps.hdc,
-			(ps.rcPaint.right - width) / 2,
-			ps.rcPaint.top + (ps.rcPaint.bottom - height) / 2,
-			ps.rcPaint.right, ps.rcPaint.bottom,
-			bitmap_context, 0, 0, SRCCOPY);
+	BitBlt(ps.hdc, (rect.right - width) / 2,
+	    rect.top + (rect.bottom - height) / 2,
+	    rect.right, rect.bottom,
+	    bitmap_context, 0, 0, SRCCOPY);
 
 	DeleteDC(bitmap_context);
 
