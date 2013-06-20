@@ -104,7 +104,7 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 		++i;
 	for (int j=b->user_len; j>i; --j)
 		b->users[j] = b->users[j-1];
-	b->users[i] = (UserOrBot *)bot;
+	b->users[i] = (UserBot *)bot;
 	++b->user_len;
 	++b->bot_len;
 
@@ -116,14 +116,18 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 void
 Users_del_bot(const char *name)
 {
-	int i = g_my_battle->user_len - g_my_battle->bot_len;
+	Bot *b;
+	int i;
+
+	i = g_my_battle->user_len - g_my_battle->bot_len;
 	while (i < g_my_battle->user_len
 			&& _stricmp(g_my_battle->users[i]->name, name) < 0)
 		++i;
 	BattleRoom_on_left_battle(g_my_battle->users[i]);
-	free(g_my_battle->users[i]->bot.dll);
-	free(g_my_battle->users[i]->bot.options);
-	free(g_my_battle->users[i]);
+	b = (Bot *)g_my_battle->users[i];
+	free(b->dll);
+	free(b->options);
+	free(b);
 	while (++i < g_my_battle->user_len)
 		g_my_battle->users[i - 1] = g_my_battle->users[i];
 	--g_my_battle->user_len;

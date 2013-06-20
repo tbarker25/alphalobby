@@ -32,7 +32,7 @@ static COLORREF get_rgb(HWND window);
 static BOOL CALLBACK color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
 
 void
-ColorDialog_create(union UserOrBot *u)
+ColorDialog_create(UserBot *u)
 {
 	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_COLOR), g_main_window, color_proc, (LPARAM)u);
 }
@@ -51,7 +51,7 @@ color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
-		union UserOrBot *s = (void *)l_param;
+		UserBot *s = (void *)l_param;
 		SetDlgItemInt(window, IDC_COLOR_R, s->red, 0);
 		SetDlgItemInt(window, IDC_COLOR_G, s->green, 0);
 		SetDlgItemInt(window, IDC_COLOR_B, s->blue, 0);
@@ -79,7 +79,7 @@ color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
 			/* TODO */
-			/* union UserOrBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA); */
+			/* UserBot *s = (void *)GetWindowLongPtr(window, GWLP_USERDATA); */
 			/* uint32_t color = get_rgb(window); */
 			/* TasServer_send_my_color(s, color); */
 		} // fallthrough:

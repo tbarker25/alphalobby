@@ -25,18 +25,18 @@
 	GetDlgItem(g_battle_room, DEST_BATTLE)
 
 struct Option;
-union UserOrBot;
+struct UserBot;
 typedef struct HWND__* HWND;
 
 void BattleRoom_hide(void);
 bool BattleRoom_is_auto_unspec(void);
 void BattleRoom_on_change_mod(void);
-void BattleRoom_on_left_battle(const union UserOrBot *);
+void BattleRoom_on_left_battle(const struct UserBot *);
 void BattleRoom_on_set_mod_details(void);
 void BattleRoom_on_set_option(struct Option *opt);
 void BattleRoom_resize_columns(void);
 void BattleRoom_show(void);
-void BattleRoom_update_user(union UserOrBot *);
+void BattleRoom_update_user(const struct UserBot *);
 
 extern HWND g_battle_room;
 

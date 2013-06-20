@@ -37,7 +37,7 @@
 #define ICON_WIDTH (sizeof(icon_data) / ICON_BBP / ICON_HEIGHT)
 
 static void _init                  (void);
-static int  get_player_color_index (const union UserOrBot *u);
+static int  get_player_color_index (const UserBot *u);
 static void set_icon_as_color      (int index, uint32_t color);
 
 static HIMAGELIST g_icon_list;
@@ -55,9 +55,9 @@ IconList_get_icon(IconIndex icon_index)
 }
 
 static int
-get_player_color_index(const union UserOrBot *u)
+get_player_color_index(const UserBot *u)
 {
-	static const UserOrBot *player_colors[ICON_LAST_COLOR - ICON_FIRST_COLOR + 1];
+	static const UserBot *player_colors[ICON_LAST_COLOR - ICON_FIRST_COLOR + 1];
 
 	if (!u->mode)
 		return -1;
@@ -105,7 +105,7 @@ set_icon_as_color(int index, uint32_t color)
 }
 
 int
-IconList_get_user_color(const union UserOrBot *u)
+IconList_get_user_color(const UserBot *u)
 {
 	int color_index;
 

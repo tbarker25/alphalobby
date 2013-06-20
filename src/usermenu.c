@@ -33,7 +33,7 @@
 #include "user.h"
 
 void
-UserMenu_spawn(union UserOrBot *s, HWND window)
+UserMenu_spawn(UserBot *s, HWND window)
 {
 	printf("%p %p\n", s, window);
 #if 0

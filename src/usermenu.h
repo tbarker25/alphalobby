@@ -21,6 +21,6 @@
 
 typedef struct HWND__* HWND;
 
-void UserMenu_spawn(union UserOrBot *s, HWND window);
+void UserMenu_spawn(struct UserBot *, HWND window);
 
 #endif /* end of include guard: USERMENU_H */

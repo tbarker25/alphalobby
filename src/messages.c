@@ -363,7 +363,7 @@ client_battle_status(void)
 	u = Users_find(get_next_word());
 	bs.as_int = get_next_int();
 
-	MyBattle_update_battle_status((UserOrBot *)u,
+	MyBattle_update_battle_status(u,
 			bs.BattleStatus,
 			get_next_int());
 }
@@ -526,7 +526,7 @@ left_battle(void)
 	u->battle = NULL;
 	int i=1; //Start at 1, we won't remove founder here
 	for (; i < b->user_len; ++i)
-		if (&b->users[i]->user == u)
+		if (u == (User *)b->users[i])
 			break;
 	assert(i < b->user_len);
 	if (i >= b->user_len)
@@ -838,10 +838,10 @@ update_bot(void)
 	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
 	char *name = get_next_word();
 	for (int i=g_my_battle->user_len - g_my_battle->bot_len; i<g_my_battle->user_len; ++i){
-		struct Bot *s = &g_my_battle->users[i]->bot;
+		struct Bot *s = (Bot *)g_my_battle->users[i];
 		if (!strcmp(name, s->name)){
 			/* uint32_t bs = get_next_int() | BS_AI | BS_MODE; */
-			/* MyBattle_update_battle_status((UserOrBot *)s, bs, get_next_int()); */
+			/* MyBattle_update_battle_status(s, bs, get_next_int()); */
 			return;
 		}
 	}
