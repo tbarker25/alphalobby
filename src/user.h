@@ -87,7 +87,7 @@ typedef struct Bot {
 	struct Bot *next;
 } Bot;
 
-void   Users_add_bot(const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *aiDll);
+void   Users_add_bot(const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *dll);
 void   Users_del(User *);
 void   Users_del_bot(const char *name);
 User * Users_find(const char username[]) __attribute__((pure));
