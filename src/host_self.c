@@ -33,7 +33,7 @@
 #include "sync.h"
 #include "user.h"
 
-static void said_battle(const char *username, char *text);
+static void said_battle(User *, char *text);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
 
@@ -53,9 +53,9 @@ force_color(const char *name, uint32_t color)    */
 /* }                                                           */
 
 static void
-said_battle(const char *username, char *text)
+said_battle(User *user, char *text)
 {
-	/* ChatBox_append(GetBattleChat(), username, 0, text); */
+	BattleRoom_said_battle(user->name, text, CHAT_NORMAL);
 }
 
 static void

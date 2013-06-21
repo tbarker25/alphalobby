@@ -188,8 +188,8 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 	if (last_bs.mode == bs.mode)
 		return;
 
-	if (!bs.mode && u != &g_my_user.UserBot
-			&& BattleRoom_is_auto_unspec()) {
+	if (!bs.mode && !g_my_user.mode && u != &g_my_user.UserBot
+	    && BattleRoom_is_auto_unspec()) {
 		BattleStatus new_bs = g_last_battle_status;
 		new_bs.mode = 1;
 		TasServer_send_my_battle_status(new_bs);
@@ -199,7 +199,6 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 	for (int i=0; i < g_my_battle->user_len; ++i)
 		g_my_battle->spectator_len += !g_my_battle->users[i]->mode;
 	BattleList_update_battle(g_my_battle);
-	/* Rebalance(); */
 }
 
 void

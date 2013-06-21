@@ -143,8 +143,8 @@ static void
 resize_current_tab(int16_t width, int16_t height)
 {
 	RECT toolbar_rect;
-	GetClientRect(GetDlgItem(g_main_window, DLG_TOOLBAR), &toolbar_rect);
 
+	GetClientRect(GetDlgItem(g_main_window, DLG_TOOLBAR), &toolbar_rect);
 	SetWindowPos(g_current_tab, NULL, 0, toolbar_rect.bottom, width, height - toolbar_rect.bottom, 0);
 }
 
@@ -199,6 +199,7 @@ MainWindow_ring(void)
 		.dwFlags = 0x00000003 | /* FLASHW_ALL */
 			0x0000000C, /* FLASHW_TIMERNOFG */
 	};
+
 	FlashWindowEx(&flashInfo);
 	MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLEROOM));
 }
@@ -481,15 +482,13 @@ MainWindow_msg_box(const char *caption, const char *text)
 void
 MainWindow_change_connect(enum ServerStatus state)
 {
+	TBBUTTONINFO info;
+
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_CHAT,
 			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_HOSTBATTLE,
 			state == CONNECTION_ONLINE ? TBSTATE_ENABLED : TBSTATE_DISABLED);
 
-	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
-	// SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
-
-	TBBUTTONINFO info;
 	info.cbSize = sizeof(TBBUTTONINFO);
 	info.dwMask = TBIF_IMAGE | TBIF_TEXT;
 	info.iImage = (IconIndex []){ICON_OFFLINE, ICON_CONNECTING, ICON_ONLINE}[state];
@@ -519,9 +518,7 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 			left, top, width, height,
 			NULL, (HMENU)0, NULL, NULL);
 
-	/* Chat_get_server_window(); */
 	Downloader_init();
-	/* RapidDialog_create(); */
 
 	if (g_settings.flags & SETTING_AUTOCONNECT)
 		autologin();
@@ -580,7 +577,8 @@ launch_spring_settings(void)
 {
 	STARTUPINFO startup_info = {0};
 	PROCESS_INFORMATION process_info;
-	startup_info.cb= sizeof(startup_info);
+
+	startup_info.cb = sizeof(startup_info);
 	CreateProcess(L"springsettings.exe", L"springsettings.exe",
 			NULL, NULL, 0, 0, NULL,NULL,
 			&startup_info, &process_info);

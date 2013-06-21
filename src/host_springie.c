@@ -12,28 +12,30 @@
 #include "mybattle.h"
 #include "user.h"
 
-static void said_battle(const char *username, char *text);
+static void said_battle(User *, char *text);
 
 const HostType HOST_SPRINGIE = {
 	.said_battle = said_battle,
 };
 
 static void
-said_battle(const char *username, char *text)
+said_battle(User *user, char *text)
 {
-	if (!strcmp(username, g_my_battle->founder->name)
-			&& text[0] == '[') {
+	if (user == g_my_battle->founder && text[0] == '[') {
+		int braces;
 
-		int braces = 1;
-		for (char *s = text + 1; *s; ++s){
+		braces = 1;
+		for (char *s = text + 1; *s; ++s) {
 			braces += *s == '[';
 			braces -= *s == ']';
-			if (braces == 0){
+			if (braces == 0) {
 				*s = '\0';
-				/* ChatBox_append(GetBattleChat(), text + 1, CHAT_INGAME, s + 1); */
+				BattleRoom_said_battle(text + 1, s + 1,
+				    CHAT_INGAME);
 				return;
 			}
 		}
 	}
-	/* ChatBox_append(GetBattleChat(), username, 0, text); */
+
+	BattleRoom_said_battle(user->name, text, CHAT_NORMAL);
 }

@@ -34,7 +34,7 @@ void BattleRoom_on_left_battle(const struct UserBot *);
 void BattleRoom_on_set_mod_details(void);
 void BattleRoom_on_set_option(struct Option *opt);
 void BattleRoom_resize_columns(void);
-void BattleRoom_said_battle(const struct User *, const char *text, enum ChatType);
+void BattleRoom_said_battle(const char *name, const char *text, enum ChatType);
 void BattleRoom_show(void);
 void BattleRoom_update_user(const struct UserBot *);
 

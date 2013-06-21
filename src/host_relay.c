@@ -22,7 +22,7 @@ static void relay_command(const char *format, ...) __attribute__ ((format (ms_pr
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
 static void kick(const UserBot *);
-static void said_battle(const char *username, char *text);
+static void said_battle(User *, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
@@ -162,9 +162,9 @@ kick(const UserBot *u)
 }
 
 static void
-said_battle(const char *username, char *text)
+said_battle(User *user, char *text)
 {
-	/* ChatBox_append(GetBattleChat(), username, 0, text); */
+	BattleRoom_said_battle(user->name, text, CHAT_NORMAL);
 }
 
 static void
