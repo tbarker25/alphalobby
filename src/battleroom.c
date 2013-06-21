@@ -31,8 +31,8 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "countrycodes.h"
@@ -98,7 +98,7 @@ static int CALLBACK     sort_listview(const UserBot *u1, const UserBot *u2, LPAR
 static LRESULT CALLBACK tooltip_subclass(HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
 static void             update_group(uint8_t group_id);
 
-HWND g_battle_room;
+static HWND g_battle_room;
 
 /* If the cursor moves outside this area, then remove it */
 static RECT g_tooltip_bounding_rect;
@@ -267,8 +267,8 @@ set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon)
 	item.mask = state_icon ? LVIF_IMAGE | LVIF_STATE : LVIF_IMAGE;
 	item.iSubItem = column_index;
 	item.iImage = icon ?: -1;
-	item.state = INDEXTOOVERLAYMASK(state_icon);
-	item.stateMask = LVIS_OVERLAYMASK;
+	item.state = state_icon ? INDEXTOOVERLAYMASK(state_icon) : 0;
+	item.stateMask = state_icon ? LVIS_OVERLAYMASK : 0;
 	SendDlgItemMessage(g_battle_room, DLG_PLAYERLIST, LVM_SETITEM,
 			0, (LPARAM)&item);
 }
@@ -487,6 +487,7 @@ tooltip_subclass(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 static void
 on_create(HWND window)
 {
+	assert(!g_battle_room);
 	g_battle_room = window;
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 	for (int i=0; i<16; ++i) {
@@ -494,6 +495,10 @@ on_create(HWND window)
 		_swprintf(buf, L"Team %d", i+1);
 		SendDlgItemMessage(window, DLG_ALLY, CB_ADDSTRING, 0, (LPARAM)buf);
 	}
+
+
+	HWND chat_window = GetDlgItem(window, DLG_CHAT);
+	ChatBox_set_say_function(chat_window, (void *)TasServer_send_say_battle, NULL);
 
 	HWND info_list = GetDlgItem(window, DLG_INFOLIST);
 #define INSERT_COLUMN(__w, __n) { \
@@ -637,8 +642,8 @@ on_notify(WPARAM w_param, NMHDR *note)
 		SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
 		if (note->idFrom == DLG_INFOLIST)
 			MyBattle_change_option((Option *)item.lParam);
-		else if (note->idFrom == DLG_PLAYERLIST)
-			ChatWindow_set_active_tab(Chat_get_private_window((User *)item.lParam));
+		/* else if (note->idFrom == DLG_PLAYERLIST) */
+			/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item.lParam)); */
 		return 1;
 
 	case NM_RCLICK:
@@ -845,4 +850,11 @@ _init (void)
 	};
 
 	RegisterClassEx(&window_class);
+}
+
+void
+BattleRoom_said_battle(const struct User *user, const char *text, ChatType chat_type)
+{
+	ChatBox_append(GetDlgItem(g_battle_room, DLG_CHAT), user->name, chat_type,
+	    text);
 }

@@ -24,6 +24,4 @@
 void DownloadList_remove(const wchar_t *name);
 void DownloadList_update(const wchar_t *name, const wchar_t *text);
 
-extern HWND g_download_list;
-
 #endif /* end of include guard: DOWNLOADTAB_H */

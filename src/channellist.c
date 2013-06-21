@@ -23,7 +23,7 @@
 #include <windows.h>
 #include <commctrl.h>
 
-#include "chat.h"
+#include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
 #include "layoutmetrics.h"
@@ -42,7 +42,7 @@ activate(int item_index)
 {
 	wchar_t name[MAX_NAME_LENGTH_NUL];
 	ListView_GetItemText(g_channel_list, item_index, 0, name, LENGTH(name));
-	Chat_join_channel(utf16to8(name), 1);
+	/* Chat_join_channel(utf16to8(name), 1); */
 }
 
 static void

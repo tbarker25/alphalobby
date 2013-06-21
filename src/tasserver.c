@@ -31,8 +31,8 @@
 #include "battle.h"
 #include "battlelist.h"
 #include "battleroom.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "host_relay.h"
@@ -146,7 +146,7 @@ TasServer_disconnect(void)
 	BattleList_reset();
 	Battles_reset();
 	Users_reset();
-	Chat_on_disconnect();
+	/* Chat_on_disconnect(); */
 }
 
 void CALLBACK
@@ -337,7 +337,7 @@ TasServer_send_my_client_status(ClientStatus status)
 void
 TasServer_send_leave_channel(const char *channel_name)
 {
-	SendDlgItemMessage(Chat_get_channel_window(channel_name), 2, LVM_DELETEALLITEMS, 0, 0);
+	/* SendDlgItemMessage(Chat_get_channel_window(channel_name), 2, LVM_DELETEALLITEMS, 0, 0); */
 	send_to_server("LEAVE %s", channel_name);
 }
 

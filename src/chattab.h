@@ -16,16 +16,17 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CHAT_WINDOW_H
-#define CHAT_WINDOW_H
+#ifndef CHAT_TAB_H
+#define CHAT_TAB_H
 
-#define WC_CHATWINDOW L"ChatWindow"
+#define WC_CHATTAB L"ChatTab"
 
-int  ChatWindow_add_tab        (HWND tab);
-void ChatWindow_remove_tab     (HWND tab);
-void ChatWindow_set_active_tab (HWND tab);
+struct User;
+enum ChatType;
 
-extern HWND g_chat_window;
-extern HWND g_tab_control;
+void ChatTab_focus_channel   (const char *channel);
+void ChatTab_focus_private   (struct User *);
+void ChatTab_on_said_private (struct User *, const char *text, enum ChatType);
+void ChatTab_on_said_channel (const char *channel, struct User *, const char *text, enum ChatType);
 
-#endif /* end of include guard: CHAT_WINDOW_H */
+#endif /* end of include guard: CHAT_TAB_H */

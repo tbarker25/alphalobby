@@ -25,8 +25,8 @@
 #include <Shlobj.h>
 
 #include "battle.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "mybattle.h"
@@ -114,14 +114,14 @@ Settings_open_default_channels(void)
 		return;
 	char buf[strlen(g_settings.autojoin) + 1];
 	strcpy(buf, g_settings.autojoin);
-	char *s, *s2 = buf;
+	/* char *s, *s2 = buf; */
 
-	while ((s=strsep(&s2, ";"))) {
-		if (*s == '*')
-			ChatWindow_set_active_tab(Chat_get_server_window());
-		else
-			Chat_join_channel(s, 0);
-	}
+	/* while ((s=strsep(&s2, ";"))) { */
+		/* if (*s == '*') */
+			/* ChatWindow_set_active_tab(Chat_get_server_window()); */
+		/* else {} */
+			/* Chat_join_channel(s, 0); */
+	/* } */
 }
 
 void

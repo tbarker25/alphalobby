@@ -29,8 +29,8 @@
 #include "battlelist.h"
 #include "battleroom.h"
 #include "channellist.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "countrycodes.h"
@@ -238,9 +238,9 @@ add_user(void)
 	u->country = country;
 	u->cpu = cpu;
 
-	Chat_add_user(Chat_get_server_window(), u);
-	if (g_settings.flags & (1<<DEST_SERVER))
-		Chat_said(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged in");
+	/* Chat_add_user(Chat_get_server_window(), u); */
+	/* if (g_settings.flags & (1<<DEST_SERVER)) */
+		/* ChatBox_append(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged in"); */
 
 	RelayHost_on_add_user(u->name);
 }
@@ -299,7 +299,7 @@ battle_opened(void)
 
 	RelayHost_on_battle_opened(b);
 
-	Chat_update_user(b->founder);
+	/* Chat_update_user(b->founder); */
 
 	BattleList_add_battle(b);
 }
@@ -343,13 +343,18 @@ channel(void)
 static void
 channel_topic(void)
 {
-	const char *channel_name = get_next_word();
-	/* const char *username =  */get_next_word();
-	/* const char *unix_time =  */get_next_word();
+	const char *channel;
+
+	channel = get_next_word();
+	get_next_word(); /* username */
+	get_next_word(); /* unix_time */
+
 	char *s;
-	while ((s = strstr(g_command, "\\n")))
-		*(uint16_t *)s = *(uint16_t *)(char [2]){'\r', '\n'};
-	Chat_said(Chat_get_channel_window(channel_name), NULL, CHAT_TOPIC, g_command);
+	while ((s = strstr(g_command, "\\n"))) {
+		s[0] = '\r';
+		s[1] = '\n';
+	}
+	ChatTab_on_said_channel(channel, NULL, g_command, CHAT_TOPIC);
 }
 
 static void
@@ -371,10 +376,10 @@ client_battle_status(void)
 static void
 clients(void)
 {
-	const char *channel_name = get_next_word();
-	HWND window = Chat_get_channel_window(channel_name);
-	for (const char *username; *(username = get_next_word()); )
-		Chat_add_user(window, Users_find(username));
+	/* const char *channel_name = get_next_word(); */
+	/* HWND window = Chat_get_channel_window(channel_name); */
+	/* for (const char *username; *(username = get_next_word()); ) */
+		/* Chat_add_user(window, Users_find(username)); */
 }
 
 static void
@@ -401,9 +406,9 @@ client_status(void)
 	if (g_my_battle && u->battle == g_my_battle)
 		BattleRoom_update_user((void *)u);
 
-	if (previous.ingame != u->ingame
-			|| previous.away != u->away)
-		Chat_update_user(u);
+	/* if (previous.ingame != u->ingame */
+			/* || previous.away != u->away) */
+		/* Chat_update_user(u); */
 
 	if (!u->battle)
 		return;
@@ -435,8 +440,8 @@ force_quit_battle(void)
 static void
 join(void)
 {
-	const char *channel_name = get_next_word();
-	ChatWindow_add_tab(Chat_get_channel_window(channel_name));
+	const char *channel= get_next_word();
+	ChatTab_focus_channel(channel);
 }
 
 static void
@@ -457,19 +462,28 @@ join_battle_failed(void)
 static void
 joined(void)
 {
-	const char *channel_name = get_next_word();
-	const char *username = get_next_word();
-	Chat_add_user(Chat_get_channel_window(channel_name), Users_find(username));
-	if (g_settings.flags & (1<<DEST_CHANNEL))
-		Chat_said(Chat_get_channel_window(channel_name), username, CHAT_SYSTEM, "has joined the channel");
+	const char *channel;
+	User *user;
+
+	channel = get_next_word();
+	user = Users_find(get_next_word());
+	assert(user);
+	if (user)
+		ChatTab_on_said_channel(channel, user, "Has joined the channel",
+		    CHAT_SYSTEM);
+	/* Chat_add_user(Chat_get_channel_window(channel_name), Users_find(username)); */
 }
 
 static void
 joined_battle(void)
 /* JOINEDBATTLE battle_id username [script_password] */
 {
-	Battle *b = Battles_find(get_next_int());
-	User *u = Users_find(get_next_word());
+	Battle *b;
+	User *u;
+	int i;
+
+	b = Battles_find(get_next_int());
+	u = Users_find(get_next_word());
 	assert(u && b);
 	if (!u || !b)
 		return;
@@ -477,41 +491,49 @@ joined_battle(void)
 	free(u->script_password);
 	u->script_password = _strdup(get_next_word());
 
-	int i=1; //Start at 1 so founder is first
+	i=1; //Start at 1 so founder is first
 	while (i<b->user_len - b->bot_len && _stricmp(b->users[i]->name, u->name) < 0)
 		++i;
+
 	for (int j=b->user_len; j>i; --j)
 		b->users[j] = b->users[j-1];
+
 	b->users[i] = (void *)u;
 	++b->user_len;
 	u->BattleStatus = (BattleStatus){0};
-	BattleList_update_battle(b);
-	Chat_update_user(u);
 
-	if (b == g_my_battle){
-		if (g_settings.flags & (1<<DEST_BATTLE))
-			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has joined the battle");
+	BattleList_update_battle(b);
+	/* Chat_update_user(u); */
+
+	if (b == g_my_battle) {
+		/* if (g_settings.flags & (1<<DEST_BATTLE)) */
+		BattleRoom_said_battle(u, "has joined the battle",
+		    CHAT_SYSTEM);
 	}
 }
 
 static void
 join_failed(void)
 {
-	HWND chan_window = Chat_get_channel_window(get_next_word());
-	if (chan_window){
-		SendMessage(chan_window, WM_CLOSE, 0, 0);
-		MainWindow_msg_box("Couldn't join channel", g_command);
-	}
+	/* HWND chan_window = Chat_get_channel_window(get_next_word()); */
+	/* if (chan_window){ */
+		/* SendMessage(chan_window, WM_CLOSE, 0, 0); */
+		/* MainWindow_msg_box("Couldn't join channel", g_command); */
+	/* } */
 }
 
 static void
 left(void)
 {
-	const char *channel_name = get_next_word();
-	const char *username = get_next_word();
-	if (g_settings.flags & (1<<DEST_CHANNEL))
-		Chat_said(Chat_get_channel_window(channel_name), username, CHAT_SYSTEM, "has left the channel");
-	Chat_on_left_battle(Chat_get_channel_window(channel_name), Users_find(username));
+	const char *channel;
+	User *user;
+
+	channel = get_next_word();
+	user = Users_find(get_next_word());
+	assert(user);
+	if (user)
+		ChatTab_on_said_channel(channel, user, "has left the channel",
+		    CHAT_SYSTEM);
 }
 
 static void
@@ -538,7 +560,7 @@ left_battle(void)
 	if (u == &g_my_user)
 		MyBattle_left_battle();
 
-	Chat_update_user(u);
+	/* Chat_update_user(u); */
 	BattleList_update_battle(b);
 
 	if (b == g_my_battle) {
@@ -546,9 +568,9 @@ left_battle(void)
 			BattleStatus bs = g_last_battle_status;
 			TasServer_send_my_battle_status(bs);
 		}
-		if (g_settings.flags & (1<<DEST_BATTLE)){
-			Chat_said(GetBattleChat(), u->name, CHAT_SYSTEM, "has left the battle");
+		if (g_settings.flags & (1<<DEST_BATTLE)) {
 			BattleRoom_on_left_battle((void *)u);
+			BattleRoom_said_battle(u, "has left the battle", CHAT_SYSTEM);
 		}
 	}
 }
@@ -565,7 +587,7 @@ login_info_end(void)
 static void
 message_of_the_day(void)
 {
-	Chat_said(Chat_get_server_window(), NULL, 0, g_command);
+	/* ChatBox_append(Chat_get_server_window(), NULL, 0, g_command); */
 }
 
 static void
@@ -603,18 +625,18 @@ remove_start_rect(void)
 static void
 remove_user(void)
 {
-	User *u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
-		return;
-	if (g_settings.flags & (1<<DEST_SERVER))
-		Chat_said(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged off");
-	// TODO:
-	// if (u->chat_window)
-	// Chat_said(u->chat_window, u->name, CHAT_SYSTEM, "has logged off");
-	Chat_on_left_battle(Chat_get_server_window(), u);
-	assert(!u->battle);
-	Users_del(u);
+	/* User *u = Users_find(get_next_word()); */
+	/* assert(u); */
+	/* if (!u) */
+		/* return; */
+	/* if (g_settings.flags & (1<<DEST_SERVER)) */
+		/* ChatBox_append(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged off"); */
+	/* // TODO: */
+	/* // if (u->chat_window) */
+	/* // ChatBox_append(u->chat_window, u->name, CHAT_SYSTEM, "has logged off"); */
+	/* Chat_on_left_battle(Chat_get_server_window(), u); */
+	/* assert(!u->battle); */
+	/* Users_del(u); */
 }
 
 static void
@@ -635,22 +657,29 @@ ring(void)
 static void
 said(void)
 {
-	const char *channel_name = get_next_word();
-	const char *username = get_next_word();
-	const char *text = g_command;
-	Chat_said(Chat_get_channel_window(channel_name), username, 0, text);
+	const char *channel;
+	User *user;
+
+	channel = get_next_word();
+	user = Users_find(get_next_word());
+	assert(user);
+	if (user)
+		ChatTab_on_said_channel(channel, user, g_command, CHAT_NORMAL);
 }
 
 static void
 said_battle(void)
 {
-	const char *username = get_next_word();
-	char *text = g_command;
+	const User *u;
 
-	if (g_host_type && g_host_type->said_battle)
-		g_host_type->said_battle(username, text);
-	else
-		Chat_said(GetBattleChat(), username, 0, text);
+	u = Users_find(get_next_word());
+	assert(u);
+
+	/* if (g_host_type && g_host_type->said_battle) */
+		/* g_host_type->said_battle(username, text); */
+	/* else */
+		/* ChatBox_append(GetBattleChat(), username, 0, text); */
+	BattleRoom_said_battle(u, g_command, CHAT_NORMAL);
 }
 
 static void
@@ -698,16 +727,20 @@ said_battle_ex(void)
 		}
 	}
 
-	Chat_said(GetBattleChat(), u->name, CHAT_EX, text);
+	BattleRoom_said_battle(u, g_command, CHAT_EX);
 }
 
 static void
 said_ex(void)
 {
-	const char *channel_name = get_next_word();
-	const char *username = get_next_word();
-	const char *text = g_command;
-	Chat_said(Chat_get_channel_window(channel_name), username, CHAT_EX, text);
+	const char *channel;
+	User *user;
+
+	channel = get_next_word();
+	user = Users_find(get_next_word());
+	assert(user);
+	if (user)
+		ChatTab_on_said_channel(channel, user, g_command, CHAT_EX);
 }
 
 static void
@@ -754,22 +787,26 @@ said_private(void)
 	}
 
 	// Normal chat message:
-	HWND window = Chat_get_private_window(user);
-	Chat_said(window, username, 0, g_command);
-	if (!g_my_battle
-			|| strcmp(username, g_my_battle->founder->name)
-			|| GetTickCount() - g_last_auto_message > 2000)
-		ChatWindow_set_active_tab(window);
+	/* HWND window = Chat_get_private_window(user); */
+	/* ChatBox_append(window, username, 0, g_command); */
+	/* if (!g_my_battle */
+			/* || strcmp(username, g_my_battle->founder->name) */
+			/* || GetTickCount() - g_last_auto_message > 2000) */
+		/* ChatWindow_set_active_tab(window); */
+	ChatTab_on_said_private(user, g_command, 0);
 }
 
 static void
 say_private(void)
 {
-	char *username = get_next_word();
-	char *text = g_command;
-	User *u = Users_find(username);
+	char *username;
+	User *u;
+
+	username = get_next_word();
+	u = Users_find(username);
+	assert(u);
 	if (u)
-		Chat_said(Chat_get_private_window(u), g_my_user.name, 0, text);
+		ChatTab_on_said_private(u, g_command, CHAT_SELF);
 }
 
 static void
