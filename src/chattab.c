@@ -212,20 +212,30 @@ _init(void)
 	RegisterClass(&window_class);
 }
 
+static HWND get_user_window(User *user)
+{
+	HWND chat_window;
+
+	if (user->chat_window)
+		return user->chat_window;
+	chat_window = CreateWindow(WC_CHATBOX,
+	    utf8to16(user->name), WS_CHILD,
+	    0, 0, 0, 0,
+	    g_tab_control, 0, NULL, NULL);
+	focus_tab(chat_window);
+	ChatBox_set_say_function(chat_window,
+	    (SayFunction *)TasServer_send_say_private, user->name);
+	user->chat_window = chat_window;
+	return chat_window;
+}
+
 void
 ChatTab_on_said_private(User *user, const char *text, ChatType chat_type)
 {
-	if (!user->chat_window) {
-		HWND chat_window = CreateWindow(WC_CHATBOX,
-		    utf8to16(user->name), WS_CHILD,
-		    0, 0, 0, 0,
-		    g_tab_control, 0, NULL, NULL);
-		focus_tab(chat_window);
-		ChatBox_set_say_function(chat_window,
-		    (SayFunction *)TasServer_send_say_private, user->name);
-		user->chat_window = chat_window;
-	}
-	ChatBox_append(user->chat_window,
+	HWND user_window;
+
+	user_window = get_user_window(user);
+	ChatBox_append(user_window,
 	    chat_type == CHAT_SELF ? g_my_user.name : user->name,
 	    chat_type, text);
 }
@@ -234,32 +244,32 @@ static HWND
 get_channel_window(const char *channel)
 {
 	for (size_t i = 0; i < LENGTH(g_channel_windows); ++i) {
+		HWND channel_window
 		char buf[128];
 		if (g_channel_windows[i]) {
 			GetWindowTextA(g_channel_windows[i], buf, sizeof(buf));
 			if (!strcmp(channel, buf))
 				return g_channel_windows[i];
 		}
-		HWND window = CreateWindow(WC_CHATBOX,
+		channel_window = CreateWindow(WC_CHATBOX,
 		    utf8to16(channel), WS_CHILD,
 		    0, 0, 0, 0,
 		    g_tab_control, 0, NULL, NULL);
-
-		g_channel_windows[i] = window;
-		focus_tab(window);
+		g_channel_windows[i] = channel_window;
+		focus_tab(channel_window);
 		/* TODO mem leak here */
-		ChatBox_set_say_function(window,
+		ChatBox_set_say_function(channel_window,
 		    (SayFunction *)TasServer_send_say_channel, _strdup(channel));
 
-		return window;
+		return channel_window;
 	}
 	assert(0);
 	return NULL;
 }
 
 void
-ChatTab_on_said_channel(const char *channel, struct User *user, const char *text,
-    enum ChatType chat_type)
+ChatTab_on_said_channel(const char *channel, struct User *user,
+    const char *text, enum ChatType chat_type)
 {
 	HWND channel_window = get_channel_window(channel);
 	ChatBox_append(channel_window, user->name, chat_type, text);
@@ -275,7 +285,10 @@ ChatTab_focus_channel(const char *channel)
 void
 ChatTab_focus_private(struct User *user)
 {
-	focus_tab(user->chat_window);
+	HWND user_window;
+
+	user_window = get_user_window(user);
+	focus_tab(user_window);
 }
 
 #if 0

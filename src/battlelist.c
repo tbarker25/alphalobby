@@ -172,7 +172,7 @@ on_item_right_click(POINT pt)
 	int index;
 	HMENU menu;
 	HMENU user_menu;
-	enum MenuId item_clicked;
+	int item_clicked;
 
 	index = SendDlgItemMessage(g_battle_list, DLG_LIST,
 			LVM_SUBITEMHITTEST, 0,
