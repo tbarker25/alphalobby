@@ -498,7 +498,7 @@ on_create(HWND window)
 
 
 	HWND chat_window = GetDlgItem(window, DLG_CHAT);
-	ChatBox_set_say_function(chat_window, (void *)TasServer_send_say_battle, NULL);
+	ChatBox_set_say_function(chat_window, (SayFunction *)TasServer_send_say_battle, NULL);
 
 	HWND info_list = GetDlgItem(window, DLG_INFOLIST);
 #define INSERT_COLUMN(__w, __n) { \
@@ -642,8 +642,8 @@ on_notify(WPARAM w_param, NMHDR *note)
 		SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
 		if (note->idFrom == DLG_INFOLIST)
 			MyBattle_change_option((Option *)item.lParam);
-		/* else if (note->idFrom == DLG_PLAYERLIST) */
-			/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item.lParam)); */
+		else if (note->idFrom == DLG_PLAYERLIST)
+			ChatTab_focus_private((User *)item.lParam);
 		return 1;
 
 	case NM_RCLICK:

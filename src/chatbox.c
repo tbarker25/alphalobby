@@ -65,34 +65,35 @@ enum {
 
 typedef struct WindowData {
 	const char *dest;
-	void (*func)(const char *dest, const char *text);
+	SayFunction *say_func;
+
+	DWORD last_scroll_time;
 
 	int last_index, end, last_pos, offset;
-	wchar_t buf[8192], *input_hint, *buffTail;
+	wchar_t buf[8192], *input_hint, *buf_end;
 } WindowData;
 
 static void             _init             (void);
-static void             put_text          (HWND window, const char *text, COLORREF color, DWORD effects);
-static LRESULT CALLBACK chat_box_proc     (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
-static void             on_create         (HWND window, LPARAM l_param);
-static void             on_size           (HWND window, int width, int height);
-static LRESULT CALLBACK log_proc          (HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR uIdSubclass, DWORD_PTR dwRefData);
-static LRESULT CALLBACK input_box_proc    (HWND window, UINT msg, WPARAM w_param, LPARAM l_param, UINT_PTR type, WindowData *data);
-static void             on_escape_command (char *s, UINT_PTR type, const wchar_t *dest_name, HWND window);
-static void             on_tab            (HWND window, UINT_PTR type, WindowData *data);
-static BOOL CALLBACK    enum_child_proc   (HWND window, LPARAM user);
-static void             update_user       (HWND window, User *u, int index);
+static void             put_text          (HWND,   const char *, COLORREF, DWORD effects);
+static LRESULT CALLBACK chat_box_proc     (HWND,   UINT msg,     WPARAM, LPARAM);
+static void             on_create         (HWND,   LPARAM);
+static void             on_size           (HWND,   int width,    int height);
+static LRESULT CALLBACK log_proc          (HWND,   UINT msg,     WPARAM, LPARAM, UINT_PTR, WindowData *);
+static LRESULT CALLBACK input_box_proc    (HWND,   UINT msg,     WPARAM, LPARAM, UINT_PTR, WindowData *);
+static void             on_escape_command (char *, WindowData *, HWND);
+static void             on_tab            (HWND,   WindowData *);
+static BOOL CALLBACK    enum_child_proc   (HWND,   LPARAM        user);
+static void             update_user       (HWND,   User *,       int index);
 
 static const COLORREF CHAT_COLORS[CHAT_LAST+1] = {
-	[CHAT_EX] = RGB(225,152,163),
-	[CHAT_INGAME] = RGB(90,122,150),
-	[CHAT_SELF] = RGB(50,170,230),
-	[CHAT_SELFEX] = RGB(50,170,230),
-	[CHAT_SYSTEM] = RGB(80,150,80),
-	[CHAT_TOPIC] = RGB(150,130,80),
-
-	[CHAT_SERVERIN] = RGB(153,190,215),
-	[CHAT_SERVEROUT] = RGB(215,190,153),
+	[CHAT_EX]        = RGB(225, 152, 163),
+	[CHAT_INGAME]    = RGB(90,  122, 150),
+	[CHAT_SELF]      = RGB(50,  170, 230),
+	[CHAT_SELFEX]    = RGB(225, 152, 163),
+	[CHAT_SYSTEM]    = RGB(80,  150, 80),
+	[CHAT_TOPIC]     = RGB(150, 130, 80),
+	[CHAT_SERVERIN]  = RGB(153, 190, 215),
+	[CHAT_SERVEROUT] = RGB(215, 190, 153),
 };
 
 static const DialogItem DIALOG_ITEMS[] = {
@@ -108,7 +109,7 @@ static const DialogItem DIALOG_ITEMS[] = {
 };
 
 static void
-on_tab(HWND window, UINT_PTR type, WindowData *data)
+on_tab(HWND window, WindowData *data)
 {
 	char text[MAX_TEXT_MESSAGE_LENGTH];
 	GetWindowTextA(window, text, LENGTH(text));
@@ -126,50 +127,30 @@ on_tab(HWND window, UINT_PTR type, WindowData *data)
 		--start;
 
 	text[end] = L'\0';
-
 }
 
 static void
-on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
+on_escape_command(char *command, WindowData *data, HWND window)
 {
-	char *code = strsep(&s, " ");
+	char *code = strsep(&command, " ");
 
 	if (!strcmp(code, "me")) {
-		const char *message = s + LENGTH("me ") - 1;
-		switch (type) {
-
-		case DEST_BATTLE:
-			TasServer_send_say_battle_ex(message);
-			break;
-
-		case DEST_PRIVATE:
-			TasServer_send_say_private((User *)utf16to8(dest_name), message);
-			break;
-
-		case DEST_CHANNEL:
-			TasServer_send_say_channel_ex(utf16to8(dest_name), message);
-			break;
-
-		case DEST_SERVER:
-			/* TODO */
-			/* TasServer_send("%s", message); */
-			break;
-		}
+		data->say_func(command, true, data->dest);
 
 	} else if (!strcmp(code, "resync")) {
 		Sync_reload();
 
 	} else if (!strcmp(code, "dlmap")) {
-		DownloadMap(s);
+		DownloadMap(command);
 
 	} else if (!strcmp(code, "start")) {
 		Spring_launch();
 
 	} else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
-		char *username = strsep(&s, " ");
+		char *username = strsep(&command, " ");
 		User *u = Users_find(username);
 		if (u) {
-			TasServer_send_say_private(u, s);
+			TasServer_send_say_private(command, u, false);
 			return;
 			/* ChatWindow_set_active_tab(Chat_get_private_window(u)); */
 		}
@@ -178,7 +159,7 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		ChatBox_append(GetParent(window), NULL, CHAT_SYSTEM, buf);
 
 	} else if (!strcmp(code, "j") || !strcmp(code, "join")) {
-		/* Chat_join_channel(s, 1); */
+		/* Chat_join_channel(command, 1); */
 
 	} else if (!strcmp(code, "away")) {
 		ClientStatus cs = g_last_client_status;
@@ -189,14 +170,14 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 		TasServer_send_get_ingame_time();
 
 	} else if (!strcmp(code, "split")) {
-		char *split_type = strsep(&s, " ");
+		char *split_type = strsep(&command, " ");
 		SplitType type = !strcmp(split_type, "h") ? SPLIT_HORZ
 			: !strcmp(split_type, "v") ? SPLIT_VERT
 			: !strcmp(split_type, "c1") ? SPLIT_CORNERS1
 			: !strcmp(split_type, "c2") ? SPLIT_CORNERS2
 			: SPLIT_LAST+1;
 		if (type <= SPLIT_LAST)
-			MyBattle_set_split(type, atoi(s));
+			MyBattle_set_split(type, atoi(command));
 
 	} else if (!strcmp(code, "ingame")) {
 		ClientStatus cs = g_last_client_status;
@@ -207,17 +188,17 @@ on_escape_command(char *s, UINT_PTR type, const wchar_t *dest_name, HWND window)
 
 static LRESULT CALLBACK
 input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
-		UINT_PTR type, WindowData *data)
+		UINT_PTR _unused, WindowData *data)
 {
 	if (msg != WM_KEYDOWN)
-		goto done;
+		return DefSubclassProc(window, msg, w_param, l_param);
 
 	if (w_param != VK_TAB)
 		data->end = -1;
 
 	switch (w_param) {
 	case VK_TAB:
-		on_tab(window, type, data);
+		on_tab(window, data);
 		return 0;
 
 	case VK_DOWN:
@@ -225,7 +206,7 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 			return 0;
 
 		while (++data->input_hint != data->buf
-		    && data->input_hint != data->buffTail
+		    && data->input_hint != data->buf_end
 		    && ((data->input_hint)[-1] || !*data->input_hint))
 			if (data->input_hint >= data->buf+LENGTH(data->buf)-1)
 				data->input_hint = data->buf - 1;
@@ -237,7 +218,7 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 		if (!data->input_hint)
 			return 0;
 		while ((--data->input_hint != data->buf)
-				&& data->input_hint != data->buffTail
+				&& data->input_hint != data->buf_end
 				&& ((data->input_hint)[-1] || !*data->input_hint))
 			if (data->input_hint < data->buf)
 				data->input_hint = data->buf + LENGTH(data->buf) - 1;
@@ -245,47 +226,42 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 	}	return 0;
 
 	case '\r': {
-		if (LENGTH(data->buf) - (data->buffTail - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
-			data->buffTail = data->buf;
-			memset(data->buffTail, (LENGTH(data->buf) - (data->buffTail - data->buf)) * sizeof(*data->buf), '\0');
+		if (LENGTH(data->buf) - (data->buf_end - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
+			data->buf_end = data->buf;
+			memset(data->buf_end, (LENGTH(data->buf) - (data->buf_end - data->buf)) * sizeof(*data->buf), '\0');
 		}
-		size_t len = GetWindowTextW(window, data->buffTail, MAX_TEXT_MESSAGE_LENGTH);
+		size_t len = GetWindowTextW(window, data->buf_end, MAX_TEXT_MESSAGE_LENGTH);
 		if (len <= 0)
 			return 0;
 
 		char text_a[len * 3];
-		WideCharToMultiByte(CP_UTF8, 0, data->buffTail, -1, text_a, sizeof(text_a), NULL, NULL);
+		WideCharToMultiByte(CP_UTF8, 0, data->buf_end, -1, text_a, sizeof(text_a), NULL, NULL);
 
 		SetWindowText(window, NULL);
-		wchar_t dest_name[128];
-		GetWindowText(GetParent(window), dest_name, sizeof(dest_name));
+
 		if (text_a[0] == '/') {
-			on_escape_command(text_a + 1, type, dest_name, window);
-
-		} else if (data->dest) {
-			data->func(data->dest, text_a);
-
+			on_escape_command(text_a + 1, data, window);
 		} else {
-			((void (*)(const char *))data->func)(text_a);
+			data->say_func(text_a, false, data->dest);
 		}
 
-		SetWindowLongPtr(GetDlgItem(GetParent(window), DLG_LOG), GWLP_USERDATA, 0);
-		data->buffTail += len+1;
-		data->input_hint = data->buffTail;
+		data->last_scroll_time = 0;
+		data->buf_end += len+1;
+		data->input_hint = data->buf_end;
 	}	return 0;
+
+	default:
+		return DefSubclassProc(window, msg, w_param, l_param);
 	}
-	done:
-	return DefSubclassProc(window, msg, w_param, l_param);
 }
 
 
 static LRESULT CALLBACK
 log_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
-		__attribute__((unused)) UINT_PTR uIdSubclass,
-		__attribute__((unused)) DWORD_PTR dwRefData)
+		__attribute__((unused)) UINT_PTR uIdSubclass, WindowData *data)
 {
 	if (msg == WM_VSCROLL)
-		SetWindowLongPtr(window, GWLP_USERDATA, GetTickCount());
+		data->last_scroll_time = GetTickCount();
 
 	return DefSubclassProc(window, msg, w_param, l_param);
 }
@@ -302,28 +278,28 @@ on_size(HWND window, int width, int height)
 static void
 on_create(HWND window, LPARAM l_param)
 {
-	/* ChatWindowData *data = ((CREATESTRUCT *)l_param)->lpCreateParams ?: &battle_room_data; */
-	/* SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data); */
-	/* if (data->name) */
-		/* SetWindowTextA(window, data->name); */
 	HWND log_window = CreateDlgItem(window, &DIALOG_ITEMS[DLG_LOG], DLG_LOG);
 	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
 	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
 	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-	SetWindowSubclass(log_window, log_proc, 0, 0);
 
 	CreateDlgItem(window, &DIALOG_ITEMS[DLG_INPUT], DLG_INPUT);
 }
 
 void
-ChatBox_set_say_function(HWND window, void (*func)(const char *dest, const char *text), const char *dest)
+ChatBox_set_say_function(HWND window, SayFunction say_func, const char *dest)
 {
 	WindowData *data;
 
 	data = calloc(1, sizeof(*data));
 	data->dest     = dest;
-	data->func     = func;
-	data->buffTail = data->buf;
+	data->say_func = say_func;
+	data->buf_end  = data->buf;
+
+	SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
+
+	SetWindowSubclass(GetDlgItem(window, DLG_LOG),
+	    (void *)log_proc, 0, (DWORD_PTR)data);
 
 	SetWindowSubclass(GetDlgItem(window, DLG_INPUT),
 	    (void *)input_box_proc, 0, (DWORD_PTR)data);
@@ -439,8 +415,11 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		return 0;
 
 	case WM_COMMAND:
-		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL))
-			SetWindowLongPtr((HWND)l_param, GWLP_USERDATA, GetTickCount());
+		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL)) {
+			WindowData *data;
+			data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
+			data->last_scroll_time = GetTickCount();
+		}
 		return 0;
 
 	case WM_NOTIFY: {
@@ -477,10 +456,12 @@ put_text(HWND window, const char *text, COLORREF color, DWORD effects)
 void
 ChatBox_append(HWND window, const char *username, ChatType type, const char *text)
 {
+	HWND log_window;
+	WindowData *data;
 	COLORREF color;
 
-	window = GetDlgItem(window, DLG_LOG);
-	SendMessage(window, EM_EXSETSEL, 0, (LPARAM)&(CHARRANGE){INFINITE, INFINITE});
+	log_window = GetDlgItem(window, DLG_LOG);
+	SendMessage(log_window, EM_EXSETSEL, 0, (LPARAM)&(CHARRANGE){INFINITE, INFINITE});
 
 	if ((type != CHAT_TOPIC) && g_settings.flags & SETTING_TIMESTAMP) {
 		char buf[128];
@@ -491,18 +472,18 @@ ChatBox_append(HWND window, const char *username, ChatType type, const char *tex
 		*(s++) = ']';
 		*(s++) = ' ';
 		*s = '\0';
-		put_text(window, buf, COLOR_TIMESTAMP, 0);
+		put_text(log_window, buf, COLOR_TIMESTAMP, 0);
 	}
 
 	color = CHAT_COLORS[type];
 	if (type == CHAT_SERVERIN || type == CHAT_SERVEROUT)
-		put_text(window, type == CHAT_SERVERIN ? "> " : "< ", color, 0);
+		put_text(log_window, type == CHAT_SERVERIN ? "> " : "< ", color, 0);
 
 	if (username) {
 		const User *u;
 		const char *alias;
 
-		put_text(window, username, color, !(type & CHAT_SYSTEM) * CFE_BOLD);
+		put_text(log_window, username, color, !(type & CHAT_SYSTEM) * CFE_BOLD);
 
 		u = Users_find(username);
 		alias = u ? u->alias : "logged out";
@@ -510,19 +491,18 @@ ChatBox_append(HWND window, const char *username, ChatType type, const char *tex
 			char buf[128];
 
 			sprintf(buf, " (%s)", alias);
-			put_text(window, buf, ALIAS(color), 0);
+			put_text(log_window, buf, ALIAS(color), 0);
 		}
-		put_text(window, type & (CHAT_EX | CHAT_SYSTEM) ? " " : ": ",
+		put_text(log_window, type & (CHAT_EX | CHAT_SYSTEM) ? " " : ": ",
 		    color, type & CHAT_SYSTEM ? 0 : CFE_BOLD);
 	}
 
-	put_text(window, text, color, 0);
-	put_text(window, "\n", color, 0);
+	put_text(log_window, text, color, 0);
+	put_text(log_window, "\n", color, 0);
 
-	if (GetTickCount() - GetWindowLongPtr(window, GWLP_USERDATA) > 5000) {
-		SendMessage(window, WM_VSCROLL, SB_BOTTOM, 0);
-		SetWindowLongPtr(window, GWLP_USERDATA, 0);
-	}
+	data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
+	if (GetTickCount() - data->last_scroll_time > 5000)
+		SendMessage(log_window, WM_VSCROLL, SB_BOTTOM, 0);
 }
 
 static void __attribute__((constructor))

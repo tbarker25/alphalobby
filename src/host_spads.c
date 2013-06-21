@@ -116,6 +116,6 @@ relay_command(const char *format, ...)
 	vsprintf(buf, format, args);
 	va_end(args);
 
-	TasServer_send_say_private((User *)g_my_battle->founder, buf);
+	TasServer_send_say_private(buf, false, (User *)g_my_battle->founder);
 	g_last_auto_message = GetTickCount();
 }

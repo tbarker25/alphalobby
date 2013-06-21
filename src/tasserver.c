@@ -424,18 +424,6 @@ TasServer_send_get_channels(void)
 }
 
 void
-TasServer_send_say_private(const User *user, const char *message)
-{
-	send_to_server("SAYPRIVATE %s %s", user->name, message);
-}
-
-void
-TasServer_send_private_ex(const User *user, const char *message)
-{
-	send_to_server("SAYPRIVATEEX %s %s", user->name, message);
-}
-
-void
 TasServer_send_join_channel(const char *channel_name)
 {
 	send_to_server("JOIN %s", channel_name);
@@ -457,27 +445,22 @@ TasServer_send_leave_battle(void)
 }
 
 void
-TasServer_send_say_battle_ex(const char *message)
+TasServer_send_say_battle(const char *text, bool is_ex)
 {
-	send_to_server("SAYBATTLEEX %s", message);
+	send_to_server(is_ex ? "SAYBATTLEEX %s" : "SAYBATTLE %s", text);
 }
 
 void
-TasServer_send_say_battle(const char *message)
+TasServer_send_say_channel(const char *text, bool is_ex, const char *dest)
 {
-	send_to_server("SAYBATTLE %s", message);
+	send_to_server(is_ex ? "SAYEX %s %s" : "SAY %s %s", dest, text);
 }
 
 void
-TasServer_send_say_channel(const char *dest, const char *message)
+TasServer_send_say_private(const char *text, bool is_ex, const User *user)
 {
-	send_to_server("SAY %s %s", dest, message);
-}
-
-void
-TasServer_send_say_channel_ex(const char *dest, const char *message)
-{
-	send_to_server("SAYEX %s %s", dest, message);
+	send_to_server(is_ex ? "SAYPRIVATEEX %s %s" : "SAYPRIVATE %s %s",
+	    user->name, text);
 }
 
 void

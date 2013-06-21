@@ -56,11 +56,9 @@ void TasServer_send_my_color(uint32_t color);
 void TasServer_send_open_battle(const char *password, uint16_t port, const char *mod_name, const char *map_name, const char *description);
 void TasServer_send_register(const char *username, const char *password);
 void TasServer_send_rename(const char *new_username);
-void TasServer_send_say_battle(const char *message);
-void TasServer_send_say_battle_ex(const char *message);
-void TasServer_send_say_channel(const char *dest, const char *message);
-void TasServer_send_say_channel_ex(const char *dest, const char *message);
-void TasServer_send_say_private(const struct User *user, const char *message);
+cdecl void TasServer_send_say_battle (const char *text, bool is_ex);
+cdecl void TasServer_send_say_channel(const char *text, bool is_ex, const char *channel);
+cdecl void TasServer_send_say_private(const char *text, bool is_ex, const struct User *);
 void TasServer_send_script_tags(const char *script_tags);
 void TasServer_send_set_map(const char *map_name);
 

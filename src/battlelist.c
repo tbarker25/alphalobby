@@ -144,7 +144,7 @@ resize_columns(void)
 	column_rem = rect.right % LENGTH(COLUMN_TITLES);
 	column_width = rect.right / LENGTH(COLUMN_TITLES);
 
-	for (int i=0, n = LENGTH(COLUMN_TITLES); i < n; ++i)
+	for (size_t i = 0; i < LENGTH(COLUMN_TITLES); ++i)
 		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
 }
 
@@ -207,29 +207,30 @@ on_item_right_click(POINT pt)
 	item_clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
 			g_battle_list, NULL);
 
+	DestroyMenu(user_menu);
+	DestroyMenu(menu);
+
 	switch (item_clicked) {
 	case FAIL:
-		break;
+		return;
 
 	case JOIN:
 		TasServer_send_join_battle(b->id, NULL);
-		break;
+		return;
 
 	case DL_MAP:
 		DownloadMap(b->map_name);
-		break;
+		return;
 
 	case DL_MOD:
 		DownloadMod(b->mod_name);
-		break;
+		return;
 
 	default:
-		/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item_clicked)); */
-		break;
+		ChatTab_focus_private((User *)item_clicked);
+		return;
 	}
 
-	DestroyMenu(user_menu);
-	DestroyMenu(menu);
 }
 
 static void
