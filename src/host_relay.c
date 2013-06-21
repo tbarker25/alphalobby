@@ -105,7 +105,7 @@ RelayHost_open_battle(const char *title, const char *password, const char *mod_n
 	sprintf(g_relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
 	strcpy(g_relay_password, password ?: "*");
 	strcpy(g_relay_manager, manager);
-	TasServer_send_say_private((User *)g_relay_manager, "!spawn");
+	TasServer_send_say_private("!spawn", false, (User *)g_relay_manager);
 }
 
 void
@@ -244,5 +244,5 @@ relay_command(const char *format, ...)
 	vsprintf(buf, format, args);
 	va_end(args);
 
-	TasServer_send_say_private((User *)g_relay_hoster, buf);
+	TasServer_send_say_private(buf, false, (User *)g_relay_hoster);
 }

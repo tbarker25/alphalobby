@@ -45,8 +45,8 @@ enum DialogId {
 	DLG_LAST = DLG_TAB,
 };
 
-static LRESULT CALLBACK chat_window_proc  (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
 static void             _init             (void);
+static LRESULT CALLBACK chat_window_proc  (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
 static void             resize_active_tab (void);
 
 static HWND g_chat_window;
@@ -149,9 +149,9 @@ focus_tab(HWND tab)
 	MainWindow_set_active_tab(g_chat_window);
 }
 
-static void say_hello(const char *dest, const char *text)
+static void say_hello(const char *text, bool unused, const void *dest)
 {
-	printf("hello %s from %s\n", text, dest);
+	printf("hello %s from %s\n", text, (char *)dest);
 }
 
 static void doit(void)
@@ -222,7 +222,7 @@ ChatTab_on_said_private(User *user, const char *text, ChatType chat_type)
 		    g_tab_control, 0, NULL, NULL);
 		focus_tab(chat_window);
 		ChatBox_set_say_function(chat_window,
-		    (void *)TasServer_send_say_private, user->name);
+		    (SayFunction *)TasServer_send_say_private, user->name);
 		user->chat_window = chat_window;
 	}
 	ChatBox_append(user->chat_window,
@@ -249,7 +249,7 @@ get_channel_window(const char *channel)
 		focus_tab(window);
 		/* TODO mem leak here */
 		ChatBox_set_say_function(window,
-		    (void *)TasServer_send_say_channel, _strdup(channel));
+		    (SayFunction *)TasServer_send_say_channel, _strdup(channel));
 
 		return window;
 	}

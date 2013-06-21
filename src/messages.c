@@ -92,7 +92,9 @@ static void said_battle           (void);
 static void said_battle_ex        (void);
 static void said_ex               (void);
 static void said_private          (void);
+static void said_private_ex       (void);
 static void say_private           (void);
+static void say_private_ex        (void);
 static void server_msg            (void);
 static void server_message_box    (void);
 static void set_script_tags       (void);
@@ -105,51 +107,53 @@ static DWORD g_time_battle_joined;
 static char *g_command;
 
 static const Command SERVER_COMMANDS[] = {
-	{"ACCEPTED", accepted},
-	{"ADDBOT", add_bot},
-	{"ADDSTARTRECT", add_start_rect},
-	{"ADDUSER", add_user},
-	{"AGREEMENT", agreement},
-	{"AGREEMENTEND", agreement_end},
-	{"BATTLECLOSED", battle_closed},
-	{"BATTLEOPENED", battle_opened},
-	{"BROADCAST", broadcast},
-	{"CHANNEL", channel},
-	{"CHANNELTOPIC", channel_topic},
-	{"CLIENTBATTLESTATUS", client_battle_status},
-	{"CLIENTS", clients},
-	{"CLIENTSTATUS", client_status},
-	{"DENIED", denied},
-	{"FORCEQUITBATTLE", force_quit_battle},
-	{"JOIN", join},
-	{"JOINBATTLE", join_battle},
-	{"JOINBATTLEFAILED", join_battle_failed},
-	{"JOINED", joined},
-	{"JOINEDBATTLE", joined_battle},
-	{"JOINFAILED", join_failed},
-	{"LEFT", left},
-	{"LEFTBATTLE", left_battle},
-	{"LOGININFOEND", login_info_end},
-	{"MOTD", message_of_the_day},
-	{"OPENBATTLE", open_battle},
+	{"ACCEPTED",             accepted},
+	{"ADDBOT",               add_bot},
+	{"ADDSTARTRECT",         add_start_rect},
+	{"ADDUSER",              add_user},
+	{"AGREEMENT",            agreement},
+	{"AGREEMENTEND",         agreement_end},
+	{"BATTLECLOSED",         battle_closed},
+	{"BATTLEOPENED",         battle_opened},
+	{"BROADCAST",            broadcast},
+	{"CHANNEL",              channel},
+	{"CHANNELTOPIC",         channel_topic},
+	{"CLIENTBATTLESTATUS",   client_battle_status},
+	{"CLIENTS",              clients},
+	{"CLIENTSTATUS",         client_status},
+	{"DENIED",               denied},
+	{"FORCEQUITBATTLE",      force_quit_battle},
+	{"JOIN",                 join},
+	{"JOINBATTLE",           join_battle},
+	{"JOINBATTLEFAILED",     join_battle_failed},
+	{"JOINED",               joined},
+	{"JOINEDBATTLE",         joined_battle},
+	{"JOINFAILED",           join_failed},
+	{"LEFT",                 left},
+	{"LEFTBATTLE",           left_battle},
+	{"LOGININFOEND",         login_info_end},
+	{"MOTD",                 message_of_the_day},
+	{"OPENBATTLE",           open_battle},
 	{"REGISTRATIONACCEPTED", registration_accepted},
-	{"REMOVEBOT", remove_bot},
-	{"REMOVESTARTRECT", remove_start_rect},
-	{"REMOVEUSER", remove_user},
-	{"REQUESTBATTLESTATUS", request_battle_status},
-	{"RING", ring},
-	{"SAID", said},
-	{"SAIDBATTLE", said_battle},
-	{"SAIDBATTLEEX", said_battle_ex},
-	{"SAIDEX", said_ex},
-	{"SAIDPRIVATE", said_private},
-	{"SAYPRIVATE", say_private},
-	{"SERVERMSG", server_msg},
-	{"SERVERMSGBOX", server_message_box },
-	{"SETSCRIPTTAGS", set_script_tags},
-	{"TASServer", TAS_server},
-	{"UPDATEBATTLEINFO", update_battle_info},
-	{"UPDATEBOT", update_bot},
+	{"REMOVEBOT",            remove_bot},
+	{"REMOVESTARTRECT",      remove_start_rect},
+	{"REMOVEUSER",           remove_user},
+	{"REQUESTBATTLESTATUS",  request_battle_status},
+	{"RING",                 ring},
+	{"SAID",                 said},
+	{"SAIDBATTLE",           said_battle},
+	{"SAIDBATTLEEX",         said_battle_ex},
+	{"SAIDEX",               said_ex},
+	{"SAIDPRIVATE",          said_private},
+	{"SAIDPRIVATEEX",        said_private_ex},
+	{"SAYPRIVATE",           say_private},
+	{"SAYPRIVATEEX",         say_private_ex},
+	{"SERVERMSG",            server_msg},
+	{"SERVERMSGBOX",         server_message_box },
+	{"SETSCRIPTTAGS",        set_script_tags},
+	{"TASServer",            TAS_server},
+	{"UPDATEBATTLEINFO",     update_battle_info},
+	{"UPDATEBOT",            update_bot},
 };
 
 static void
@@ -721,8 +725,8 @@ said_battle_ex(void)
 				g_host_type = &HOST_SPRINGIE;
 			} else {
 				g_last_auto_message = GetTickCount();
-				TasServer_send_say_private(u, "!version");
-				TasServer_send_say_private(u, "!springie");
+				TasServer_send_say_private("!version", false, u);
+				TasServer_send_say_private("!springie", false, u);
 			}
 		}
 	}
@@ -746,29 +750,29 @@ said_ex(void)
 static void
 said_private(void)
 {
-	const char *username = get_next_word();
+	User *user;
 
-	User *user = Users_find(username);
+	user = Users_find(get_next_word());
 	assert(user);
 	if (!user || user->ignore)
 		return;
 
-	if (RelayHost_on_private_message(username, g_command))
+	if (RelayHost_on_private_message(user->name, g_command))
 		return;
 
 	// Zero-K juggler sends matchmaking g_command "!join <host>"
 	if (g_my_battle
 			&& user == g_my_battle->founder
 			&& !memcmp(g_command, "!join ", sizeof("!join ") - 1)) {
-		User *user = Users_find(g_command + sizeof("!join ") - 1);
-		if (user && user->battle)
-			TasServer_send_join_battle(user->battle->id, NULL);
+		User *host = Users_find(g_command + sizeof("!join ") - 1);
+		if (host && host->battle)
+			TasServer_send_join_battle(host->battle->id, NULL);
 		return;
 	}
 
 	// Check for pms that identify an autohost
 	if (g_my_battle && user == g_my_battle->founder
-			&& strstr(g_command, username)
+			&& strstr(g_command, user->name)
 			&& strstr(g_command, "running")) {
 
 		// Response to "!springie":
@@ -788,25 +792,47 @@ said_private(void)
 
 	// Normal chat message:
 	/* HWND window = Chat_get_private_window(user); */
-	/* ChatBox_append(window, username, 0, g_command); */
+	/* ChatBox_append(window, user->name, 0, g_command); */
 	/* if (!g_my_battle */
-			/* || strcmp(username, g_my_battle->founder->name) */
+			/* || strcmp(user->name, g_my_battle->founder->name) */
 			/* || GetTickCount() - g_last_auto_message > 2000) */
 		/* ChatWindow_set_active_tab(window); */
 	ChatTab_on_said_private(user, g_command, 0);
 }
 
 static void
+said_private_ex(void)
+{
+	User *user;
+
+	user = Users_find(get_next_word());
+	assert(user);
+	if (!user || user->ignore)
+		return;
+
+	ChatTab_on_said_private(user, g_command, CHAT_EX);
+}
+
+static void
 say_private(void)
 {
-	char *username;
 	User *u;
 
-	username = get_next_word();
-	u = Users_find(username);
+	u = Users_find(get_next_word());
 	assert(u);
 	if (u)
 		ChatTab_on_said_private(u, g_command, CHAT_SELF);
+}
+
+static void
+say_private_ex(void)
+{
+	User *u;
+
+	u = Users_find(get_next_word());
+	assert(u);
+	if (u)
+		ChatTab_on_said_private(u, g_command, CHAT_SELFEX);
 }
 
 static void

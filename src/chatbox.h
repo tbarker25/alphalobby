@@ -44,7 +44,9 @@ typedef enum ChatDest {
 	DEST_LAST = DEST_SERVER,
 }ChatDest;
 
+typedef cdecl void (SayFunction)(const char *text, bool is_ex, const void *dst);
+
 void ChatBox_append           (HWND window, const char *username, ChatType type, const char *text);
-void ChatBox_set_say_function (HWND window, void (*func)(const char *dest, const char *text), const char *dest);
+void ChatBox_set_say_function (HWND window, SayFunction, const char *dest);
 
 #endif /* end of include guard: CHATBOX_H */

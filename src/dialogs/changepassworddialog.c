@@ -17,6 +17,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #include <windows.h>
 
