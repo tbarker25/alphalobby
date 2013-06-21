@@ -20,7 +20,7 @@ static void relay_command(const char *format, ...) __attribute__ ((format (ms_pr
 static void force_ally(const char *name, int ally);
 static void force_team(const char *name, int team);
 static void kick(const UserBot *);
-static void said_battle(const char *username, char *text);
+static void said_battle(struct User *, char *text);
 static void set_map(const char *map_name);
 static void set_option(Option *opt, const char *val);
 static void set_split(int size, SplitType type);
@@ -58,18 +58,18 @@ kick(const UserBot *u)
 }
 
 static void
-said_battle(const char *username, char *text)
+said_battle(User *user, char *text)
 {
 	char ingame_name[MAX_NAME_LENGTH_NUL];
 
-	if (!strcmp(username, g_my_battle->founder->name)
+	if (user == g_my_battle->founder
 			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingame_name) == 1) {
 		text += 3 + strlen(ingame_name);
-		/* ChatBox_append(GetBattleChat(), ingame_name, CHAT_INGAME, text); */
+		BattleRoom_said_battle(ingame_name, text, CHAT_INGAME);
 		return;
 	}
 
-	/* ChatBox_append(GetBattleChat(), username, 0, text); */
+	BattleRoom_said_battle(user->name, text, CHAT_INGAME);
 }
 
 static void

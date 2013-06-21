@@ -66,6 +66,7 @@ static void
 resize_active_tab(void)
 {
 	RECT rect;
+
 	GetClientRect(g_tab_control, &rect);
 	TabCtrl_AdjustRect(g_tab_control, FALSE, &rect);
 	MoveWindow(active_tab, rect.left, rect.top, rect.right - rect.left,
@@ -75,11 +76,13 @@ resize_active_tab(void)
 static int
 get_tab_index(HWND tab_item)
 {
-	TCITEM info;
-	info.mask = TCIF_PARAM;
+	int tab_len;
 
-	int tab_len = TabCtrl_GetItemCount(g_tab_control);
+	tab_len = TabCtrl_GetItemCount(g_tab_control);
 	for (int i=0; i<tab_len; ++i) {
+		TCITEM info;
+
+		info.mask = TCIF_PARAM;
 		TabCtrl_GetItem(g_tab_control, i, &info);
 		if ((HWND)info.lParam == tab_item)
 			return i;
@@ -90,11 +93,13 @@ get_tab_index(HWND tab_item)
 static int
 add_tab(HWND tab)
 {
-	int item_index = get_tab_index(tab);
+	wchar_t window_title[MAX_NAME_LENGTH_NUL];
+	int item_index;
+
+	item_index = get_tab_index(tab);
 	if  (item_index >= 0)
 		return item_index;
 
-	wchar_t window_title[MAX_NAME_LENGTH_NUL];
 	GetWindowText(tab, window_title, MAX_NAME_LENGTH_NUL);
 
 	TCITEM info;
@@ -140,7 +145,9 @@ remove_tab(HWND tab_item)
 static void
 focus_tab(HWND tab)
 {
-	int item_index = add_tab(tab);
+	int item_index;
+
+	item_index = add_tab(tab);
 	TabCtrl_SetCurSel(g_tab_control, item_index);
 	ShowWindow(active_tab, 0);
 	active_tab = tab;
@@ -188,6 +195,7 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 
 	case WM_NOTIFY: {
 		NMHDR *info = (void *)l_param;
+
 		if (info->hwndFrom == g_tab_control && info->code == TCN_SELCHANGE) {
 			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
 			TCITEM info;
@@ -209,6 +217,7 @@ _init(void)
 		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
+
 	RegisterClass(&window_class);
 }
 
@@ -244,8 +253,9 @@ static HWND
 get_channel_window(const char *channel)
 {
 	for (size_t i = 0; i < LENGTH(g_channel_windows); ++i) {
-		HWND channel_window
+		HWND channel_window;
 		char buf[128];
+
 		if (g_channel_windows[i]) {
 			GetWindowTextA(g_channel_windows[i], buf, sizeof(buf));
 			if (!strcmp(channel, buf))
@@ -271,14 +281,18 @@ void
 ChatTab_on_said_channel(const char *channel, struct User *user,
     const char *text, enum ChatType chat_type)
 {
-	HWND channel_window = get_channel_window(channel);
+	HWND channel_window;
+
+	channel_window = get_channel_window(channel);
 	ChatBox_append(channel_window, user->name, chat_type, text);
 }
 
 void
 ChatTab_focus_channel(const char *channel)
 {
-	HWND channel_window = get_channel_window(channel);
+	HWND channel_window;
+
+	channel_window = get_channel_window(channel);
 	focus_tab(channel_window);
 }
 

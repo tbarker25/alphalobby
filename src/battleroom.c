@@ -853,8 +853,8 @@ _init (void)
 }
 
 void
-BattleRoom_said_battle(const struct User *user, const char *text, ChatType chat_type)
+BattleRoom_said_battle(const char *name, const char *text, ChatType chat_type)
 {
-	ChatBox_append(GetDlgItem(g_battle_room, DLG_CHAT), user->name, chat_type,
+	ChatBox_append(GetDlgItem(g_battle_room, DLG_CHAT), name, chat_type,
 	    text);
 }

@@ -25,6 +25,7 @@
 #define NUM_ALLIANCES 16
 
 struct UserBot;
+struct User;
 
 typedef enum SplitType {
 	SPLIT_HORZ,
@@ -76,7 +77,7 @@ typedef struct HostType {
 	void (*force_ally)(const char *name, int ally_id);
 	void (*force_team)(const char *name, int team_id);
 	void (*kick)(const struct UserBot *);
-	void (*said_battle)(const char *username, char *text);
+	void (*said_battle)(struct User *, char *text);
 	void (*set_map)(const char *map_name);
 	void (*set_option)(Option *opt, const char *val);
 	void (*set_split)(int size, SplitType type);

@@ -372,9 +372,7 @@ client_battle_status(void)
 	u = Users_find(get_next_word());
 	bs.as_int = get_next_int();
 
-	MyBattle_update_battle_status(u,
-			bs.BattleStatus,
-			get_next_int());
+	MyBattle_update_battle_status(u, bs.BattleStatus, get_next_int());
 }
 
 static void
@@ -511,7 +509,7 @@ joined_battle(void)
 
 	if (b == g_my_battle) {
 		/* if (g_settings.flags & (1<<DEST_BATTLE)) */
-		BattleRoom_said_battle(u, "has joined the battle",
+		BattleRoom_said_battle(u->name, "has joined the battle",
 		    CHAT_SYSTEM);
 	}
 }
@@ -568,13 +566,15 @@ left_battle(void)
 	BattleList_update_battle(b);
 
 	if (b == g_my_battle) {
-		if (u->mode && BattleRoom_is_auto_unspec()) {
+		if (u->mode && !g_my_user.mode && BattleRoom_is_auto_unspec()) {
 			BattleStatus bs = g_last_battle_status;
+			bs.mode = 1;
 			TasServer_send_my_battle_status(bs);
 		}
 		if (g_settings.flags & (1<<DEST_BATTLE)) {
 			BattleRoom_on_left_battle((void *)u);
-			BattleRoom_said_battle(u, "has left the battle", CHAT_SYSTEM);
+			BattleRoom_said_battle(u->name, "has left the battle",
+			    CHAT_SYSTEM);
 		}
 	}
 }
@@ -674,16 +674,16 @@ said(void)
 static void
 said_battle(void)
 {
-	const User *u;
+	User *u;
 
 	u = Users_find(get_next_word());
 	assert(u);
 
-	/* if (g_host_type && g_host_type->said_battle) */
-		/* g_host_type->said_battle(username, text); */
-	/* else */
-		/* ChatBox_append(GetBattleChat(), username, 0, text); */
-	BattleRoom_said_battle(u, g_command, CHAT_NORMAL);
+	if (g_host_type && g_host_type->said_battle) {
+		g_host_type->said_battle(u, g_command);
+	} else {
+		BattleRoom_said_battle(u->name, g_command, CHAT_NORMAL);
+	}
 }
 
 static void
@@ -731,7 +731,7 @@ said_battle_ex(void)
 		}
 	}
 
-	BattleRoom_said_battle(u, g_command, CHAT_EX);
+	BattleRoom_said_battle(u->name, g_command, CHAT_EX);
 }
 
 static void

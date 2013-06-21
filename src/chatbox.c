@@ -271,6 +271,7 @@ on_size(HWND window, int width, int height)
 {
 	HWND input = GetDlgItem(window, DLG_INPUT);
 	HWND log   = GetDlgItem(window, DLG_LOG);
+
 	MoveWindow(log, 0, 0, width, height - MAP_Y(14), 1);
 	MoveWindow(input, 0, height - MAP_Y(14), width, MAP_Y(14), 1);
 }
