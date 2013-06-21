@@ -392,8 +392,8 @@ on_draw(HWND window)
 	GetClientRect(window, &rect);
 	BeginPaint(window, &ps);
 
-	ps.rcPaint.top += MAP_Y(18);
-	ps.rcPaint.bottom -= MAP_Y(36);
+	rect.top += MAP_Y(18);
+	rect.bottom -= MAP_Y(36);
 
 	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH) (COLOR_BTNFACE+1));
 
