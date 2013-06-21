@@ -278,12 +278,14 @@ on_size(HWND window, int width, int height)
 static void
 on_create(HWND window, LPARAM l_param)
 {
-	HWND log_window = CreateDlgItem(window, &DIALOG_ITEMS[DLG_LOG], DLG_LOG);
+	HWND log_window;
+
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
+
+	log_window = GetDlgItem(window, DLG_LOG);
 	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
 	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
 	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-
-	CreateDlgItem(window, &DIALOG_ITEMS[DLG_INPUT], DLG_INPUT);
 }
 
 void

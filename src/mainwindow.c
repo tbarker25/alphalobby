@@ -248,16 +248,16 @@ on_destroy(void)
 static void
 on_create(HWND window)
 {
+	HWND toolbar;
+
 	g_main_window = window;
-	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST+1);
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 
-	HWND toolbar = GetDlgItem(window, DLG_TOOLBAR);
-	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
-
+	toolbar = GetDlgItem(window, DLG_TOOLBAR);
 	IconList_enable_for_toolbar(toolbar);
-
+	SendMessage(toolbar, TB_SETEXTENDEDSTYLE, 0, TBSTYLE_EX_DRAWDDARROWS);
 	SendMessage(toolbar, TB_BUTTONSTRUCTSIZE, sizeof(*TOOLBAR_BUTTONS), 0);
-	SendMessage(toolbar, TB_ADDBUTTONS,       LENGTH(TOOLBAR_BUTTONS), (LPARAM)&TOOLBAR_BUTTONS);
+	SendMessage(toolbar, TB_ADDBUTTONS, LENGTH(TOOLBAR_BUTTONS), (LPARAM)&TOOLBAR_BUTTONS);
 	SendMessage(toolbar, TB_AUTOSIZE, 0, 0);
 
 	MainWindow_set_active_tab(GetDlgItem(window, DLG_BATTLELIST));
