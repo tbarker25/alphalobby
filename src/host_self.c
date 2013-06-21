@@ -25,7 +25,7 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "chat.h"
+#include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
 #include "host_self.h"
@@ -55,7 +55,7 @@ force_color(const char *name, uint32_t color)    */
 static void
 said_battle(const char *username, char *text)
 {
-	Chat_said(GetBattleChat(), username, 0, text);
+	/* ChatBox_append(GetBattleChat(), username, 0, text); */
 }
 
 static void

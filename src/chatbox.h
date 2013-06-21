@@ -16,8 +16,8 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef CHAT_H
-#define CHAT_H
+#ifndef CHATBOX_H
+#define CHATBOX_H
 
 #define WC_CHATBOX L"ChatBox"
 
@@ -44,17 +44,7 @@ typedef enum ChatDest {
 	DEST_LAST = DEST_SERVER,
 }ChatDest;
 
-void Chat_add_user(HWND window, struct User *);
-HWND Chat_get_channel_window(const char *name);
-HWND Chat_get_private_window(struct User *);
-HWND Chat_get_server_window(void);
-void Chat_join_channel(const char *channel_name, int focus);
-void Chat_on_disconnect(void);
-void Chat_on_left_battle(HWND window, struct User *);
-void Chat_said(HWND window, const char *username, ChatType type, const char *text);
-void Chat_save_windows(void);
-void Chat_update_user(struct User *);
+void ChatBox_append           (HWND window, const char *username, ChatType type, const char *text);
+void ChatBox_set_say_function (HWND window, void (*func)(const char *dest, const char *text), const char *dest);
 
-extern HWND g_chat_window;
-
-#endif /* end of include guard: CHAT_H */
+#endif /* end of include guard: CHATBOX_H */

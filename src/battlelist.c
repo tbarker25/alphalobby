@@ -27,8 +27,8 @@
 
 #include "battle.h"
 #include "battlelist.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "downloader.h"
@@ -82,7 +82,7 @@ static const DialogItem DIALOG_ITEMS[] = {
 };
 
 static const wchar_t *const COLUMN_TITLES[] = {L"host", L"description", L"mod", L"map", L"Players"};
-HWND g_battle_list;
+static HWND g_battle_list;
 
 static int CALLBACK
 compare_battle(const Battle *b1, const Battle *b2, int sort_order)
@@ -210,17 +210,21 @@ on_item_right_click(POINT pt)
 	switch (item_clicked) {
 	case FAIL:
 		break;
+
 	case JOIN:
 		TasServer_send_join_battle(b->id, NULL);
 		break;
+
 	case DL_MAP:
 		DownloadMap(b->map_name);
 		break;
+
 	case DL_MOD:
 		DownloadMod(b->mod_name);
 		break;
+
 	default:
-		ChatWindow_set_active_tab(Chat_get_private_window((User *)item_clicked));
+		/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item_clicked)); */
 		break;
 	}
 

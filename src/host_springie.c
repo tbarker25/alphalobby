@@ -6,7 +6,7 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "chat.h"
+#include "chatbox.h"
 #include "common.h"
 #include "host_spads.h"
 #include "mybattle.h"
@@ -30,10 +30,10 @@ said_battle(const char *username, char *text)
 			braces -= *s == ']';
 			if (braces == 0){
 				*s = '\0';
-				Chat_said(GetBattleChat(), text + 1, CHAT_INGAME, s + 1);
+				/* ChatBox_append(GetBattleChat(), text + 1, CHAT_INGAME, s + 1); */
 				return;
 			}
 		}
 	}
-	Chat_said(GetBattleChat(), username, 0, text);
+	/* ChatBox_append(GetBattleChat(), username, 0, text); */
 }

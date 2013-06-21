@@ -30,8 +30,8 @@
 #include "battlelist.h"
 #include "battleroom.h"
 #include "channellist.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "downloader.h"
@@ -116,7 +116,7 @@ static const DialogItem DIALOG_ITEMS[] = {
 		.class = WC_BATTLEROOM,
 	}, [DLG_CHAT] = {
 		.name = L"Chat Window",
-		.class = WC_CHATWINDOW,
+		.class = WC_CHATTAB,
 	}, [DLG_DOWNLOADTAB] = {
 		.class = WC_DOWNLOADTAB,
 	}
@@ -151,16 +151,26 @@ resize_current_tab(int16_t width, int16_t height)
 static void
 set_current_tab_checked(char enable)
 {
-	int tab_index = g_current_tab == g_battle_list   ? ID_BATTLELIST
-	              : g_current_tab == g_battle_room   ? ID_BATTLEROOM
-	              : g_current_tab == g_chat_window   ? ID_CHAT
-	              : g_current_tab == g_download_list ? ID_DOWNLOADS
-	              : -1;
-	WPARAM state = SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_GETSTATE, tab_index, 0);
-	if (enable)
+	int dialog_id;
+	int tab_index;
+
+	dialog_id = GetDlgCtrlID(g_current_tab);
+
+	tab_index = dialog_id == DLG_BATTLELIST  ? ID_BATTLELIST
+	          : dialog_id == DLG_BATTLEROOM  ? ID_BATTLEROOM
+		  : dialog_id == DLG_CHAT        ? ID_CHAT
+		  : dialog_id == DLG_DOWNLOADTAB ? ID_DOWNLOADS
+		  : -1;
+
+	WPARAM state = SendDlgItemMessage(g_main_window, DLG_TOOLBAR,
+	    TB_GETSTATE, tab_index, 0);
+
+	if (enable) {
 		state |= TBSTATE_CHECKED;
-	else
+	} else {
 		state &= ~TBSTATE_CHECKED;
+	}
+
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, tab_index, state);
 	ShowWindow(g_current_tab, enable);
 }
@@ -190,22 +200,24 @@ MainWindow_ring(void)
 			0x0000000C, /* FLASHW_TIMERNOFG */
 	};
 	FlashWindowEx(&flashInfo);
-	MainWindow_set_active_tab(g_battle_room);
+	MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLEROOM));
 }
 
 void
 MainWindow_disable_battleroom_button(void)
 {
-	if (g_current_tab == g_battle_room)
-		MainWindow_set_active_tab(g_battle_list);
-	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_DISABLED);
+	if (GetDlgCtrlID(g_current_tab) == DLG_BATTLEROOM)
+		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLELIST));
+
+	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE,
+	    ID_BATTLEROOM, TBSTATE_DISABLED);
 }
 
 void
 MainWindow_enable_battleroom_button(void)
 {
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE, ID_BATTLEROOM, TBSTATE_ENABLED | TBSTATE_CHECKED);
-	MainWindow_set_active_tab(g_battle_room);
+	MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLEROOM));
 }
 
 static void
@@ -216,7 +228,7 @@ on_destroy(void)
 	RECT *r;
 
 	TasServer_disconnect();
-	Chat_save_windows();
+	/* Chat_save_windows(); */
 	window_placement.length = sizeof(window_placement);
 	GetWindowPlacement(g_main_window, &window_placement);
 	r = &window_placement.rcNormalPosition;
@@ -269,15 +281,15 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_BATTLEROOM:
-		MainWindow_set_active_tab(g_battle_room);
+		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLEROOM));
 		return 0;
 
 	case ID_BATTLELIST:
-		MainWindow_set_active_tab(g_battle_list);
+		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLELIST));
 		return 0;
 
 	case ID_DOWNLOADS:
-		MainWindow_set_active_tab(g_download_list);
+		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_DOWNLOADTAB));
 		return 0;
 
 		/* case ID_SINGLEPLAYER: */
@@ -291,7 +303,7 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_CHAT:
-		MainWindow_set_active_tab(g_chat_window);
+		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_CHAT));
 		return 0;
 
 	case ID_PRIVATE:
@@ -303,7 +315,7 @@ on_command(int dialog_id)
 		return 0;
 
 	case ID_SERVERLOG:
-		ChatWindow_set_active_tab(Chat_get_server_window());
+		/* ChatWindow_set_active_tab(Chat_get_server_window()); */
 		return 0;
 
 	case ID_SPRING_SETTINGS:
@@ -507,7 +519,7 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 			left, top, width, height,
 			NULL, (HMENU)0, NULL, NULL);
 
-	Chat_get_server_window();
+	/* Chat_get_server_window(); */
 	Downloader_init();
 	/* RapidDialog_create(); */
 

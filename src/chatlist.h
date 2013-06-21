@@ -16,17 +16,9 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BATTLELIST_H
-#define BATTLELIST_H
+#ifndef CHATLIST_H
+#define CHATLIST_H
 
-#define WC_BATTLELIST L"BattleListClass"
+#define WC_CHATLIST L"Chatlist"
 
-struct Battle;
-
-void BattleList_add_battle(struct Battle *);
-void BattleList_update_battle(const struct Battle *);
-void BattleList_close_battle(const struct Battle *);
-void BattleList_on_end_login_info(void);
-void BattleList_reset(void);
-
-#endif /* end of include guard: BATTLELIST_H */
+#endif /* end of include guard: CHATLIST_H */

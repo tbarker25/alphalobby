@@ -9,7 +9,7 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "chat.h"
+#include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
 #include "host_relay.h"
@@ -164,7 +164,7 @@ kick(const UserBot *u)
 static void
 said_battle(const char *username, char *text)
 {
-	Chat_said(GetBattleChat(), username, 0, text);
+	/* ChatBox_append(GetBattleChat(), username, 0, text); */
 }
 
 static void

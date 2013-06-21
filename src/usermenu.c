@@ -24,8 +24,8 @@
 #include <windows.h>
 
 #include "battle.h"
-#include "chat.h"
-#include "chat_window.h"
+#include "chatbox.h"
+#include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
 #include "mybattle.h"

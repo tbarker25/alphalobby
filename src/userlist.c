@@ -30,8 +30,8 @@
 #include "layoutmetrics.h"
 #include "resource.h"
 #include "user.h"
-#include "chat_window.h"
-#include "chat.h"
+#include "chattab.h"
+#include "chatbox.h"
 
 #define LENGTH(x) (sizeof(x) / sizeof(*x))
 
@@ -49,7 +49,7 @@ activate(int item_index)
 	item_info.iItem = item_index;
 	item_info.iSubItem = 2;
 	ListView_GetItem(g_user_list, &item_info);
-	ChatWindow_set_active_tab(Chat_get_private_window((User *)item_info.lParam));
+	/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item_info.lParam)); */
 }
 
 static void

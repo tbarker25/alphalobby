@@ -39,7 +39,7 @@ static void _init (void);
 static LRESULT CALLBACK download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
 static void resize_columns(void);
 
-HWND g_download_list;
+static HWND g_download_list;
 static const wchar_t *const COLUMN_TITLES[] = {L"Name", L"Status"};
 
 static const DialogItem DIALOG_ITEMS[] = {

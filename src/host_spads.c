@@ -7,7 +7,7 @@
 
 #include "battle.h"
 #include "battleroom.h"
-#include "chat.h"
+#include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
 #include "host_spads.h"
@@ -65,11 +65,11 @@ said_battle(const char *username, char *text)
 	if (!strcmp(username, g_my_battle->founder->name)
 			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingame_name) == 1) {
 		text += 3 + strlen(ingame_name);
-		Chat_said(GetBattleChat(), ingame_name, CHAT_INGAME, text);
+		/* ChatBox_append(GetBattleChat(), ingame_name, CHAT_INGAME, text); */
 		return;
 	}
 
-	Chat_said(GetBattleChat(), username, 0, text);
+	/* ChatBox_append(GetBattleChat(), username, 0, text); */
 }
 
 static void
