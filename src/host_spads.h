@@ -19,6 +19,6 @@
 #ifndef HOST_SPADS_H
 #define HOST_SPADS_H
 
-extern const struct HostType HOST_SPADS;
+void Spads_set_as_host(void);
 
 #endif /* end of include guard: HOST_SPADS_H */

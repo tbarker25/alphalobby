@@ -23,7 +23,7 @@
 #define MAX_TITLE 128
 
 #define GetNumPlayers(_b)\
-	((_b)->user_len - (_b)->spectator_len - (_b)->bot_len)
+	((uint8_t)((_b)->user_len - (_b)->spectator_len - (_b)->bot_len))
 
 
 enum BattleType {

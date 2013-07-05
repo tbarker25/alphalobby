@@ -67,9 +67,9 @@ UserMenu_spawn(UserBot *s, HWND window)
 
 
 	if (battle_status & BS_AI) {
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[ALLY_MENU], L"Set team");
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[SIDE_MENU], L"Set faction");
+		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[TEAM_MENU], L"Set ID");
+		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[ALLY_MENU], L"Set team");
+		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[SIDE_MENU], L"Set faction");
 		AppendMenu(menus[0], 0, COLOR, L"Set color");
 		AppendMenu(menus[0], 0, KICK, L"Remove bot");
 	} else if (&s->user != &g_my_user) {
@@ -82,14 +82,14 @@ UserMenu_spawn(UserBot *s, HWND window)
 			AppendMenu(menus[0], 0, SPEC, L"Force spectate");
 		AppendMenu(menus[0], 0, KICK, L"Kick");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[TEAM_MENU], L"Set ID");
-		AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
+		AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[TEAM_MENU], L"Set ID");
+		AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[ALLY_MENU], L"Set team");
 	} else { //(u == &g_my_user)
 		if (battle_status & BS_MODE) {
 			AppendMenu(menus[0], 0, SPEC, L"Spectate");
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR)menus[TEAM_MENU], L"Set ID");
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[ALLY_MENU], L"Set team");
-			AppendMenu(menus[0], MF_POPUP, (UINT_PTR )menus[SIDE_MENU], L"Set faction");
+			AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[TEAM_MENU], L"Set ID");
+			AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[ALLY_MENU], L"Set team");
+			AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[SIDE_MENU], L"Set faction");
 			AppendMenu(menus[0], 0, COLOR, L"Set color");
 		} else
 			AppendMenu(menus[0], 0, SPEC, L"Unspectate");
@@ -112,7 +112,7 @@ UserMenu_spawn(UserBot *s, HWND window)
 	case ALIAS: {
 		char title[128], buf[MAX_NAME_LENGTH_NUL];
 		sprintf(title, "Set alias for %s", s->name);
-		if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof(buf))) {
+		if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof buf)) {
 			strcpy(s->user.alias, buf);
 			/* UpdateUser(&s->user); */
 		}
@@ -135,7 +135,7 @@ UserMenu_spawn(UserBot *s, HWND window)
 			// GetMenuStringA(menus[AI_MENU], clicked, s->bot.dll, len+1, MF_BYCOMMAND);
 			// free(s->bot.options);
 			// s->bot.option_len = Sync_ai_option_len(s->bot.dll);
-			// s->bot.options = calloc(s->bot.option_len, sizeof(*s->bot.options));
+			// s->bot.options = calloc(s->bot.option_len, sizeof *s->bot.options);
 			// UnitSync_GetOptions(s->bot.options, s->bot.option_len);
 		// } else if (clicked & AI_OPTIONS_FLAG) {
 			// Option2 *opt= &s->bot.options[clicked & 0xFF];
@@ -144,7 +144,7 @@ UserMenu_spawn(UserBot *s, HWND window)
 				// strcpy(opt->val, opt->list_items[clicked >> 8 & 0xFF].key);
 				// break;
 			// case opt_number:
-				// GetTextDialog_create(opt->name, opt->val, opt->val - opt->extra_data + sizeof(opt->extra_data));
+				// GetTextDialog_create(opt->name, opt->val, opt->val - opt->extra_data + sizeof opt->extra_data);
 				// break;
 			// case opt_bool:
 				// opt->val[0] ^= '0' ^ '1';

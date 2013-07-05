@@ -48,6 +48,7 @@ void TasServer_send_get_ingame_time(void);
 void TasServer_send_join_battle(uint32_t id, const char *password);
 void TasServer_send_join_channel(const char *channel_name);
 void TasServer_send_kick(const struct UserBot *);
+void TasServer_send_leave_battle(void);
 void TasServer_send_leave_channel(const char *channel_name);
 void TasServer_send_login(const char *username, const char *password);
 void TasServer_send_my_battle_status(struct BattleStatus);
@@ -62,7 +63,7 @@ cdecl void TasServer_send_say_private(const char *text, bool is_ex, const struct
 void TasServer_send_script_tags(const char *script_tags);
 void TasServer_send_set_map(const char *map_name);
 
-extern int g_last_auto_message;
+extern uint32_t g_last_auto_message;
 extern struct BattleStatus g_last_battle_status;
 extern struct ClientStatus g_last_client_status;
 

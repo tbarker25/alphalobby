@@ -38,7 +38,7 @@
 #include "user.h"
 #include "wincommon.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 enum DialogId {
 	DLG_TAB,
@@ -46,14 +46,14 @@ enum DialogId {
 };
 
 static void             _init             (void);
-static LRESULT CALLBACK chat_window_proc  (HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static intptr_t CALLBACK chat_window_proc  (HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void             resize_active_tab (void);
 
-static HWND g_chat_window;
-static HWND g_tab_control;
+static HWND s_chat_window;
+static HWND s_tab_control;
 static HWND active_tab;
 
-static HWND g_channel_windows[128];
+static HWND s_channel_windows[128];
 
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_TAB] = {
@@ -67,8 +67,8 @@ resize_active_tab(void)
 {
 	RECT rect;
 
-	GetClientRect(g_tab_control, &rect);
-	TabCtrl_AdjustRect(g_tab_control, FALSE, &rect);
+	GetClientRect(s_tab_control, &rect);
+	TabCtrl_AdjustRect(s_tab_control, FALSE, &rect);
 	MoveWindow(active_tab, rect.left, rect.top, rect.right - rect.left,
 			rect.bottom - rect.top, 1);
 }
@@ -78,12 +78,12 @@ get_tab_index(HWND tab_item)
 {
 	int tab_len;
 
-	tab_len = TabCtrl_GetItemCount(g_tab_control);
+	tab_len = TabCtrl_GetItemCount(s_tab_control);
 	for (int i=0; i<tab_len; ++i) {
 		TCITEM info;
 
 		info.mask = TCIF_PARAM;
-		TabCtrl_GetItem(g_tab_control, i, &info);
+		TabCtrl_GetItem(s_tab_control, i, &info);
 		if ((HWND)info.lParam == tab_item)
 			return i;
 	}
@@ -105,9 +105,9 @@ add_tab(HWND tab)
 	TCITEM info;
 	info.mask = TCIF_TEXT | TCIF_PARAM;
 	info.pszText = window_title;
-	info.lParam = (LPARAM)tab;
+	info.lParam = (intptr_t)tab;
 
-	item_index = TabCtrl_InsertItem(g_tab_control, 1000, &info);
+	item_index = TabCtrl_InsertItem(s_tab_control, 1000, &info);
 	if (item_index == 0) {
 		active_tab = tab;
 		ShowWindow(tab, 1);
@@ -122,7 +122,7 @@ static void
 remove_tab(HWND tab_item)
 {
 	int index = get_tab_index(tab_item);
-	TabCtrl_DeleteItem(g_tab_control, index);
+	TabCtrl_DeleteItem(s_tab_control, index);
 
 	if (tab_item != active_tab)
 		return;
@@ -134,11 +134,11 @@ remove_tab(HWND tab_item)
 
 	TCITEM info;
 	info.mask = TCIF_PARAM;
-	TabCtrl_GetItem(g_tab_control, index, &info);
+	TabCtrl_GetItem(s_tab_control, index, &info);
 
 	active_tab = (HWND)info.lParam;
 	ShowWindow(active_tab, 1);
-	TabCtrl_SetCurSel(g_tab_control, index);
+	TabCtrl_SetCurSel(s_tab_control, index);
 }
 #endif
 
@@ -148,12 +148,12 @@ focus_tab(HWND tab)
 	int item_index;
 
 	item_index = add_tab(tab);
-	TabCtrl_SetCurSel(g_tab_control, item_index);
+	TabCtrl_SetCurSel(s_tab_control, item_index);
 	ShowWindow(active_tab, 0);
 	active_tab = tab;
 	ShowWindow(active_tab, 1);
 	resize_active_tab();
-	MainWindow_set_active_tab(g_chat_window);
+	MainWindow_set_active_tab(s_chat_window);
 }
 
 static void say_hello(const char *text, bool unused, const void *dest)
@@ -165,26 +165,26 @@ static void doit(void)
 {
 	HWND chat_window = CreateWindow(WC_CHATBOX, L"TestWindow", WS_CHILD,
 	    0, 0, 0, 0,
-	    g_tab_control, 0, NULL, NULL);
+	    s_tab_control, 0, NULL, NULL);
 	focus_tab(chat_window);
 	ChatBox_set_say_function(chat_window, say_hello, "blah");
 }
 
 
-static LRESULT CALLBACK
-chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+static intptr_t CALLBACK
+chat_window_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_CREATE:
-		g_chat_window = window;
+		s_chat_window = window;
 
 		CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
-		g_tab_control = GetDlgItem(window, DLG_TAB);
+		s_tab_control = GetDlgItem(window, DLG_TAB);
 		doit();
 		return 0;
 
 	case WM_SIZE:
-		SetWindowPos(g_tab_control, HWND_BOTTOM, 0, 0,
+		SetWindowPos(s_tab_control, HWND_BOTTOM, 0, 0,
 				LOWORD(l_param), HIWORD(l_param), SWP_NOMOVE);
 		resize_active_tab();
 		break;
@@ -196,11 +196,11 @@ chat_window_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 	case WM_NOTIFY: {
 		NMHDR *info = (void *)l_param;
 
-		if (info->hwndFrom == g_tab_control && info->code == TCN_SELCHANGE) {
+		if (info->hwndFrom == s_tab_control && info->code == TCN_SELCHANGE) {
 			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
 			TCITEM info;
 			info.mask = TCIF_PARAM;
-			TabCtrl_GetItem(g_tab_control, tab_index, &info);
+			TabCtrl_GetItem(s_tab_control, tab_index, &info);
 			focus_tab((HWND)info.lParam);
 			return 0;
 		}
@@ -213,8 +213,8 @@ static void __attribute__((constructor))
 _init(void)
 {	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATTAB,
-		.lpfnWndProc   = chat_window_proc,
-		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.lpfnWndProc   = (WNDPROC)chat_window_proc,
+		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
 
@@ -230,7 +230,7 @@ static HWND get_user_window(User *user)
 	chat_window = CreateWindow(WC_CHATBOX,
 	    utf8to16(user->name), WS_CHILD,
 	    0, 0, 0, 0,
-	    g_tab_control, 0, NULL, NULL);
+	    s_tab_control, 0, NULL, NULL);
 	focus_tab(chat_window);
 	ChatBox_set_say_function(chat_window,
 	    (SayFunction *)TasServer_send_say_private, user->name);
@@ -252,20 +252,20 @@ ChatTab_on_said_private(User *user, const char *text, ChatType chat_type)
 static HWND
 get_channel_window(const char *channel)
 {
-	for (size_t i = 0; i < LENGTH(g_channel_windows); ++i) {
+	for (size_t i = 0; i < LENGTH(s_channel_windows); ++i) {
 		HWND channel_window;
 		char buf[128];
 
-		if (g_channel_windows[i]) {
-			GetWindowTextA(g_channel_windows[i], buf, sizeof(buf));
+		if (s_channel_windows[i]) {
+			GetWindowTextA(s_channel_windows[i], buf, sizeof buf);
 			if (!strcmp(channel, buf))
-				return g_channel_windows[i];
+				return s_channel_windows[i];
 		}
 		channel_window = CreateWindow(WC_CHATBOX,
 		    utf8to16(channel), WS_CHILD,
 		    0, 0, 0, 0,
-		    g_tab_control, 0, NULL, NULL);
-		g_channel_windows[i] = channel_window;
+		    s_tab_control, 0, NULL, NULL);
+		s_channel_windows[i] = channel_window;
 		focus_tab(channel_window);
 		/* TODO mem leak here */
 		ChatBox_set_say_function(channel_window,
@@ -312,11 +312,11 @@ Chat_save_windows(void)
 	char autojoin_channels[10000];
 	autojoin_channels[0] = 0;
 	size_t len = 0;
-	for (size_t i=0; i<LENGTH(g_channel_windows); ++i) {
+	for (size_t i=0; i<LENGTH(s_channel_windows); ++i) {
 		extern int get_tab_index(HWND tab_item);
-		if (get_tab_index(g_channel_windows[i]) >= 0) {
+		if (get_tab_index(s_channel_windows[i]) >= 0) {
 			ChatWindowData *data = (void *)GetWindowLongPtr(
-					g_channel_windows[i], GWLP_USERDATA);
+					s_channel_windows[i], GWLP_USERDATA);
 			len += sprintf(&autojoin_channels[len],
 					len ? ";%s" : "%s", data->name);
 		}

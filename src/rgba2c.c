@@ -27,7 +27,7 @@ int main(int argc, char **argv)
 	puts("static const uint8_t icon_data[] = {");
 	uint8_t buf[16384];
 	size_t len;
-	while ((len = fread(buf, 1, sizeof(buf), stdin))) {
+	while ((len = fread(buf, 1, sizeof buf, stdin))) {
 		for (int i=0; i < len / 4; ++i)
 			fprintf(stdout, "0x%X, 0x%X, 0x%X, 0x%X, \n",
 			buf[i*4+2], buf[i*4+1], buf[i*4], buf[i*4+3]);

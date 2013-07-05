@@ -27,7 +27,7 @@
 #include "resource.h"
 #include "wincommon.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 enum DialogId {
 	DLG_LIST,
@@ -36,10 +36,10 @@ enum DialogId {
 };
 
 static void _init (void);
-static LRESULT CALLBACK download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static intptr_t CALLBACK download_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void resize_columns(void);
 
-static HWND g_download_list;
+static HWND s_download_list;
 static const wchar_t *const COLUMN_TITLES[] = {L"Name", L"Status"};
 
 static const DialogItem DIALOG_ITEMS[] = {
@@ -57,11 +57,11 @@ static void
 resize_columns(void)
 {
 	RECT rect;
-	HWND list = GetDlgItem(g_download_list, DLG_LIST);
+	HWND list = GetDlgItem(s_download_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
-	int column_rem = rect.right % LENGTH(COLUMN_TITLES);
-	int column_width = rect.right / LENGTH(COLUMN_TITLES);
+	int column_rem = rect.right % (int)LENGTH(COLUMN_TITLES);
+	int column_width = rect.right / (int)LENGTH(COLUMN_TITLES);
 
 	for (int i=0, n = LENGTH(COLUMN_TITLES); i < n; ++i)
 		ListView_SetColumnWidth(list, i, column_width + !i * column_rem);
@@ -70,24 +70,30 @@ resize_columns(void)
 void
 DownloadList_remove(const wchar_t *name)
 {
-	int item = SendDlgItemMessage(g_download_list, DLG_LIST, LVM_FINDITEM, -1,
-		(LPARAM)&(LVFINDINFO){.flags = LVFI_STRING, .psz  = (wchar_t *)name}
-	);
-	SendDlgItemMessage(g_download_list, DLG_LIST, LVM_DELETEITEM, item, 0);
+	LVFINDINFO find_info;
+	int item_index;
+
+	find_info.flags = LVFI_STRING;
+	find_info.psz = (wchar_t *)name;
+	item_index = SendDlgItemMessage(s_download_list, DLG_LIST, LVM_FINDITEM,
+	    (uintptr_t)-1, (intptr_t)&find_info);
+
+	SendDlgItemMessage(s_download_list, DLG_LIST, LVM_DELETEITEM,
+	    (uintptr_t)item_index, 0);
 }
 
 void
 DownloadList_update(const wchar_t *name, const wchar_t *text)
 {
-	HWND list = GetDlgItem(g_download_list, DLG_LIST);
+	HWND list = GetDlgItem(s_download_list, DLG_LIST);
 	int item = ListView_FindItem(list, -1,
 		(&(LVFINDINFO){.flags = LVFI_STRING, .psz  = (wchar_t *)name})
 	);
 
 	if (item == -1)
 		item = SendMessage(list, LVM_INSERTITEM, 0,
-				(LPARAM)&(LVITEM){.mask = LVIF_TEXT, .pszText = (wchar_t *)name});
-	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
+				(intptr_t)&(LVITEM){.mask = LVIF_TEXT, .pszText = (wchar_t *)name});
+	SendMessage(list, LVM_SETITEM, 0, (intptr_t)&(LVITEM){
 			.mask = LVIF_TEXT,
 			.iItem = item,
 			.iSubItem = 1,
@@ -95,19 +101,19 @@ DownloadList_update(const wchar_t *name, const wchar_t *text)
 		);
 }
 
-static LRESULT CALLBACK
-download_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+static intptr_t CALLBACK
+download_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch(msg) {
 	case WM_CLOSE:
 		return 0;
 	case WM_CREATE:
-		g_download_list = window;
+		s_download_list = window;
 		CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 
-		HWND list_dlg = GetDlgItem(g_download_list, DLG_LIST);
+		HWND list_dlg = GetDlgItem(s_download_list, DLG_LIST);
 
-		for (int i=0, n=sizeof(COLUMN_TITLES) / sizeof(char *); i < n; ++i) {
+		for (int i=0, n=sizeof COLUMN_TITLES / sizeof *COLUMN_TITLES; i < n; ++i) {
 			ListView_InsertColumn(list_dlg, i, (&(LVCOLUMN){
 				.mask = LVCF_TEXT | LVCF_SUBITEM,
 				.pszText = (wchar_t *)COLUMN_TITLES[i],
@@ -138,9 +144,9 @@ _init(void)
 {
 	WNDCLASSEX window_class = {
 		.lpszClassName = WC_DOWNLOADTAB,
-		.cbSize        = sizeof(WNDCLASSEX),
-		.lpfnWndProc   = download_list_proc,
-		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.cbSize        = sizeof window_class,
+		.lpfnWndProc   = (WNDPROC)download_list_proc,
+		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
 

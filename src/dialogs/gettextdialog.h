@@ -19,8 +19,8 @@
 #ifndef GETTEXTDIALOG_H
 #define GETTEXTDIALOG_H
 
-LPARAM GetTextDialog2_create(HWND window, const char *title, char *buf, size_t buf_len);
-LPARAM GetTextDialog_create(const char *title, char *buf, size_t buf_len);
+intptr_t GetTextDialog2_create(HWND window, const char *title, char *buf, size_t buf_len);
+intptr_t GetTextDialog_create(const char *title, char *buf, size_t buf_len);
 
 #endif /* end of include guard: GETTEXTDIALOG_H */
 

@@ -15,40 +15,42 @@
 #include "spring.h"
 #include "user.h"
 
-static void relay_command(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
+static void relay_command (const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
 
-static void force_ally(const char *name, int ally);
-static void force_team(const char *name, int team);
-static void kick(const UserBot *);
-static void said_battle(struct User *, char *text);
-static void set_map(const char *map_name);
-static void set_option(Option *opt, const char *val);
-static void set_split(int size, SplitType type);
-static void start_game(void);
+static void force_ally    (const User *, int ally);
+static void force_team    (const User *, int team);
+static void kick          (const UserBot *);
+static void said_battle   (struct User *, char *text, ChatType);
+static void set_map       (const char *map_name);
+static void set_option    (Option *opt, const char *val);
+static void set_split     (int size, SplitType type);
+static void start_game    (void);
 
-const HostType HOST_SPADS = {
-	.force_ally = force_ally,
-	.force_team = force_team,
-	.kick = kick,
-	.said_battle = said_battle,
-	.set_map = set_map,
-	.set_option = set_option,
-	.set_split = set_split,
-	.start_game = start_game,
-};
-
-static void
-force_ally(const char *name, int ally)
+void
+Spads_set_as_host(void)
 {
-	relay_command("!force %s team %d",
-			name, ally);
+	MyBattle_force_ally  = force_ally;
+	MyBattle_force_team  = force_team;
+	MyBattle_kick        = kick;
+	MyBattle_said_battle = said_battle;
+	MyBattle_set_map     = set_map;
+	MyBattle_set_option  = set_option;
+	MyBattle_set_split   = set_split;
+	MyBattle_start_game  = start_game;
 }
 
 static void
-force_team(const char *name, int team)
+force_ally(const User *user, int ally)
+{
+	relay_command("!force %s team %d",
+			user->name, ally);
+}
+
+static void
+force_team(const User *user, int team)
 {
 	relay_command("!force %s id %d",
-			name, team);
+			user->name, team);
 }
 
 static void
@@ -58,18 +60,19 @@ kick(const UserBot *u)
 }
 
 static void
-said_battle(User *user, char *text)
+said_battle(User *user, char *text, ChatType chat_type)
 {
 	char ingame_name[MAX_NAME_LENGTH_NUL];
 
 	if (user == g_my_battle->founder
-			&& sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingame_name) == 1) {
+	    && chat_type == CHAT_NORMAL
+	    && sscanf(text, "<%" STRINGIFY(MAX_NAME_LENGTH_NUL) "[^>]> ", ingame_name) == 1) {
 		text += 3 + strlen(ingame_name);
 		BattleRoom_said_battle(ingame_name, text, CHAT_INGAME);
 		return;
 	}
 
-	BattleRoom_said_battle(user->name, text, CHAT_INGAME);
+	BattleRoom_said_battle(user->name, text, chat_type);
 }
 
 static void

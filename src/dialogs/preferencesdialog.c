@@ -16,6 +16,7 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -26,17 +27,18 @@
 #include "../settings.h"
 #include "../resource.h"
 
-static BOOL CALLBACK preferences_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK preferences_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
 void
 PreferencesDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_PREFERENCES), g_main_window, preferences_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_PREFERENCES), g_main_window,
+	    (DLGPROC)preferences_proc);
 }
 
 static BOOL CALLBACK
-preferences_proc(HWND window, UINT msg, WPARAM w_param,
-		__attribute__((unused)) LPARAM l_param)
+preferences_proc(HWND window, uint32_t msg, uintptr_t w_param,
+		__attribute__((unused)) intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -52,7 +54,7 @@ preferences_proc(HWND window, UINT msg, WPARAM w_param,
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
 			char buf[1024];
-			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buf, sizeof(buf));
+			GetDlgItemTextA(window, IDC_PREFERENCES_PATH, buf, sizeof buf);
 			free(g_settings.spring_path);
 			g_settings.spring_path = _strdup(buf);
 			g_settings.flags = (g_settings.flags & ~SETTING_AUTOCONNECT) | SETTING_AUTOCONNECT * SendDlgItemMessage(window, IDC_PREFERENCES_AUTOCONNECT, BM_GETCHECK, 0, 0);

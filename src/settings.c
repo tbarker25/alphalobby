@@ -34,10 +34,10 @@
 #include "user.h"
 
 #define CONFIG_PATH (Settings_get_data_dir(L"alphalobby.conf"))
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 typedef struct KeyPair{
-	char *key, *val;
+	const char *key, *val;
 	char is_int;
 }KeyPair;
 
@@ -58,11 +58,11 @@ get_line(FILE *fd)
 {
 	static char buf[1024];
 	char *delim=NULL, *end;
-	if (!fgets(buf, sizeof(buf), fd)
+	if (!fgets(buf, sizeof buf, fd)
 			|| !(delim = strchr(buf, '='))
 			|| !(end = strchr(delim, '\n')))
 		return delim ? get_line(fd) : (KeyPair){0};
-	assert(end - buf < (ssize_t)sizeof(buf));
+	assert(end - buf < (ssize_t)sizeof buf);
 	*end = '\0'; *delim = '\0';
 	return (KeyPair){buf, delim+1, 0};
 }
@@ -140,12 +140,12 @@ Settings_init(void)
 	FILE *fd = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"r");
 	if (fd) {
 		for (KeyPair s; (s = get_line(fd)).key;)
-			Users_new(atoi(s.key), s.val);
+			Users_new((uint32_t)atol(s.key), s.val);
 		fclose(fd);
 	}
 
 	for(size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i)
-		((char **)&g_settings)[i] = DEFAULT_SETTINGS[i].is_int ? DEFAULT_SETTINGS[i].val
+		((char **)&g_settings)[i] = DEFAULT_SETTINGS[i].is_int ? (void *)DEFAULT_SETTINGS[i].val
 		                         : DEFAULT_SETTINGS[i].val ? _strdup(DEFAULT_SETTINGS[i].val)
 								 : NULL;
 

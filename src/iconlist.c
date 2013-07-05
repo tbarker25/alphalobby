@@ -30,28 +30,28 @@
 #include "mybattle.h"
 #include "user.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 #define ICON_BBP (4)
 #define ICON_HEIGHT (16)
-#define ICON_WIDTH (sizeof(icon_data) / ICON_BBP / ICON_HEIGHT)
+#define ICON_WIDTH (sizeof icon_data / ICON_BBP / ICON_HEIGHT)
 
 static void _init                  (void);
 static int  get_player_color_index (const UserBot *u);
 static void set_icon_as_color      (int index, uint32_t color);
 
-static HIMAGELIST g_icon_list;
+static HIMAGELIST s_icon_list;
 
 void
 IconList_replace_icon(IconIndex index, HBITMAP bitmap)
 {
-	ImageList_Replace(g_icon_list, index, bitmap, NULL);
+	ImageList_Replace(s_icon_list, index, bitmap, NULL);
 }
 
 HICON
 IconList_get_icon(IconIndex icon_index)
 {
-	return ImageList_GetIcon(g_icon_list, icon_index, 0);
+	return ImageList_GetIcon(s_icon_list, icon_index, 0);
 }
 
 static int
@@ -62,14 +62,14 @@ get_player_color_index(const UserBot *u)
 	if (!u->mode)
 		return -1;
 
-	for (size_t i=0; i < LENGTH(player_colors); ++i) {
+	for (uint8_t i=0; i < LENGTH(player_colors); ++i) {
 		if (player_colors[i] == u) {
 			player_colors[i] = u;
 			return i;
 		}
 	}
 
-	for (size_t i=0; i < LENGTH(player_colors); ++i) {
+	for (uint8_t i=0; i < LENGTH(player_colors); ++i) {
 		for (size_t j = 0; j < g_my_battle->user_len; ++j) {
 			if (g_my_battle->users[j]->mode
 					&& g_my_battle->users[j] == player_colors[i])
@@ -95,12 +95,12 @@ set_icon_as_color(int index, uint32_t color)
 	ReleaseDC(NULL, dc);
 	SelectObject(bitmap_dc, bitmap);
 
-	for (size_t i=0; i<16*16; ++i)
+	for (int i=0; i<16*16; ++i)
 		SetPixelV(bitmap_dc, i%16, i/16, color);
 
 	DeleteDC(bitmap_dc);
 
-	ImageList_Replace(g_icon_list, index, bitmap, NULL);
+	ImageList_Replace(s_icon_list, index, bitmap, NULL);
 	DeleteObject(bitmap);
 }
 
@@ -123,20 +123,20 @@ IconList_set_window_image(HWND window, IconIndex icon_index)
 {
 	HICON icon;
 
-	icon = ImageList_GetIcon(g_icon_list, icon_index, 0);
-	SendMessage(window, BM_SETIMAGE, IMAGE_ICON, (WPARAM)icon);
+	icon = ImageList_GetIcon(s_icon_list, icon_index, 0);
+	SendMessage(window, BM_SETIMAGE, IMAGE_ICON, (intptr_t)icon);
 }
 
 void
 IconList_enable_for_listview(HWND window)
 {
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)g_icon_list);
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (intptr_t)s_icon_list);
 }
 
 void
 IconList_enable_for_toolbar(HWND window)
 {
-	SendMessage(window, TB_SETIMAGELIST, 0, (LPARAM)g_icon_list);
+	SendMessage(window, TB_SETIMAGELIST, 0, (intptr_t)s_icon_list);
 }
 
 static void __attribute__((constructor))
@@ -144,12 +144,12 @@ _init(void)
 {
 	HBITMAP icons_bitmap;
 
-	g_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
+	s_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
 	icons_bitmap = CreateBitmap(ICON_WIDTH, ICON_HEIGHT, 1, ICON_BBP*8, icon_data);
-	ImageList_Add(g_icon_list, icons_bitmap, NULL);
+	ImageList_Add(s_icon_list, icons_bitmap, NULL);
 	DeleteObject(icons_bitmap);
 
 	for (IconIndex i=1; i<=ICON_MASK; ++i)
 		if (i & ~ ICONMASK_USER)
-			ImageList_SetOverlayImage(g_icon_list, i, i);
+			ImageList_SetOverlayImage(s_icon_list, i, i);
 }

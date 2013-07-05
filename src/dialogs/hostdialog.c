@@ -29,39 +29,41 @@
 #include "../settings.h"
 #include "../tasserver.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 static void on_host_init(HWND window);
 static int on_host_ok(HWND window);
-static BOOL CALLBACK host_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK host_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
 void
 HostDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_HOST), g_main_window, host_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_HOST), g_main_window,
+	    (DLGPROC)host_proc);
 }
 
 static void
 on_host_init(HWND window)
 {
 	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(Settings_load_str("last_host_description")));
-	const char *def; int defIndex;
+	const char *def;
+	int defIndex;
 
 	def = Settings_load_str("last_host_mod"); defIndex=0;
-	for (size_t i=0; i<g_mod_len; ++i) {
+	for (int i=0; i<g_mod_len; ++i) {
 		if (def && !strcmp(def, g_mods[i]))
 			defIndex = i;
-		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (LPARAM)g_mods[i]);
+		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (intptr_t)g_mods[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, (uintptr_t)defIndex, 0);
 
 	def = Settings_load_str("last_host_map"); defIndex=0;
-	for (size_t i=0; i<g_map_len; ++i) {
+	for (int i=0; i<g_map_len; ++i) {
 		if (def && !strcmp(def, g_maps[i]))
 			defIndex = i;
-		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (LPARAM)g_maps[i]);
+		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (intptr_t)g_maps[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, (uintptr_t)defIndex, 0);
 
 	SetDlgItemInt(window, IDC_HOST_PORT, 8452, 0);
 	SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_SETCHECK, 1, 0);
@@ -70,9 +72,9 @@ on_host_init(HWND window)
 	for (int i=1; i<g_relay_manager_len; ++i) {
 		if (def && !strcmp(def, g_relay_managers[i]))
 			defIndex = i;
-		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (LPARAM)utf8to16(g_relay_managers[i]));
+		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (intptr_t)utf8to16(g_relay_managers[i]));
 	}
-	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, (uintptr_t)defIndex, 0);
 }
 
 static int
@@ -101,7 +103,7 @@ on_host_ok(HWND window)
 		RelayHost_open_battle(description, password, mod, map, manager);
 	} else {
 		uint16_t port;
-		port = GetDlgItemInt(window, IDC_HOST_PORT, NULL, 0);
+		port = (uint16_t)GetDlgItemInt(window, IDC_HOST_PORT, NULL, 0);
 		if (!port) {
 			if (MessageBox(window, L"Use the default port? (8452)", L"Can't _proceed Without a Valid Port", MB_YESNO) == IDYES)
 				port = 8452;
@@ -114,7 +116,7 @@ on_host_ok(HWND window)
 }
 
 static BOOL CALLBACK
-host_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+host_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:

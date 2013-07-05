@@ -28,19 +28,20 @@
 #include "../wincommon.h"
 #include "../tasserver.h"
 
-static BOOL CALLBACK change_password_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK change_password_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 __attribute__((pure)) static int is_md5(const char *hash);
 static void to_md5_2(char *md5, const char *password);
 
 void
 ChangePasswordDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_CHANGEPASSWORD), g_main_window, change_password_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_CHANGEPASSWORD), g_main_window,
+	    (DLGPROC)change_password_proc);
 }
 
 static BOOL CALLBACK
-change_password_proc(HWND window, UINT msg, WPARAM w_param,
-		__attribute__((unused)) LPARAM l_param)
+change_password_proc(HWND window, uint32_t msg, uintptr_t w_param,
+		__attribute__((unused)) intptr_t l_param)
 {
 	switch (msg) {
 	case WM_COMMAND:

@@ -47,7 +47,7 @@
 #include "userlist.h"
 #include "dialogs/agreementdialog.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 typedef struct Command {
 	char name[20];
@@ -102,9 +102,9 @@ static void TAS_server            (void);
 static void update_battle_info    (void);
 static void update_bot            (void);
 
-static FILE *g_agreement_file;
-static DWORD g_time_battle_joined;
-static char *g_command;
+static FILE *s_agreement_file;
+static uint32_t s_time_battle_joined;
+static char *s_command;
 
 static const Command SERVER_COMMANDS[] = {
 	{"ACCEPTED",             accepted},
@@ -158,32 +158,32 @@ static const Command SERVER_COMMANDS[] = {
 
 static void
 copy_next_word(char *buf) {
-	size_t len = strcspn(g_command, " ");
-	char *word = g_command;
-	g_command += len + !!g_command[len];
+	size_t len = strcspn(s_command, " ");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
 	word[len] = '\0';
 	memcpy(buf, word, len + 1);
 }
 
 static char *
 get_next_word(void) {
-	size_t len = strcspn(g_command, " ");
-	char *word = g_command;
-	g_command += len + !!g_command[len];
+	size_t len = strcspn(s_command, " ");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
 	word[len] = '\0';
 	return word;
 }
 
-static int
+static uint32_t
 get_next_int(void) {
-	return atoi(get_next_word());
+	return (uint32_t)atol(get_next_word());
 }
 
 static void
 copy_next_sentence(char *buf) {
-	size_t len = strcspn(g_command, "\t");
-	char *word = g_command;
-	g_command += len + !!g_command[len];
+	size_t len = strcspn(s_command, "\t");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
 	word[len] = '\0';
 	memcpy(buf, word, len + 1);
 }
@@ -191,11 +191,11 @@ copy_next_sentence(char *buf) {
 void
 Messages_handle(char *command)
 {
-	g_command = command;
+	s_command = command;
 	char *command_name = get_next_word();
 	typeof(*SERVER_COMMANDS) *com =
 		bsearch(command_name, SERVER_COMMANDS, LENGTH(SERVER_COMMANDS),
-				sizeof(*SERVER_COMMANDS), (void *)strcmp);
+				sizeof *SERVER_COMMANDS, (void *)strcmp);
 	if (com)
 		com->func();
 }
@@ -208,6 +208,7 @@ accepted(void)
 }
 
 
+/* ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL} */
 static void
 add_bot(void)
 {
@@ -215,7 +216,6 @@ add_bot(void)
 		BattleStatus; uint32_t as_int;
 	} bs;
 
-	// ADDBOT BATTLE_ID name owner battlestatus teamcolor{AIDLL}
 	__attribute__((unused))
 	char *battle_id = get_next_word();
 	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
@@ -224,7 +224,7 @@ add_bot(void)
 	assert(owner);
 	bs.as_int = get_next_int();
 	uint32_t color = get_next_int();
-	Users_add_bot(name, owner, bs.BattleStatus, color, g_command);
+	Users_add_bot(name, owner, bs.BattleStatus, color, s_command);
 }
 
 static void
@@ -232,8 +232,8 @@ add_user(void)
 {
 	char *name = get_next_word();
 
-	uint8_t country = Country_get_id(g_command);
-	g_command += 3;
+	uint8_t country = Country_get_id(s_command);
+	s_command += 3;
 
 	uint32_t cpu = get_next_int();
 
@@ -242,10 +242,6 @@ add_user(void)
 	u->country = country;
 	u->cpu = cpu;
 
-	/* Chat_add_user(Chat_get_server_window(), u); */
-	/* if (g_settings.flags & (1<<DEST_SERVER)) */
-		/* ChatBox_append(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged in"); */
-
 	RelayHost_on_add_user(u->name);
 }
 
@@ -253,26 +249,26 @@ static void
 add_start_rect(void)
 {
 	typeof(*g_battle_options.start_rects) *rect = &g_battle_options.start_rects[get_next_int()];
-	rect->left = get_next_int();
-	rect->top = get_next_int();
-	rect->right = get_next_int();
-	rect->bottom = get_next_int();
+	rect->left   = (uint16_t)get_next_int();
+	rect->top    = (uint16_t)get_next_int();
+	rect->right  = (uint16_t)get_next_int();
+	rect->bottom = (uint16_t)get_next_int();
 	Minimap_on_start_position_change();
 }
 
 static void
 agreement(void)
 {
-	g_agreement_file = g_agreement_file ?: tmpfile();
-	fputs(g_command, g_agreement_file);
+	s_agreement_file = s_agreement_file ?: tmpfile();
+	fputs(s_command, s_agreement_file);
 }
 
 static void
 agreement_end(void)
 {
-	rewind(g_agreement_file);
-	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)AgreementDialog_create, (LPARAM)g_agreement_file);
-	g_agreement_file = NULL;
+	rewind(s_agreement_file);
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (uintptr_t)AgreementDialog_create, (intptr_t)s_agreement_file);
+	s_agreement_file = NULL;
 }
 
 static void
@@ -280,8 +276,8 @@ battle_opened(void)
 {
 	Battle *b = Battles_new();
 
-	b->id = get_next_int();
-	b->type = get_next_int();
+	b->id       = get_next_int();
+	b->type     = (uint8_t)get_next_int();
 	b->nat_type = get_next_int();
 
 	char founder_name[MAX_NAME_LENGTH_NUL];
@@ -292,18 +288,16 @@ battle_opened(void)
 	b->founder->battle = b;
 
 	copy_next_word(b->ip);
-	b->port = get_next_int();
-	b->max_players = get_next_int();
-	b->passworded = get_next_int();
-	b->rank = get_next_int();
-	b->map_hash = get_next_int();
+	b->port        = (uint16_t)get_next_int();
+	b->max_players = (uint8_t)get_next_int();
+	b->passworded  = (uint8_t)get_next_int();
+	b->rank        = (uint8_t)get_next_int();
+	b->map_hash    = get_next_int();
 	copy_next_sentence(b->map_name);
 	copy_next_sentence(b->title);
 	copy_next_sentence(b->mod_name);
 
 	RelayHost_on_battle_opened(b);
-
-	/* Chat_update_user(b->founder); */
 
 	BattleList_add_battle(b);
 }
@@ -340,7 +334,7 @@ channel(void)
 {
 	const char *channame = get_next_word();
 	const char *usercount = get_next_word();
-	const char *description = g_command;
+	const char *description = s_command;
 	ChannelList_add_channel(channame, usercount, description);
 }
 
@@ -354,11 +348,11 @@ channel_topic(void)
 	get_next_word(); /* unix_time */
 
 	char *s;
-	while ((s = strstr(g_command, "\\n"))) {
+	while ((s = strstr(s_command, "\\n"))) {
 		s[0] = '\r';
 		s[1] = '\n';
 	}
-	ChatTab_on_said_channel(channel, NULL, g_command, CHAT_TOPIC);
+	ChatTab_on_said_channel(channel, NULL, s_command, CHAT_TOPIC);
 }
 
 static void
@@ -378,10 +372,6 @@ client_battle_status(void)
 static void
 clients(void)
 {
-	/* const char *channel_name = get_next_word(); */
-	/* HWND window = Chat_get_channel_window(channel_name); */
-	/* for (const char *username; *(username = get_next_word()); ) */
-		/* Chat_add_user(window, Users_find(username)); */
 }
 
 static void
@@ -398,7 +388,7 @@ client_status(void)
 	if (!u)
 		return;
 
-	status.as_int = get_next_int();
+	status.as_int = (uint8_t)get_next_int();
 	previous = u->ClientStatus;
 	u->ClientStatus = status.ClientStatus;
 
@@ -407,10 +397,6 @@ client_status(void)
 
 	if (g_my_battle && u->battle == g_my_battle)
 		BattleRoom_update_user((void *)u);
-
-	/* if (previous.ingame != u->ingame */
-			/* || previous.away != u->away) */
-		/* Chat_update_user(u); */
 
 	if (!u->battle)
 		return;
@@ -428,13 +414,13 @@ static void
 denied(void)
 {
 	TasServer_disconnect();
-	MainWindow_msg_box("Connection denied", g_command);
+	MainWindow_msg_box("Connection denied", s_command);
 }
 
 static void
 force_quit_battle(void)
 {
-	static char buf[sizeof(" has kicked you from the current battle") + MAX_TITLE];
+	static char buf[sizeof " has kicked you from the current battle" + MAX_TITLE];
 	sprintf(buf, "%s has kicked you from the current battle.", g_my_battle->founder->name);
 	MainWindow_msg_box("Leaving battle", buf);
 }
@@ -451,14 +437,14 @@ join_battle(void)
 {
 	Battle *b = Battles_find(get_next_int());
 	MyBattle_joined_battle(b, get_next_int());
-	g_time_battle_joined = GetTickCount();
+	s_time_battle_joined = GetTickCount();
 }
 
 static void
 join_battle_failed(void)
 {
 	BattleRoom_hide();
-	MainWindow_msg_box("Failed to join battle", g_command);
+	MainWindow_msg_box("Failed to join battle", s_command);
 }
 
 static void
@@ -473,7 +459,6 @@ joined(void)
 	if (user)
 		ChatTab_on_said_channel(channel, user, "Has joined the channel",
 		    CHAT_SYSTEM);
-	/* Chat_add_user(Chat_get_channel_window(channel_name), Users_find(username)); */
 }
 
 static void
@@ -505,10 +490,8 @@ joined_battle(void)
 	u->BattleStatus = (BattleStatus){0};
 
 	BattleList_update_battle(b);
-	/* Chat_update_user(u); */
 
 	if (b == g_my_battle) {
-		/* if (g_settings.flags & (1<<DEST_BATTLE)) */
 		BattleRoom_said_battle(u->name, "has joined the battle",
 		    CHAT_SYSTEM);
 	}
@@ -517,11 +500,6 @@ joined_battle(void)
 static void
 join_failed(void)
 {
-	/* HWND chan_window = Chat_get_channel_window(get_next_word()); */
-	/* if (chan_window){ */
-		/* SendMessage(chan_window, WM_CLOSE, 0, 0); */
-		/* MainWindow_msg_box("Couldn't join channel", g_command); */
-	/* } */
 }
 
 static void
@@ -562,11 +540,13 @@ left_battle(void)
 	if (u == &g_my_user)
 		MyBattle_left_battle();
 
-	/* Chat_update_user(u); */
 	BattleList_update_battle(b);
 
 	if (b == g_my_battle) {
-		if (u->mode && !g_my_user.mode && BattleRoom_is_auto_unspec()) {
+		if (u->mode && !g_my_user.mode
+		    && g_last_auto_unspec + 5000 < GetTickCount()
+		    && BattleRoom_is_auto_unspec()) {
+			g_last_auto_unspec = GetTickCount();
 			BattleStatus bs = g_last_battle_status;
 			bs.mode = 1;
 			TasServer_send_my_battle_status(bs);
@@ -585,13 +565,11 @@ login_info_end(void)
 	Settings_open_default_channels();
 	BattleList_on_end_login_info();
 	MainWindow_change_connect(CONNECTION_ONLINE);
-	/* TasServer_send("SAYPRIVATE RelayHostManagerList !listmansrc\messages.c */
 }
 
 static void
 message_of_the_day(void)
 {
-	/* ChatBox_append(Chat_get_server_window(), NULL, 0, g_command); */
 }
 
 static void
@@ -622,25 +600,13 @@ remove_bot(void)
 static void
 remove_start_rect(void)
 {
-	memset(&g_battle_options.start_rects[get_next_int()], 0, sizeof(typeof(*g_battle_options.start_rects)));
+	g_battle_options.start_rects[get_next_int()] = (StartRect){0};
 	Minimap_on_start_position_change();
 }
 
 static void
 remove_user(void)
 {
-	/* User *u = Users_find(get_next_word()); */
-	/* assert(u); */
-	/* if (!u) */
-		/* return; */
-	/* if (g_settings.flags & (1<<DEST_SERVER)) */
-		/* ChatBox_append(Chat_get_server_window(), u->name, CHAT_SYSTEM, "has logged off"); */
-	/* // TODO: */
-	/* // if (u->chat_window) */
-	/* // ChatBox_append(u->chat_window, u->name, CHAT_SYSTEM, "has logged off"); */
-	/* Chat_on_left_battle(Chat_get_server_window(), u); */
-	/* assert(!u->battle); */
-	/* Users_del(u); */
 }
 
 static void
@@ -668,7 +634,7 @@ said(void)
 	user = Users_find(get_next_word());
 	assert(user);
 	if (user)
-		ChatTab_on_said_channel(channel, user, g_command, CHAT_NORMAL);
+		ChatTab_on_said_channel(channel, user, s_command, CHAT_NORMAL);
 }
 
 static void
@@ -679,11 +645,7 @@ said_battle(void)
 	u = Users_find(get_next_word());
 	assert(u);
 
-	if (g_host_type && g_host_type->said_battle) {
-		g_host_type->said_battle(u, g_command);
-	} else {
-		BattleRoom_said_battle(u->name, g_command, CHAT_NORMAL);
-	}
+	MyBattle_said_battle(u, s_command, CHAT_NORMAL);
 }
 
 static void
@@ -693,7 +655,7 @@ said_battle_ex(void)
 	char *text;
 
 	u = Users_find(get_next_word());
-	text =  g_command;
+	text =  s_command;
 
 	assert(u);
 	if (!u)
@@ -703,9 +665,9 @@ said_battle_ex(void)
 	// welcome message is configurable, but chance_of_autohost should usually be between 5 and 8.
 	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
 	if (g_my_battle && u == g_my_battle->founder
-	    && GetTickCount() - g_time_battle_joined < 10000) {
+	    && GetTickCount() - s_time_battle_joined < 10000) {
 		int chance_of_autohost = 0;
-		chance_of_autohost += GetTickCount() - g_time_battle_joined < 2000;
+		chance_of_autohost += GetTickCount() - s_time_battle_joined < 2000;
 		chance_of_autohost += text[0] == '*' && text[1] == ' ';
 		chance_of_autohost += StrStrIA(text, "hi ") != NULL;
 		chance_of_autohost += StrStrIA(text, "welcome ") != NULL;
@@ -720,9 +682,9 @@ said_battle_ex(void)
 
 		if (chance_of_autohost > 3){
 			if (said_spads) {
-				g_host_type = &HOST_SPADS;
+				Spads_set_as_host();
 			} else if (said_springie) {
-				g_host_type = &HOST_SPRINGIE;
+				Springie_set_as_host();
 			} else {
 				g_last_auto_message = GetTickCount();
 				TasServer_send_say_private("!version", false, u);
@@ -731,7 +693,7 @@ said_battle_ex(void)
 		}
 	}
 
-	BattleRoom_said_battle(u->name, g_command, CHAT_EX);
+	MyBattle_said_battle(u, s_command, CHAT_EX);
 }
 
 static void
@@ -744,7 +706,7 @@ said_ex(void)
 	user = Users_find(get_next_word());
 	assert(user);
 	if (user)
-		ChatTab_on_said_channel(channel, user, g_command, CHAT_EX);
+		ChatTab_on_said_channel(channel, user, s_command, CHAT_EX);
 }
 
 static void
@@ -757,14 +719,14 @@ said_private(void)
 	if (!user || user->ignore)
 		return;
 
-	if (RelayHost_on_private_message(user->name, g_command))
+	if (RelayHost_on_private_message(user->name, s_command))
 		return;
 
-	// Zero-K juggler sends matchmaking g_command "!join <host>"
+	// Zero-K juggler sends matchmaking s_command "!join <host>"
 	if (g_my_battle
 			&& user == g_my_battle->founder
-			&& !memcmp(g_command, "!join ", sizeof("!join ") - 1)) {
-		User *host = Users_find(g_command + sizeof("!join ") - 1);
+			&& !memcmp(s_command, "!join ", sizeof "!join " - 1)) {
+		User *host = Users_find(s_command + sizeof "!join " - 1);
 		if (host && host->battle)
 			TasServer_send_join_battle(host->battle->id, NULL);
 		return;
@@ -772,32 +734,26 @@ said_private(void)
 
 	// Check for pms that identify an autohost
 	if (g_my_battle && user == g_my_battle->founder
-			&& strstr(g_command, user->name)
-			&& strstr(g_command, "running")) {
+			&& strstr(s_command, user->name)
+			&& strstr(s_command, "running")) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
-		if (strstr(g_command, "Springie")) {
-			g_host_type = &HOST_SPRINGIE;
+		if (strstr(s_command, "Springie")) {
+			Springie_set_as_host();
 			return;
 		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
-		if (strstr(g_command, "SPADS")) {
-			g_host_type = &HOST_SPADS;
+		if (strstr(s_command, "SPADS")) {
+			Spads_set_as_host();
 			return;
 		}
 	}
 
 	// Normal chat message:
-	/* HWND window = Chat_get_private_window(user); */
-	/* ChatBox_append(window, user->name, 0, g_command); */
-	/* if (!g_my_battle */
-			/* || strcmp(user->name, g_my_battle->founder->name) */
-			/* || GetTickCount() - g_last_auto_message > 2000) */
-		/* ChatWindow_set_active_tab(window); */
-	ChatTab_on_said_private(user, g_command, 0);
+	ChatTab_on_said_private(user, s_command, 0);
 }
 
 static void
@@ -810,7 +766,7 @@ said_private_ex(void)
 	if (!user || user->ignore)
 		return;
 
-	ChatTab_on_said_private(user, g_command, CHAT_EX);
+	ChatTab_on_said_private(user, s_command, CHAT_EX);
 }
 
 static void
@@ -821,7 +777,7 @@ say_private(void)
 	u = Users_find(get_next_word());
 	assert(u);
 	if (u)
-		ChatTab_on_said_private(u, g_command, CHAT_SELF);
+		ChatTab_on_said_private(u, s_command, CHAT_SELF);
 }
 
 static void
@@ -832,7 +788,7 @@ say_private_ex(void)
 	u = Users_find(get_next_word());
 	assert(u);
 	if (u)
-		ChatTab_on_said_private(u, g_command, CHAT_SELFEX);
+		ChatTab_on_said_private(u, s_command, CHAT_SELFEX);
 }
 
 static void
@@ -844,13 +800,13 @@ server_msg(void)
 static void
 server_message_box(void)
 {
-	MainWindow_msg_box("Message from the server", g_command);
+	MainWindow_msg_box("Message from the server", s_command);
 }
 
 static void
 set_script_tags(void)
 {
-	MyBattle_append_script(g_command);
+	MyBattle_append_script(s_command);
 }
 
 static void
@@ -881,8 +837,8 @@ update_battle_info(void)
 
 	uint32_t last_map_hash = b->map_hash;
 
-	b->spectator_len = get_next_int();
-	b->locked = get_next_int();
+	b->spectator_len = (uint8_t)get_next_int();
+	b->locked = (uint8_t)get_next_int();
 	b->map_hash = get_next_int();
 	copy_next_sentence(b->map_name);
 
@@ -896,17 +852,4 @@ static void
 update_bot(void)
 {
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
-	__attribute__((unused))
-		char *battle_id = get_next_word();
-	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
-	char *name = get_next_word();
-	for (int i=g_my_battle->user_len - g_my_battle->bot_len; i<g_my_battle->user_len; ++i){
-		struct Bot *s = (Bot *)g_my_battle->users[i];
-		if (!strcmp(name, s->name)){
-			/* uint32_t bs = get_next_int() | BS_AI | BS_MODE; */
-			/* MyBattle_update_battle_status(s, bs, get_next_int()); */
-			return;
-		}
-	}
-	assert(0);
 }

@@ -49,7 +49,7 @@
 #include "wincommon.h"
 #include "dialogs/gettextdialog.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 #define MARGIN (MAP_X(115))
 
@@ -67,22 +67,22 @@ typedef struct WindowData {
 	const char *dest;
 	SayFunction *say_func;
 
-	DWORD last_scroll_time;
+	uint32_t last_scroll_time;
 
 	int last_index, end, last_pos, offset;
 	wchar_t buf[8192], *input_hint, *buf_end;
 } WindowData;
 
 static void             _init             (void);
-static void             put_text          (HWND,   const char *, COLORREF, DWORD effects);
-static LRESULT CALLBACK chat_box_proc     (HWND,   UINT msg,     WPARAM, LPARAM);
-static void             on_create         (HWND,   LPARAM);
+static void             put_text          (HWND,   const char *, COLORREF, uint32_t effects);
+static intptr_t CALLBACK chat_box_proc     (HWND,   uint32_t msg, uintptr_t, intptr_t);
+static void             on_create         (HWND,   intptr_t);
 static void             on_size           (HWND,   int width,    int height);
-static LRESULT CALLBACK log_proc          (HWND,   UINT msg,     WPARAM, LPARAM, UINT_PTR, WindowData *);
-static LRESULT CALLBACK input_box_proc    (HWND,   UINT msg,     WPARAM, LPARAM, UINT_PTR, WindowData *);
+static intptr_t CALLBACK log_proc          (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
+static intptr_t CALLBACK input_box_proc    (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
 static void             on_escape_command (char *, WindowData *, HWND);
 static void             on_tab            (HWND,   WindowData *);
-static BOOL CALLBACK    enum_child_proc   (HWND,   LPARAM        user);
+static BOOL CALLBACK    enum_child_proc   (HWND,   uintptr_t user);
 static void             update_user       (HWND,   User *,       int index);
 
 static const COLORREF CHAT_COLORS[CHAT_LAST+1] = {
@@ -112,8 +112,8 @@ static void
 on_tab(HWND window, WindowData *data)
 {
 	char text[MAX_TEXT_MESSAGE_LENGTH];
-	GetWindowTextA(window, text, LENGTH(text));
 
+	GetWindowTextA(window, text, LENGTH(text));
 	if (data->last_pos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
 		data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
 		data->offset = 0;
@@ -186,9 +186,9 @@ on_escape_command(char *command, WindowData *data, HWND window)
 	}
 }
 
-static LRESULT CALLBACK
-input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
-		UINT_PTR _unused, WindowData *data)
+static intptr_t CALLBACK
+input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
+		uintptr_t _unused, WindowData *data)
 {
 	if (msg != WM_KEYDOWN)
 		return DefSubclassProc(window, msg, w_param, l_param);
@@ -226,16 +226,17 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 	}	return 0;
 
 	case '\r': {
-		if (LENGTH(data->buf) - (data->buf_end - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
+		if ((ptrdiff_t)LENGTH(data->buf) - (data->buf_end - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
 			data->buf_end = data->buf;
-			memset(data->buf_end, (LENGTH(data->buf) - (data->buf_end - data->buf)) * sizeof(*data->buf), '\0');
+			size_t len = (LENGTH(data->buf) - (size_t)(data->buf_end - data->buf)) * sizeof *data->buf;
+			memset(data->buf_end, '\0', len);
 		}
-		size_t len = GetWindowTextW(window, data->buf_end, MAX_TEXT_MESSAGE_LENGTH);
+		int len = GetWindowTextW(window, data->buf_end, MAX_TEXT_MESSAGE_LENGTH);
 		if (len <= 0)
 			return 0;
 
 		char text_a[len * 3];
-		WideCharToMultiByte(CP_UTF8, 0, data->buf_end, -1, text_a, sizeof(text_a), NULL, NULL);
+		WideCharToMultiByte(CP_UTF8, 0, data->buf_end, -1, text_a, (int)sizeof text_a, NULL, NULL);
 
 		SetWindowText(window, NULL);
 
@@ -256,9 +257,9 @@ input_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
 }
 
 
-static LRESULT CALLBACK
-log_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param,
-		__attribute__((unused)) UINT_PTR uIdSubclass, WindowData *data)
+static intptr_t CALLBACK
+log_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
+		__attribute__((unused)) uintptr_t uIdSubclass, WindowData *data)
 {
 	if (msg == WM_VSCROLL)
 		data->last_scroll_time = GetTickCount();
@@ -277,7 +278,7 @@ on_size(HWND window, int width, int height)
 }
 
 static void
-on_create(HWND window, LPARAM l_param)
+on_create(HWND window, intptr_t l_param)
 {
 	HWND log_window;
 
@@ -294,27 +295,27 @@ ChatBox_set_say_function(HWND window, SayFunction say_func, const char *dest)
 {
 	WindowData *data;
 
-	data = calloc(1, sizeof(*data));
+	data = calloc(1, sizeof *data);
 	data->dest     = dest;
 	data->say_func = say_func;
 	data->buf_end  = data->buf;
 
-	SetWindowLongPtr(window, GWLP_USERDATA, (LONG_PTR)data);
+	SetWindowLongPtr(window, GWLP_USERDATA, (intptr_t)data);
 
 	SetWindowSubclass(GetDlgItem(window, DLG_LOG),
-	    (void *)log_proc, 0, (DWORD_PTR)data);
+	    (SUBCLASSPROC)log_proc, 0, (uintptr_t)data);
 
 	SetWindowSubclass(GetDlgItem(window, DLG_INPUT),
-	    (void *)input_box_proc, 0, (DWORD_PTR)data);
+	    (SUBCLASSPROC)input_box_proc, 0, (uintptr_t)data);
 }
 
 static int
 on_message_filter(HWND window, MSGFILTER *info)
 {
-#if 0
 	if (info->msg != WM_RBUTTONUP)
 		return 0;
 
+#if 0
 	WindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 
 	HMENU menu = CreatePopupMenu();
@@ -337,9 +338,9 @@ on_message_filter(HWND window, MSGFILTER *info)
 	switch (index) {
 	case 1: {
 		CHARRANGE info;
-		SendMessage(note->hwndFrom, EM_EXGETSEL, 0, (LPARAM)&info);
-		HGLOBAL *mem_buff = GlobalAlloc(GMEM_MOVEABLE, sizeof(wchar_t) * (info.cpMax - info.cpMin + 1));
-		SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (LPARAM)GlobalLock(mem_buff));
+		SendMessage(note->hwndFrom, EM_EXGETSEL, 0, (uintptr_t)&info);
+		HGLOBAL *mem_buff = GlobalAlloc(GMEM_MOVEABLE, sizeof wchar_t * (info.cpMax - info.cpMin + 1));
+		SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (uintptr_t)GlobalLock(mem_buff));
 		GlobalUnlock(mem_buff);
 		OpenClipboard(window);
 		EmptyClipboard();
@@ -351,7 +352,7 @@ on_message_filter(HWND window, MSGFILTER *info)
 		SetWindowText(info->nmhdr.hwndFrom, NULL);
 		return 1;
 	case 3: case 4: {
-		MENUITEMINFO info = {.cbSize = sizeof(MENUITEMINFO), .fMask = MIIM_STATE};
+		MENUITEMINFO info = {.cbSize = sizeof MENUITEMINFO, .fMask = MIIM_STATE};
 		GetMenuItemInfo(menu, index, 0, &info);
 		int new_val = !(info.fState & MFS_CHECKED);
 		if (index == 3)
@@ -385,21 +386,21 @@ on_link(ENLINK *link_info)
 		return 0;
 
 	SendMessage(link_info->nmhdr.hwndFrom, EM_EXSETSEL, 0,
-	    (LPARAM)&link_info->chrg);
+	    (intptr_t)&link_info->chrg);
 
-	get_text_info.cb       = sizeof(url);
+	get_text_info.cb       = sizeof url;
 	get_text_info.flags    = GT_SELECTION;
 	get_text_info.codepage = 1200;
 
 	SendMessage(link_info->nmhdr.hwndFrom, EM_GETTEXTEX,
-	    (WPARAM)&get_text_info, (LPARAM)url);
+	    (uintptr_t)&get_text_info, (intptr_t)url);
 
 	ShellExecute(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL);
 	return 1;
 }
 
-static LRESULT CALLBACK
-chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+static intptr_t CALLBACK
+chat_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
     switch (msg) {
 	case WM_CREATE:
@@ -423,7 +424,7 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
 			data->last_scroll_time = GetTickCount();
 		}
-		return 0;
+		break;
 
 	case WM_NOTIFY: {
 		NMHDR *note = (NMHDR *)l_param;
@@ -440,20 +441,20 @@ chat_box_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 }
 
 static void
-put_text(HWND window, const char *text, COLORREF color, DWORD effects)
+put_text(HWND window, const char *text, COLORREF color, uint32_t effects)
 {
 	CHARFORMAT format;
 	SETTEXTEX set_text_info;
 
-	format.cbSize = sizeof(format);
+	format.cbSize = sizeof format;
 	format.dwMask = CFM_BOLD | CFM_COLOR;
 	format.dwEffects = effects;
 	format.crTextColor = color;
-	SendMessage(window, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&format);
+	SendMessage(window, EM_SETCHARFORMAT, SCF_SELECTION, (intptr_t)&format);
 
 	set_text_info.flags = ST_SELECTION;
 	set_text_info.codepage = 65001;
-	SendMessage(window, EM_SETTEXTEX, (WPARAM)&set_text_info, (LPARAM)text);
+	SendMessage(window, EM_SETTEXTEX, (uintptr_t)&set_text_info, (intptr_t)text);
 }
 
 void
@@ -462,16 +463,17 @@ ChatBox_append(HWND window, const char *username, ChatType type, const char *tex
 	HWND log_window;
 	WindowData *data;
 	COLORREF color;
+	static const CHARRANGE end_of_log = {INT32_MAX, INT32_MAX};
 
 	log_window = GetDlgItem(window, DLG_LOG);
-	SendMessage(log_window, EM_EXSETSEL, 0, (LPARAM)&(CHARRANGE){INFINITE, INFINITE});
+	SendMessage(log_window, EM_EXSETSEL, 0, (intptr_t)&end_of_log);
 
 	if ((type != CHAT_TOPIC) && g_settings.flags & SETTING_TIMESTAMP) {
 		char buf[128];
 		char *s = buf;
 
 		*(s++) = '[';
-		s += GetTimeFormatA(0, 0, NULL, NULL, s, sizeof(buf) - 2) - 1;
+		s += GetTimeFormatA(0, 0, NULL, NULL, s, sizeof buf - 2) - 1;
 		*(s++) = ']';
 		*(s++) = ' ';
 		*s = '\0';
@@ -504,8 +506,11 @@ ChatBox_append(HWND window, const char *username, ChatType type, const char *tex
 	put_text(log_window, "\n", color, 0);
 
 	data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
-	if (GetTickCount() - data->last_scroll_time > 5000)
+	if (GetTickCount() - data->last_scroll_time > 5000) {
 		SendMessage(log_window, WM_VSCROLL, SB_BOTTOM, 0);
+		/* sending VM_VSCROLL will reset last_scroll_time in logproc */
+		data->last_scroll_time = 0;
+	}
 }
 
 static void __attribute__((constructor))
@@ -513,8 +518,8 @@ _init(void)
 {
 	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATBOX,
-		.lpfnWndProc   = chat_box_proc,
-		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.lpfnWndProc   = (WNDPROC)chat_box_proc,
+		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
 

@@ -24,8 +24,11 @@
 #define NUM_TEAMS 16
 #define NUM_ALLIANCES 16
 
-struct UserBot;
+struct Battle;
+struct BattleStatus;
 struct User;
+struct UserBot;
+enum ChatType;
 
 typedef enum SplitType {
 	SPLIT_HORZ,
@@ -37,7 +40,7 @@ typedef enum SplitType {
 	SPLIT_LAST = SPLIT_RAND,
 } SplitType;
 
-typedef enum OptionType{
+typedef enum OptionType {
   opt_error = 0, opt_bool = 1, opt_list = 2, opt_number = 3,
   opt_string = 4, opt_section = 5
 } OptionType;
@@ -51,7 +54,7 @@ typedef struct Option {
 	char *key, *name, *val, *def, *desc;
 	struct Option *section;
 
-	size_t list_item_len;
+	int list_item_len;
 	OptionListItem *list_items;
 } Option;
 
@@ -73,17 +76,6 @@ typedef struct StartRect {
 	uint16_t left, top, right, bottom;
 } StartRect;
 
-typedef struct HostType {
-	void (*force_ally)(const char *name, int ally_id);
-	void (*force_team)(const char *name, int team_id);
-	void (*kick)(const struct UserBot *);
-	void (*said_battle)(struct User *, char *text);
-	void (*set_map)(const char *map_name);
-	void (*set_option)(Option *opt, const char *val);
-	void (*set_split)(int size, SplitType type);
-	void (*start_game)(void);
-} HostType;
-
 typedef struct BattleOptions {
 	StartPosType start_pos_type;
 	StartRect start_rects[NUM_ALLIANCES];
@@ -91,47 +83,58 @@ typedef struct BattleOptions {
 	uint32_t mod_hash;
 } BattleOption;
 
-
 typedef struct MapInfo_ {
 	MapInfo;
 	char _description[256];
 	char _author[201];
 } MapInfo_;
 
-struct UserBot;
-struct UserBot;
-struct Battle;
-struct BattleStatus;
-struct Battle;
-
-
-void MyBattle_append_script(char *restrict script);
-void MyBattle_change_option(struct Option *restrict opt);
+void MyBattle_append_script        (char *script);
+void MyBattle_change_option        (struct Option *);
 struct BattleStatus MyBattle_new_battle_status(void) __attribute__((pure));
-void MyBattle_joined_battle(struct Battle *restrict b, uint32_t mod_hash);
-void TasServer_send_leave_battle(void);
-void MyBattle_left_battle(void);
-void Rebalance(void);
-void ResetBattleOptions(void);
-void MyBattle_set_map(const char *name);
-void MyBattle_set_split(SplitType, int size);
-void MyBattle_update_battle_status(struct UserBot *, struct BattleStatus battle_status, uint32_t color);
-void MyBattle_update_mod_options(void);
+void MyBattle_joined_battle        (struct Battle *, uint32_t mod_hash);
+void MyBattle_left_battle          (void);
+void MyBattle_rebalance            (void);
+void MyBattle_reset                (void);
+void MyBattle_update_battle_status (struct UserBot *, struct BattleStatus, uint32_t color);
+void MyBattle_update_mod_options   (void);
 
-extern MapInfo_ g_map_info;
+extern void (*MyBattle_force_ally) (const struct User *, int ally_id);
+extern void (*MyBattle_force_team) (const struct User *, int team_id);
+extern void (*MyBattle_kick)       (const struct UserBot *);
+extern void (*MyBattle_said_battle)(struct User *, char *text, enum ChatType);
+extern void (*MyBattle_set_map)    (const char *map_name);
+extern void (*MyBattle_set_option) (Option *opt, const char *val);
+extern void (*MyBattle_set_split)  (int size, SplitType);
+extern void (*MyBattle_start_game) (void);
+
+extern MapInfo_       g_map_info;
+
 extern struct Battle *g_my_battle;
-extern uint32_t g_battle_to_join;
-extern size_t g_mod_option_len, g_map_option_len;
-extern Option *g_mod_options, *g_map_options;
-extern uint32_t g_map_hash, g_mod_hash;
-extern char **g_maps, **g_mods;
-extern size_t g_map_len, g_mod_len;
-extern BattleOption g_battle_options;
-extern const HostType *g_host_type;
-extern uint8_t g_side_len;
-extern char g_side_names[16][32];
-extern uint32_t g_udp_help_port;
-extern bool g_battle_info_finished;
 
+extern uint32_t       g_battle_to_join;
+
+extern uint32_t       g_map_hash;
+extern uint32_t       g_mod_hash;
+
+extern int            g_map_option_len;
+extern Option        *g_map_options;
+
+extern Option        *g_mod_options;
+extern int            g_mod_option_len;
+
+extern char         **g_maps;
+extern int            g_map_len;
+
+extern char         **g_mods;
+extern int            g_mod_len;
+
+extern char           g_side_names[16][32];
+extern uint8_t        g_side_len;
+
+extern BattleOption   g_battle_options;
+extern uint32_t       g_udp_help_port;
+extern bool           g_battle_info_finished;
+extern uint32_t       g_last_auto_unspec;
 
 #endif /* end of include guard: BATTLETOOLS_H */

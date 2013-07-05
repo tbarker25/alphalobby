@@ -17,9 +17,10 @@
  */
 
 
+#include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <zlib.h>
 
 #include <windows.h>
@@ -33,19 +34,20 @@
 
 static void rapidAdd_available(HWND window, char download_only);
 static void rapid_on_init(HWND window);
-static BOOL CALLBACK rapid_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK rapid_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
 void
 RapidDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), g_main_window, rapid_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_RAPID), g_main_window,
+	    (DLGPROC)rapid_proc);
 }
 
 static void
 rapidAdd_available(HWND window, char download_only)
 {
 #define TVGN_NEXTSELECTED       0x000B
-	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (LPARAM)NULL);
+	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (uintptr_t)NULL);
 #undef TVGN_NEXTSELECTED
 
 	char item_text1[256];
@@ -56,7 +58,7 @@ rapidAdd_available(HWND window, char download_only)
 		TVITEMA item_info = {TVIF_HANDLE | TVIF_TEXT | TVIF_CHILDREN, item,
 			.pszText = text_a,
 			.cchTextMax = 256};
-		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (LPARAM)&item_info);
+		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (intptr_t)&item_info);
 
 		if (text_b)
 			sprintf(text_a + strlen(text_a), ":%s", text_b);
@@ -69,12 +71,12 @@ rapidAdd_available(HWND window, char download_only)
 		swap = text_a;
 		text_a = text_b;
 		text_b = swap;
-		item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_PARENT, (LPARAM)item);
+		item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_PARENT, (intptr_t)item);
 	}
 	if (download_only)
 		DownloadShortMod(text_b);
 	else
-		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)text_b);
+		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)text_b);
 }
 
 static void
@@ -95,10 +97,10 @@ rapid_on_init(HWND window)
 			if (buf[i] != ';')
 				continue;
 			buf[i] = '\0';
-			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+			SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)start);
 			start = buf + i + 1;
 		}
-		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (LPARAM)start);
+		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)start);
 	}
 
 	char path[MAX_PATH];
@@ -116,7 +118,7 @@ rapid_on_init(HWND window)
 		char root[1024] = {};
 		HTREEITEM root_items[5] = {};
 
-		while (gzgets(file, buf, sizeof(buf))) {
+		while (gzgets(file, buf, sizeof buf)) {
 			*strchr(buf, ',') = '\0';
 
 			size_t root_level = 0;
@@ -144,7 +146,7 @@ rapid_on_init(HWND window)
 				info.item.pszText = &root[start];
 				info.item.cChildren = !buf[i];
 
-				root_items[++root_level] = (HTREEITEM)SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_INSERTITEMA, 0, (LPARAM)&info);
+				root_items[++root_level] = (HTREEITEM)SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_INSERTITEMA, 0, (intptr_t)&info);
 
 				if (!buf[i])
 					break;
@@ -160,7 +162,7 @@ rapid_on_init(HWND window)
 
 
 static BOOL CALLBACK
-rapid_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+rapid_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -180,12 +182,12 @@ rapid_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 		{
 			HWND list_box = GetDlgItem(window, IDC_RAPID_SELECTED);
-			int package_len = SendMessageA(list_box, LB_GETCOUNT, 0, 0);
+			size_t package_len = (size_t)SendMessageA(list_box, LB_GETCOUNT, 0, 0);
 			char text[1024];
 			char *s = text;
-			for (int i=0; i<package_len; ++i) {
+			for (size_t i=0; i<package_len; ++i) {
 				*s++ = ';';
-				s += SendMessageA(list_box, LB_GETTEXT, i, (LPARAM)s);
+				s += SendMessageA(list_box, LB_GETTEXT, i, (intptr_t)s);
 			}
 			g_settings.selected_packages = _strdup(text + 1);
 			Downloader_get_selected_packages();
@@ -196,7 +198,7 @@ rapid_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 			return 0;
 		case MAKEWPARAM(IDC_RAPID_REMOVE, BN_CLICKED):
 		{
-			DWORD selected = SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_GETCURSEL, 0, 0);
+			uint32_t selected = (uint32_t)SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_GETCURSEL, 0, 0);
 			SendDlgItemMessage(window, IDC_RAPID_SELECTED, LB_DELETESTRING, selected, 0);
 			return 0;
 		}

@@ -26,69 +26,69 @@
 #include "wincommon.h"
 #include "chatlist.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
-enum {
-	DLG_LIST,
-};
+	enum {
+		DLG_LIST,
+	};
 
-static const DialogItem DIALOG_ITEMS[] = {
-	[DLG_LIST] = {
-		.class = WC_LISTVIEW,
-		.ex_style = WS_EX_CLIENTEDGE,
-		.style = WS_VISIBLE | LVS_SHAREIMAGELISTS | LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING | LVS_NOCOLUMNHEADER,
-	},
-};
+	static const DialogItem DIALOG_ITEMS[] = {
+		[DLG_LIST] = {
+			.class = WC_LISTVIEW,
+			.ex_style = WS_EX_CLIENTEDGE,
+			.style = WS_VISIBLE | LVS_SHAREIMAGELISTS | LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING | LVS_NOCOLUMNHEADER,
+		},
+	};
 
-static void
-on_create(HWND window)
-{
-	CreateDlgItems(window, DIALOG_ITEMS, LENGTH(DIALOG_ITEMS));
-	puts("here");
+	static void
+	on_create(HWND window)
+	{
+		CreateDlgItems(window, DIALOG_ITEMS, LENGTH(DIALOG_ITEMS));
+		puts("here");
 
-}
-
-static void
-on_size(HWND window, uint16_t width, uint16_t height)
-{
-	MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, width, height, 1);
-}
-
-static LRESULT CALLBACK
-chatlist_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
-{
-	switch (msg) {
-
-	case WM_CREATE:
-		on_create(window);
-		return 0;
-
-	case WM_SIZE:
-		on_size(window, LOWORD(l_param), HIWORD(l_param));
-		return 0;
-
-	/* case WM_COMMAND: */
-		/* return on_command(w_param); */
-
-	/* case WM_HSCROLL: */
-		/* if (GetDlgCtrlID((HWND)l_param) == DLG_SPLIT_SIZE */
-				/* && w_param == SB_ENDSCROLL) */
-			/* on_split_size_scroll(); */
-		/* return 0; */
-
-	default:
-		return DefWindowProc(window, msg, w_param, l_param);
 	}
-}
+
+	static void
+	on_size(HWND window, uint16_t width, uint16_t height)
+	{
+		MoveWindow(GetDlgItem(window, DLG_LIST), 0, 0, width, height, 1);
+	}
+
+	static intptr_t CALLBACK
+	chatlist_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
+	{
+		switch (msg) {
+
+		case WM_CREATE:
+			on_create(window);
+			return 0;
+
+		case WM_SIZE:
+			on_size(window, LOWORD(l_param), HIWORD(l_param));
+			return 0;
+
+		/* case WM_COMMAND: */
+			/* return on_command(w_param); */
+
+		/* case WM_HSCROLL: */
+			/* if (GetDlgCtrlID((HWND)l_param) == DLG_SPLIT_SIZE */
+					/* && w_param == SB_ENDSCROLL) */
+				/* on_split_size_scroll(); */
+			/* return 0; */
+
+		default:
+			return DefWindowProc(window, msg, w_param, l_param);
+		}
+	}
 
 static void __attribute__((constructor))
 _init (void)
 {
 	WNDCLASSEX window_class = {
 		.lpszClassName = WC_CHATLIST,
-		.cbSize        = sizeof(WNDCLASSEX),
-		.lpfnWndProc   = chatlist_proc,
-		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.cbSize        = sizeof window_class,
+		.lpfnWndProc   = (WNDPROC)chatlist_proc,
+		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
 
@@ -100,7 +100,7 @@ _init (void)
 		for (int i=0; i<=COLUMN_LAST; ++i) {
 			LVCOLUMN info;
 			info.mask = 0;
-			SendMessage(list, LVM_INSERTCOLUMN, 0, (LPARAM)&info);
+			SendMessage(list, LVM_INSERTCOLUMN, 0, (uintptr_t)&info);
 		}
 		ListView_SetExtendedListViewStyle(list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
 		IconList_enable_for_listview(list);
@@ -108,12 +108,12 @@ _init (void)
 			if (note->code == LVN_ITEMACTIVATE) {
 				LVITEM item;
 				item.mask = LVIF_PARAM;
-				item.iItem = ((LPNMITEMACTIVATE)l_param)->iItem;
+				item.iItem = ((NMITEMACTIVATE *)l_param)->iItem;
 
 				if (item.iItem < 0)
 					return 0;
 
-				SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
+				SendMessage(note->hwndFrom, LVM_GETITEM, 0, (uintptr_t)&item);
 				ChatWindow_set_active_tab(Chat_get_private_window((User *)item.lParam));
 				return 0;
 			}
@@ -123,14 +123,14 @@ _init (void)
 					.iItem = -1,
 				};
 			if (note->code == NM_RCLICK)
-				item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0, (LPARAM)&(LVHITTESTINFO){.pt = ((LPNMITEMACTIVATE)l_param)->ptAction});
+				item.iItem = SendMessage(note->hwndFrom, LVM_SUBITEMHITTEST, 0, (uintptr_t)&(LVHITTESTINFO){.pt = ((NMITEMACTIVATE *)l_param)->ptAction});
 			else if (note->code == LVN_ITEMACTIVATE)
-				item.iItem = ((LPNMITEMACTIVATE)l_param)->iItem;
+				item.iItem = ((NMITEMACTIVATE *)l_param)->iItem;
 
 			if (item.iItem < 0)
 				break;
 
-			SendMessage(note->hwndFrom, LVM_GETITEM, 0, (LPARAM)&item);
+			SendMessage(note->hwndFrom, LVM_GETITEM, 0, (uintptr_t)&item);
 			User *u = (void *)item.lParam;
 			if (u == &g_my_user)
 				return 0;
@@ -143,8 +143,8 @@ _init (void)
 			AppendMenu(menu, u->ignore * MF_CHECKED, 2, L"Ignore");
 			AppendMenu(menu, 0, 3, L"Set alias");
 			SetMenuDefaultItem(menu, 1, 0);
-			ClientToScreen(note->hwndFrom, &((LPNMITEMACTIVATE)l_param)->ptAction);
-			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, ((LPNMITEMACTIVATE)l_param)->ptAction.x, ((LPNMITEMACTIVATE)l_param)->ptAction.y, window, NULL);
+			ClientToScreen(note->hwndFrom, &((NMITEMACTIVATE *)l_param)->ptAction);
+			int clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, ((NMITEMACTIVATE *)l_param)->ptAction.x, ((NMITEMACTIVATE *)l_param)->ptAction.y, window, NULL);
 			DestroyMenu(menu);
 			if (clicked == 1)
 				ChatWindow_set_active_tab(Chat_get_private_window(u));
@@ -168,7 +168,7 @@ Chat_on_left_battle(HWND window, User *u)
 {
 	window = GetDlgItem(window, DLG_LIST);
 	int i = SendMessage(window, LVM_FINDITEM, -1,
-			(LPARAM)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (LPARAM)u});
+			(uintptr_t)&(LVFINDINFO){.flags = LVFI_PARAM, .lParam = (uintptr_t)u});
 	SendMessage(window, LVM_DELETEITEM, i, 0);
 }
 
@@ -179,7 +179,7 @@ update_user(HWND window, User *u, int index)
 	if (!strcmp(UNTAGGED_NAME(u->name), u->alias))
 		name = u->name;
 	else {
-		name = _alloca(MAX_NAME_LENGTH * 2 + sizeof(" ()"));
+		name = _alloca(MAX_NAME_LENGTH * 2 + sizeof " ()");
 		sprintf(name, "%s (%s)", u->name, u->alias);
 	}
 
@@ -201,11 +201,11 @@ update_user(HWND window, User *u, int index)
 
 	item.state = INDEXTOOVERLAYMASK(icon_index);
 
-	SendMessage(window, LVM_SETITEMA, 0, (LPARAM)&item);
+	SendMessage(window, LVM_SETITEMA, 0, (uintptr_t)&item);
 }
 
 static BOOL CALLBACK
-enum_child_proc(HWND window, LPARAM user)
+enum_child_proc(HWND window, uintptr_t user)
 {
 	HWND list = GetDlgItem(window, DLG_LIST);
 	if (!list)
@@ -216,7 +216,7 @@ enum_child_proc(HWND window, LPARAM user)
 	find_info.lParam = user;
 
 	int index = SendMessage(list, LVM_FINDITEM, -1,
-			(LPARAM)&find_info);
+			(uintptr_t)&find_info);
 
 	if (index >= 0)
 		update_user(list, (User *)user, index);
@@ -227,7 +227,7 @@ enum_child_proc(HWND window, LPARAM user)
 void
 Chat_update_user(User *u)
 {
-	EnumChildWindows(g_tab_control, enum_child_proc, (LPARAM)u);
+	EnumChildWindows(s_tab_control, enum_child_proc, (uintptr_t)u);
 }
 
 void
@@ -238,12 +238,12 @@ Chat_add_user(HWND window, User *u)
 	item.mask = LVIF_PARAM | LVIF_TEXT;
 	item.iSubItem = 0;
 	item.pszText = u->name;
-	item.lParam = (LPARAM)u;
+	item.lParam = (uintptr_t)u;
 
-	int index = SendMessage(list, LVM_INSERTITEMA, 0, (LPARAM)&item);
+	int index = SendMessage(list, LVM_INSERTITEMA, 0, (uintptr_t)&item);
 	update_user(list, u, index);
 
-	SendMessage(list, LVM_SETITEM, 0, (LPARAM)&(LVITEM){
+	SendMessage(list, LVM_SETITEM, 0, (uintptr_t)&(LVITEM){
 		.mask = LVIF_IMAGE, .iImage = ICON_FIRST_FLAG + u->country,
 		.iItem = index, .iSubItem = COLUMN_COUNTRY,
 	});
@@ -271,7 +271,7 @@ Chat_add_user(HWND window, User *u)
 	info.mask = LVIF_PARAM;
 	info.iItem = data->last_index;
 	do {
-		SendMessage(list, LVM_GETITEM, 0, (LPARAM)&info);
+		SendMessage(list, LVM_GETITEM, 0, (uintptr_t)&info);
 		const char *name = ((User *)info.lParam)->name;
 		const char *s = NULL;
 		if (!_strnicmp(name, text+start, strlen(text+start))
@@ -279,7 +279,7 @@ Chat_add_user(HWND window, User *u)
 			data->last_index = info.iItem + 1;
 			SendMessage(window, EM_SETSEL, start - offset, LOWORD(SendMessage(window, EM_GETSEL, 0, 0)));
 			data->offset = s ? s - name + 1 : 0;
-			SendMessageA(window, EM_REPLACESEL, 1, (LPARAM)name);
+			SendMessageA(window, EM_REPLACESEL, 1, (uintptr_t)name);
 			break;
 		}
 		info.iItem = (info.iItem + 1) % count;
@@ -294,10 +294,10 @@ void
 Chat_on_disconnect(void)
 {
 	/* SendDlgItemMessage(g_server_chat_window, DLG_LIST, LVM_DELETEALLITEMS, 0, 0); */
-	/* for (size_t i=0; i<LENGTH(g_channel_windows); ++i) { */
-		/* if (!g_channel_windows[i]) */
+	/* for (size_t i=0; i<LENGTH(s_channel_windows); ++i) { */
+		/* if (!s_channel_windows[i]) */
 			/* continue; */
-		/* SendDlgItemMessage(g_channel_windows[i], DLG_LIST, */
+		/* SendDlgItemMessage(s_channel_windows[i], DLG_LIST, */
 				/* LVM_DELETEALLITEMS, 0, 0); */
 	/* } */
 }

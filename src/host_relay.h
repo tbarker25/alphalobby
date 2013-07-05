@@ -29,4 +29,6 @@ void RelayHost_open_battle(const char *title, const char *password, const char *
 extern const char **g_relay_managers;
 extern int g_relay_manager_len;
 
+void Relay_set_as_host(void);
+
 #endif /* end of include guard: HOST_RELAY_H */

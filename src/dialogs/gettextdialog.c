@@ -16,32 +16,34 @@
  * Along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <inttypes.h>
+
 #include <windows.h>
 
 #include "gettextdialog.h"
 #include "../resource.h"
 #include "../mainwindow.h"
 
-static BOOL CALLBACK get_text_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK get_text_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
-LPARAM
+intptr_t
 GetTextDialog2_create(HWND window, const char *title, char *buf, size_t buf_len)
 {
 	const char *param[] = {title, buf, (void *)buf_len};
 	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT), window,
-	    get_text_proc, (LPARAM)param);
+	    (DLGPROC)get_text_proc, (intptr_t)param);
 }
 
-LPARAM
+intptr_t
 GetTextDialog_create(const char *title, char *buf, size_t buf_len)
 {
 	const char *param[] = {title, buf, (void *)buf_len};
 	return DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_GETTEXT),
-	    g_main_window, get_text_proc, (LPARAM)param);
+	    g_main_window, (DLGPROC)get_text_proc, (intptr_t)param);
 }
 
 static BOOL CALLBACK
-get_text_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+get_text_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -50,8 +52,8 @@ get_text_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		SetWindowTextA(window, s[0]);
 		HWND textbox = GetDlgItem(window, IDC_GETTEXT);
 		SetWindowTextA(textbox, s[1]);
-		SetWindowLongPtr(textbox, GWLP_USERDATA, (LPARAM)s[2]);
-		SetWindowLongPtr(window, GWLP_USERDATA, (LPARAM)s[1]);
+		SetWindowLongPtr(textbox, GWLP_USERDATA, (intptr_t)s[2]);
+		SetWindowLongPtr(window, GWLP_USERDATA, (intptr_t)s[1]);
 		return 0;
 	}
 	case WM_COMMAND:

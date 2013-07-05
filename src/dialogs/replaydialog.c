@@ -30,15 +30,16 @@
 #include "../spring.h"
 #include "../sync.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 static void activate_replay_list_item(HWND list_view_window, int index);
-static BOOL CALLBACK replay_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK replay_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
 void
 ReplayDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), g_main_window, replay_list_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_REPLAY), g_main_window,
+	    (DLGPROC)replay_list_proc);
 }
 
 static void
@@ -47,20 +48,20 @@ activate_replay_list_item(HWND list_view_window, int index)
 	printf("index = %d\n", index);
 	wchar_t buf[1024];
 	LVITEM item = {.pszText = buf, LENGTH(buf)};
-	SendMessage(list_view_window, LVM_GETITEMTEXT, index, (LPARAM)&item);
+	SendMessage(list_view_window, LVM_GETITEMTEXT, (uintptr_t)index, (intptr_t)&item);
 	wprintf(L"buf = %s\n", buf);
 	Spring_launch_replay(buf);
 }
 
 static BOOL CALLBACK
-replay_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+replay_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	HWND list_window;
 	switch (msg) {
 	case WM_INITDIALOG:
 		list_window = GetDlgItem(window, IDC_REPLAY_LIST);
 		SendMessage(list_window, LVM_INSERTCOLUMN, 0,
-				(LPARAM)&(LVCOLUMN){LVCF_TEXT, .pszText = L"filename"});
+				(intptr_t)&(LVCOLUMN){LVCF_TEXT, .pszText = (wchar_t *)L"filename"});
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
 		Sync_add_replays_to_listview(list_window);
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
@@ -69,7 +70,7 @@ replay_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 			list_window = GetDlgItem(window, IDC_REPLAY_LIST);
-			activate_replay_list_item(list_window, SendMessage(list_window, LVM_GETNEXTITEM, -1, LVNI_SELECTED));
+			activate_replay_list_item(list_window, SendMessage(list_window, LVM_GETNEXTITEM, (uintptr_t)-1, LVNI_SELECTED));
 			//FALLTHROUGH:
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);

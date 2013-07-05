@@ -59,20 +59,20 @@ static void copy_metalmap        (uint32_t *dst, int width, int height);
 static void copy_heightmap       (uint32_t *dst, int width, int height);
 static void copy_normalmap       (uint32_t *dst, int width, int height);
 static void _init                (void);
-static LRESULT CALLBACK minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static intptr_t CALLBACK minimap_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_create            (HWND window);
 static void on_draw              (HWND window);
-static void on_size              (LPARAM l_param);
+static void on_size              (intptr_t l_param);
 static void on_split_size_scroll (void);
 static void set_split            (SplitType type, int size);
 
-static HWND g_minimap;
-static enum MinimapType g_minimap_type = MINIMAP_NORMAL;
-static const uint16_t *g_minimap_pixels;
-static uint16_t g_metal_mapheight, g_metal_mapwidth;
-static const uint8_t *g_metal_mappixels;
-static uint16_t g_height_mapheight, g_height_mapwidth;
-static const uint8_t *g_height_mappixels;
+static HWND s_minimap;
+static enum MinimapType s_minimap_type = MINIMAP_NORMAL;
+static const uint16_t *s_minimap_pixels;
+static uint16_t s_metal_mapheight, s_metal_mapwidth;
+static const uint8_t *s_metal_mappixels;
+static uint16_t s_height_mapheight, s_height_mapwidth;
+static const uint8_t *s_height_mappixels;
 
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_MAPMODE_MINIMAP] = {
@@ -106,13 +106,13 @@ static void
 set_split(SplitType type, int size)
 {
 	for (SplitType i=0; i<=SPLIT_LAST; ++i)
-		SendDlgItemMessage(g_minimap, DLG_SPLIT_FIRST + i,
+		SendDlgItemMessage(s_minimap, DLG_SPLIT_FIRST + i,
 				BM_SETCHECK, i == type, 0);
 
-	EnableWindow(GetDlgItem(g_minimap, DLG_SPLIT_SIZE),
+	EnableWindow(GetDlgItem(s_minimap, DLG_SPLIT_SIZE),
 			g_battle_options.start_pos_type == STARTPOS_CHOOSE_INGAME);
 
-	SendDlgItemMessage(g_minimap, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
+	SendDlgItemMessage(s_minimap, DLG_SPLIT_SIZE, TBM_SETPOS, 1, size);
 }
 
 void
@@ -175,7 +175,7 @@ Minimap_on_start_position_change(void)
 }
 
 static void
-on_size(LPARAM l_param)
+on_size(intptr_t l_param)
 {
 	HDWP dwp = BeginDeferWindowPos(DLG_LAST + 1);
 	int w = LOWORD(l_param), h = HIWORD(l_param);
@@ -186,7 +186,7 @@ on_size(LPARAM l_param)
 #define YH MAP_Y(14)
 
 #define MOVE_ID(id, x, y, cx, cy)\
-	(DeferWindowPos(dwp, (GetDlgItem(g_minimap, (id))), NULL, (x), (y), (cx), (cy), 0))
+	(DeferWindowPos(dwp, (GetDlgItem(s_minimap, (id))), NULL, (x), (y), (cx), (cy), 0))
 
 	for (SplitType i=0; i<=SPLIT_LAST; ++i)
 		MOVE_ID(DLG_SPLIT_FIRST + i,  (1 + i) * XS + i * YH, YS, MAP_Y(14), MAP_Y(14));
@@ -206,24 +206,24 @@ on_size(LPARAM l_param)
 
 void Minimap_set_type(enum MinimapType type)
 {
-	g_minimap_type = type;
+	s_minimap_type = type;
 	Minimap_redraw();
 }
 
 void
-Minimap_set_bitmap(const uint16_t *_minimap_pixels,
-		uint16_t _metal_map_width, uint16_t _metal_map_height, const uint8_t *_metal_map_pixels,
-		uint16_t _height_map_width, uint16_t _height_map_height, const uint8_t *_height_map_pixels)
+Minimap_set_bitmap(const uint16_t *minimap_pixels,
+		uint16_t metal_map_width, uint16_t metal_map_height, const uint8_t *metal_map_pixels,
+		uint16_t height_map_width, uint16_t height_map_height, const uint8_t *height_map_pixels)
 {
-	g_minimap_pixels = _minimap_pixels;
+	s_minimap_pixels = minimap_pixels;
 
-	g_metal_mapwidth = _metal_map_width;
-	g_metal_mapheight = _metal_map_height;
-	g_metal_mappixels = _metal_map_pixels;
+	s_metal_mapwidth = metal_map_width;
+	s_metal_mapheight = metal_map_height;
+	s_metal_mappixels = metal_map_pixels;
 
-	g_height_mapwidth = _height_map_width;
-	g_height_mapheight = _height_map_height;
-	g_height_mappixels = _height_map_pixels;
+	s_height_mapwidth = height_map_width;
+	s_height_mapheight = height_map_height;
+	s_height_mappixels = height_map_pixels;
 
 	Minimap_redraw();
 }
@@ -231,21 +231,21 @@ Minimap_set_bitmap(const uint16_t *_minimap_pixels,
 void
 Minimap_redraw(void)
 {
-	InvalidateRect(g_minimap, 0, 0);
+	InvalidateRect(s_minimap, 0, 0);
 }
 
 static void
 copy_heightmap(uint32_t *dst, int width, int height)
 {
 	for (int i=0; i<width * height; ++i) {
-		size_t src_i;
+		int src_i;
 		uint8_t height_p;
 
-		src_i = i % width * g_height_mapwidth / width
-			+ i / width * g_height_mapheight / height * g_height_mapwidth;
-		height_p = g_height_mappixels[src_i];
+		src_i = i % width * s_height_mapwidth / width
+			+ i / width * s_height_mapheight / height * s_height_mapwidth;
+		height_p = s_height_mappixels[src_i];
 
-		dst[i] = height_p | height_p << 8 | height_p << 16;
+		dst[i] = (uint32_t)(height_p | height_p << 8 | height_p << 16);
 	}
 }
 
@@ -253,18 +253,18 @@ static void
 copy_metalmap(uint32_t *dst, int width, int height)
 {
 	for (int i=0; i<width * height; ++i) {
-		size_t normal_i, metal_i;
+		int normal_i, metal_i;
 		uint16_t normal_p;
 		uint8_t metal_p;
 
 		normal_i = i % width * MAP_RESOLUTION / width
 			+ i / width * MAP_RESOLUTION / height * MAP_RESOLUTION;
-		normal_p = g_minimap_pixels[normal_i];
-		metal_i = i % width * g_metal_mapwidth / width
-			+ i / width * g_metal_mapheight / height * g_metal_mapwidth;
-		metal_p= g_metal_mappixels[metal_i];
-		dst[i] = (normal_p & 0x001B) << 1 | (normal_p & 0x700 ) << 3 | (normal_p & 0xE000) << 6;
-		dst[i] |= metal_p>> 2 | metal_p<< 8;
+		normal_p = s_minimap_pixels[normal_i];
+		metal_i = i % width * s_metal_mapwidth / width
+			+ i / width * s_metal_mapheight / height * s_metal_mapwidth;
+		metal_p= s_metal_mappixels[metal_i];
+		dst[i] = (uint32_t)((normal_p & 0x001B) << 1 | (normal_p & 0x700 ) << 3 | (normal_p & 0xE000) << 6);
+		dst[i] |= (uint32_t)(metal_p>> 2 | metal_p<< 8);
 	}
 }
 
@@ -272,13 +272,13 @@ static void
 copy_normalmap(uint32_t *dst, int width, int height)
 {
 	for (int i=0; i<width * height; ++i) {
-		size_t src_i;
+		int src_i;
 		uint16_t p;
 
 		src_i = i % width * MAP_RESOLUTION / width
 			+ i / width * MAP_RESOLUTION / height * MAP_RESOLUTION;
-		p = g_minimap_pixels[src_i];
-		dst[i] = (p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8;
+		p = s_minimap_pixels[src_i];
+		dst[i] = (uint32_t)((p & 0x001F) << 3 | (p & 0x7E0 ) << 5 | (p & 0xF800) << 8);
 	}
 }
 
@@ -295,10 +295,10 @@ copy_start_boxes(uint32_t *pixels, int width, int height)
 
 		start_rect = &g_battle_options.start_rects[i];
 
-		x_min = start_rect->left   * width  / START_RECT_MAX;
-		x_max = start_rect->right  * width  / START_RECT_MAX;
-		y_min = start_rect->top    * height / START_RECT_MAX;
-		y_max = start_rect->bottom * height / START_RECT_MAX;
+		x_min = (uint16_t)(start_rect->left   * width  / START_RECT_MAX);
+		x_max = (uint16_t)(start_rect->right  * width  / START_RECT_MAX);
+		y_min = (uint16_t)(start_rect->top    * height / START_RECT_MAX);
+		y_max = (uint16_t)(start_rect->bottom * height / START_RECT_MAX);
 
 		if (i == ally) {
 			for (uint16_t x=x_min; x<x_max; ++x) {
@@ -338,16 +338,16 @@ copy_start_positions(uint32_t *dst, int width, int height)
 	uint8_t max;
 
 	max = g_my_battle ? GetNumPlayers(g_my_battle) : 0;
-	max = max < g_map_info.pos_len ? max : g_map_info.pos_len;
+	max = max < (uint8_t)g_map_info.pos_len ? max : (uint8_t)g_map_info.pos_len;
 
 	for (uint8_t i=0; i<max; ++i) {
 		uint16_t x_mid, y_mid;
 
-		x_mid = g_map_info.positions[i].x * width / g_map_info.width;
-		y_mid = g_map_info.positions[i].z * height / g_map_info.height;
+		x_mid = (uint16_t)(g_map_info.positions[i].x * width / g_map_info.width);
+		y_mid = (uint16_t)(g_map_info.positions[i].z * height / g_map_info.height);
 
-		for (uint16_t x=x_mid-5; x<x_mid+5; ++x)
-			for (uint16_t y=y_mid-5; y<y_mid+5; ++y)
+		for (uint16_t x=(uint16_t)(x_mid-5); x<x_mid+5; ++x)
+			for (uint16_t y=(uint16_t)(y_mid-5); y<y_mid+5; ++y)
 				dst[x + width * y] = 0x00CC00;
 	}
 }
@@ -355,7 +355,7 @@ copy_start_positions(uint32_t *dst, int width, int height)
 static void
 copy_minimap(uint32_t *dst, int width, int height)
 {
-	switch (g_minimap_type) {
+	switch (s_minimap_type) {
 
 	case MINIMAP_HEIGHT:
 		copy_heightmap(dst, width, height);
@@ -397,7 +397,7 @@ on_draw(HWND window)
 
 	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH) (COLOR_BTNFACE+1));
 
-	if (!g_minimap_pixels)
+	if (!s_minimap_pixels)
 		return;
 
 	width = rect.right;
@@ -418,7 +418,7 @@ on_draw(HWND window)
 		return;
 	}
 
-	pixels = malloc(width * height * sizeof(*pixels));
+	pixels = malloc((size_t)(width * height) * sizeof *pixels);
 	copy_minimap(pixels, width, height);
 
 	if (!pixels)
@@ -441,18 +441,19 @@ on_draw(HWND window)
 	EndPaint(window, &ps);
 }
 
-static LRESULT
-on_command(WPARAM w_param)
+static intptr_t
+on_command(uintptr_t w_param)
 {
 	HMENU menu;
+
 	switch (w_param) {
 	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED):
 		menu = CreatePopupMenu();
-		for (size_t i=0; i<g_map_len; ++i)
-			AppendMenuA(menu, MF_CHECKED * !strcmp(g_my_battle->map_name,  g_maps[i]), i + 1, g_maps[i]);
+		for (int i=0; i<g_map_len; ++i)
+			AppendMenuA(menu, MF_CHECKED * !strcmp(g_my_battle->map_name,  g_maps[i]), (uintptr_t)i + 1, g_maps[i]);
 		POINT pt;
 		GetCursorPos(&pt);
-		int map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, g_minimap, NULL);
+		int map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, s_minimap, NULL);
 		if (map_index > 0)
 			TasServer_send_change_map(g_maps[map_index - 1]);
 		DestroyMenu(menu);
@@ -463,7 +464,7 @@ on_command(WPARAM w_param)
 		return 0;
 
 	case MAKEWPARAM(DLG_SPLIT_FIRST, BN_CLICKED) ... MAKEWPARAM(DLG_SPLIT_LAST, BN_CLICKED):
-		MyBattle_set_split(LOWORD(w_param) - DLG_SPLIT_FIRST, SendDlgItemMessage(g_minimap, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
+		MyBattle_set_split(LOWORD(w_param) - DLG_SPLIT_FIRST, SendDlgItemMessage(s_minimap, DLG_SPLIT_SIZE, TBM_GETPOS, 0, 0));
 		return 0;
 
 	default:
@@ -473,10 +474,11 @@ on_command(WPARAM w_param)
 
 static void
 on_split_size_scroll(void) {
-	SplitType split_type = 0;
+	SplitType split_type;
+	int split_size;
 
 	/* find which split button is checked: */
-	while (!SendDlgItemMessage(g_minimap,
+	while (!SendDlgItemMessage(s_minimap,
 				DLG_SPLIT_FIRST + split_type,
 				BM_GETCHECK, 0, 0)) {
 		if (split_type > SPLIT_LAST) {
@@ -486,7 +488,7 @@ on_split_size_scroll(void) {
 		++split_type;
 	}
 
-	int split_size = SendDlgItemMessage(g_minimap, DLG_SPLIT_SIZE,
+	split_size = SendDlgItemMessage(s_minimap, DLG_SPLIT_SIZE,
 			TBM_GETPOS, 0, 0);
 	MyBattle_set_split(split_type, split_size);
 }
@@ -494,7 +496,7 @@ on_split_size_scroll(void) {
 static void
 on_create(HWND window)
 {
-	g_minimap = window;
+	s_minimap = window;
 
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 
@@ -515,8 +517,8 @@ on_create(HWND window)
 	SendDlgItemMessage(window, DLG_MAPMODE_MINIMAP, BM_SETCHECK, BST_CHECKED, 0);
 }
 
-static LRESULT CALLBACK
-minimap_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+static intptr_t CALLBACK
+minimap_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 
@@ -550,9 +552,9 @@ _init (void)
 {
 	WNDCLASSEX window_class = {
 		.lpszClassName = WC_MINIMAP,
-		.cbSize        = sizeof(WNDCLASSEX),
-		.lpfnWndProc   = minimap_proc,
-		.hCursor       = LoadCursor(NULL, (void *)(IDC_ARROW)),
+		.cbSize        = sizeof window_class,
+		.lpfnWndProc   = (WNDPROC)minimap_proc,
+		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
 		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
 	};
 

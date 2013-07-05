@@ -29,6 +29,7 @@ Gzip_inflate(void *restrict src, size_t src_len, void *restrict dst, size_t dst_
 		.avail_out = dst_len,
 		.next_out =  dst,
 	};
+
 	inflateInit2(&stream, 15 + 16);
 	inflate(&stream, Z_FINISH);
 	inflateEnd(&stream);
@@ -42,9 +43,12 @@ Gzip_deflate(void *src, size_t *len)
 		.avail_in = *len,
 		.next_in = src,
 	};
+	size_t dst_len;
+	void *dst;
+
 	deflateInit2(&stream, 9, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
-	size_t dst_len = deflateBound(&stream, *len);
-	void *dst = malloc(dst_len);
+	dst_len = deflateBound(&stream, *len);
+	dst = malloc(dst_len);
 	stream.avail_out = dst_len;
 	stream.next_out = dst;
 	deflate(&stream, Z_FINISH);

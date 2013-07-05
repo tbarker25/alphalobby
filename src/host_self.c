@@ -33,29 +33,18 @@
 #include "sync.h"
 #include "user.h"
 
-static void said_battle(User *, char *text);
-static void set_option(Option *opt, const char *val);
-static void set_split(int size, SplitType type);
+static void set_option (Option *opt, const char *val);
+static void set_split  (int size,    SplitType type);
 
-const HostType HOST_SELF = {
-	.force_ally = TasServer_send_force_ally,
-	.force_team = TasServer_send_force_team,
-	.kick = TasServer_send_kick,
-	.said_battle = said_battle,
-	.set_map = TasServer_send_set_map,
-	.set_option = set_option,
-	.set_split = set_split,
-};
-
-/* static void
-force_color(const char *name, uint32_t color)    */
-/* {                                                           */
-/* }                                                           */
-
-static void
-said_battle(User *user, char *text)
+void
+Self_set_as_host(void)
 {
-	BattleRoom_said_battle(user->name, text, CHAT_NORMAL);
+	MyBattle_force_ally  = (void *)TasServer_send_force_ally;
+	MyBattle_force_team  = (void *)TasServer_send_force_team;
+	MyBattle_kick        = TasServer_send_kick;
+	MyBattle_set_map     = TasServer_send_set_map;
+	MyBattle_set_option  = set_option;
+	MyBattle_set_split   = set_split;
 }
 
 static void
@@ -85,27 +74,31 @@ set_split(int size, SplitType type)
 		TasServer_send_add_start_box(1, 200 - size, 0, 200, 200);
 		TasServer_send_del_start_box(2);
 		TasServer_send_del_start_box(3);
-		break;
+		return;
+
 	case SPLIT_VERT:
 		TasServer_send_add_start_box(0, 0, 0, 200, size);
 		TasServer_send_add_start_box(1, 0, 200 - size, 200, 200);
 		TasServer_send_del_start_box(2);
 		TasServer_send_del_start_box(3);
-		break;
+		return;
+
 	case SPLIT_CORNERS1:
 		TasServer_send_add_start_box(0, 0, 0, size, size);
 		TasServer_send_add_start_box(1, 200 - size, 200 - size, 200, 200);
 		TasServer_send_add_start_box(2, 0, 200 - size, size, 200);
 		TasServer_send_add_start_box(3, 200 - size, 0, 200, size);
-		break;
+		return;
+
 	case SPLIT_CORNERS2:
 		TasServer_send_add_start_box(0, 0, 200 - size, size, 200);
 		TasServer_send_add_start_box(1, 200 - size, 0, 200, size);
 		TasServer_send_add_start_box(2, 0, 0, size, size);
 		TasServer_send_add_start_box(3, 200 - size, 200 - size, 200, 200);
-		break;
+		return;
+
 	default:
 		assert(0);
-		break;
+		return;
 	}
 }
