@@ -12,16 +12,20 @@
 #include "mybattle.h"
 #include "user.h"
 
-static void said_battle(User *, char *text);
+static void said_battle(User *, char *text, ChatType);
 
-const HostType HOST_SPRINGIE = {
-	.said_battle = said_battle,
-};
+void
+Springie_set_as_host(void)
+{
+	MyBattle_said_battle = said_battle;
+}
 
 static void
-said_battle(User *user, char *text)
+said_battle(User *user, char *text, ChatType chat_type)
 {
-	if (user == g_my_battle->founder && text[0] == '[') {
+	if (user == g_my_battle->founder
+	    && chat_type == CHAT_NORMAL
+	    && text[0] == '[') {
 		int braces;
 
 		braces = 1;
@@ -37,5 +41,5 @@ said_battle(User *user, char *text)
 		}
 	}
 
-	BattleRoom_said_battle(user->name, text, CHAT_NORMAL);
+	BattleRoom_said_battle(user->name, text, chat_type);
 }

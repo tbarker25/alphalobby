@@ -29,19 +29,20 @@
 #include "layoutmetrics.h"
 #include "resource.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 static void activate(int item_index);
-static BOOL CALLBACK channel_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_init(HWND window);
 
-static HWND g_channel_list;
+static HWND s_channel_list;
 
 static void
 activate(int item_index)
 {
 	wchar_t name[MAX_NAME_LENGTH_NUL];
-	ListView_GetItemText(g_channel_list, item_index, 0, name, LENGTH(name));
+
+	ListView_GetItemText(s_channel_list, item_index, 0, name, LENGTH(name));
 	/* Chat_join_channel(utf16to8(name), 1); */
 }
 
@@ -51,55 +52,62 @@ on_init(HWND window)
 	RECT rect;
 	LVCOLUMN column_info;
 
-	g_channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
-	GetClientRect(g_channel_list, &rect);
+	s_channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
+	GetClientRect(s_channel_list, &rect);
 	column_info .mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH;
 
-	column_info.pszText = L"name";
+	column_info.pszText = (wchar_t *)L"name";
 	column_info.cx = MAP_X(50);
 	column_info.iSubItem = 0;
-	ListView_InsertColumn(g_channel_list, 0, (LPARAM)&column_info);
+	ListView_InsertColumn(s_channel_list, 0, (uintptr_t)&column_info);
 
-	column_info.pszText = L"users";
+	column_info.pszText = (wchar_t *)L"users";
 	column_info.cx = MAP_X(20);
 	column_info.iSubItem = 1;
-	ListView_InsertColumn(g_channel_list, 1, (LPARAM)&column_info);
+	ListView_InsertColumn(s_channel_list, 1, (uintptr_t)&column_info);
 
-	column_info.pszText = L"description";
-	column_info.cx = rect.right - MAP_X(70) - g_scroll_width;
+	column_info.pszText = (wchar_t *)L"description";
+	column_info.cx = (int32_t)rect.right - (int32_t)MAP_X(70) - (int32_t)g_scroll_width;
 	column_info.iSubItem = 2;
-	ListView_InsertColumn(g_channel_list, 2, (LPARAM)&column_info);
+	ListView_InsertColumn(s_channel_list, 2, (uintptr_t)&column_info);
 
-	ListView_SetExtendedListViewStyleEx(g_channel_list,
+	ListView_SetExtendedListViewStyleEx(s_channel_list,
 			LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 }
 
 static BOOL CALLBACK
-channel_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
 		on_init(window);
 		return 0;
+
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(g_channel_list, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(s_channel_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
+
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
 			return 0;
+
+		default:
+			return 0;
 		}
-		return 0;
+
 	case WM_NOTIFY:
-		if (((LPNMHDR)l_param)->code == LVN_ITEMACTIVATE) {
-			activate(((LPNMITEMACTIVATE)l_param)->iItem);
+		if (((NMHDR *)l_param)->code == LVN_ITEMACTIVATE) {
+			activate(((NMITEMACTIVATE *)l_param)->iItem);
 			DestroyWindow(window);
 		}
 		return 0;
+
 	case WM_DESTROY:
-		g_channel_list = NULL;
+		s_channel_list = NULL;
 		return 0;
+
 	default:
 		return 0;
 	}
@@ -114,19 +122,19 @@ ChannelList_add_channel(const char *name, const char *user_len, const char *desc
 	item.mask = LVIF_TEXT;
 	item.iSubItem = 0;
 	item.pszText = utf8to16(name);
-	item_index = ListView_InsertItem(g_channel_list, &item);
+	item_index = ListView_InsertItem(s_channel_list, &item);
 
 	assert(item_index != -1);
 
-	ListView_SetItemText(g_channel_list, item_index, 1, utf8to16(user_len));
-	ListView_SetItemText(g_channel_list, item_index, 2, utf8to16(desc));
+	ListView_SetItemText(s_channel_list, item_index, 1, utf8to16(user_len));
+	ListView_SetItemText(s_channel_list, item_index, 2, utf8to16(desc));
 }
 
 void
 ChannelList_show(void)
 {
-	/* DestroyWindow(GetParent(g_channel_list)); */
-	assert(g_channel_list == NULL);
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, channel_list_proc);
+	/* DestroyWindow(GetParent(s_channel_list)); */
+	assert(s_channel_list == NULL);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)channel_list_proc);
 	TasServer_send_get_channels();
 }

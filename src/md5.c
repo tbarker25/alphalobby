@@ -127,7 +127,7 @@ static void
 final(MD5_CTX *md_context)
 {
 	uint32_t in[16] = {
-		[14]=md_context->i[0],
+		[14] = md_context->i[0],
 		[15] = md_context->i[1],
 	};
 
@@ -135,7 +135,7 @@ final(MD5_CTX *md_context)
 	int mdi = (int)((md_context->i[0] >> 3) & 0x3F);
 
 	/* pad out to 56 mod 64 */
-	unsigned int pad_len = (mdi < 56) ? (56 - mdi) : (120 - mdi);
+	unsigned int pad_len = (mdi < 56) ? (unsigned int)(56 - mdi) : (unsigned int)(120 - mdi);
 	update (md_context, PADDING, pad_len);
 
 	/* append length in bits and transform */
@@ -264,7 +264,7 @@ MD5_to_base_64(const uint8_t *s)
 {
 	const char conv[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	static char code[BASE64_MD5_LENGTH + 1];
-	for (int i=0; i<5; ++i) {
+	for (uint8_t i=0; i<5; ++i) {
 		uint32_t c = ((uint32_t)s[i*3] << 16) + ((uint32_t)s[i*3+1] << 8) + ((uint32_t)s[i*3+2]);
 		sprintf(&code[i*4], "%c%c%c%c", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], conv[(c >> 6) % (1 << 6)], conv[(c >> 0) % (1 << 6)]);
 	}
@@ -289,7 +289,7 @@ MD5_from_base_16(const char *restrict in, uint8_t *restrict out)
 {
 	#define FROM_XCHR(c) (c - '0' + (c > '9') * (10 - 'a' + '0'))
 	for (int i=0; i < 16; ++i)
-		out[i] = FROM_XCHR(in[2*i]) << 4 | FROM_XCHR(in[2*i+1]);
+		out[i] = (uint8_t)(FROM_XCHR(in[2*i]) << 4 | FROM_XCHR(in[2*i+1]));
 	#undef FROM_XCHR
 }
 

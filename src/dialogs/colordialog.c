@@ -29,12 +29,13 @@
 #include "../user.h"
 
 static COLORREF get_rgb(HWND window);
-static BOOL CALLBACK color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK color_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 
 void
 ColorDialog_create(UserBot *u)
 {
-	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_COLOR), g_main_window, color_proc, (LPARAM)u);
+	DialogBoxParam(NULL, MAKEINTRESOURCE(IDD_COLOR), g_main_window,
+	    (DLGPROC)color_proc, (intptr_t)u);
 }
 
 static COLORREF
@@ -46,7 +47,7 @@ get_rgb(HWND window)
 }
 
 static BOOL CALLBACK
-color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
+color_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -89,7 +90,7 @@ color_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param)
 		}
 		break;
 	case WM_CTLCOLORSTATIC:
-		return (GetDlgCtrlID((HWND)l_param) == IDC_COLOR_PREVIEW) * (INT_PTR)CreateSolidBrush(get_rgb(window));
+		return (GetDlgCtrlID((HWND)l_param) == IDC_COLOR_PREVIEW) * (intptr_t)CreateSolidBrush(get_rgb(window));
 	}
 	return 0;
 }

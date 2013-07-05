@@ -26,7 +26,7 @@
 
 #define RUN_IN_SYNC_THREAD(_func, _param) {\
 	extern HANDLE g_sync_thread;\
-	QueueUserAPC((void *)(_func), g_sync_thread, (ULONG_PTR)(_param));\
+	QueueUserAPC((void *)(_func), g_sync_thread, (uintptr_t)(_param));\
 }
 
 struct Option;

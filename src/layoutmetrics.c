@@ -30,10 +30,10 @@ uint32_t g_scroll_width;
 static void __attribute__((constructor))
 _init(void)
 {
-	NONCLIENTMETRICS info = {.cbSize = sizeof(NONCLIENTMETRICS)};
+	NONCLIENTMETRICS info = {.cbSize = sizeof info};
 
 	SystemParametersInfo(SPI_GETNONCLIENTMETRICS, 0, &info, 0);
-	g_scroll_width = info.iScrollWidth;
+	g_scroll_width = (uint32_t)info.iScrollWidth;
 	g_font = CreateFontIndirect(&info.lfMessageFont);
 
 	HDC dc = GetDC(NULL);
@@ -41,6 +41,6 @@ _init(void)
 	TEXTMETRIC tmp;
 	GetTextMetrics(dc, &tmp);
 	ReleaseDC(NULL, dc);
-	g_base_unit_x = tmp.tmAveCharWidth;
-	g_base_unit_y = tmp.tmHeight;
+	g_base_unit_x = (uint16_t)tmp.tmAveCharWidth;
+	g_base_unit_y = (uint16_t)tmp.tmHeight;
 }

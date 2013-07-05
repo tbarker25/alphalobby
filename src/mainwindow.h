@@ -33,13 +33,13 @@ enum {
 #define DLG_PROGRESS_BUTTON 0x200
 
 #define ExecuteInMainThreadAsync(_func)\
-	SendMessage(g_main_window, WM_EXECFUNC, (WPARAM)(_func), 0)
+	SendMessage(g_main_window, WM_EXECFUNC, (uintptr_t)(_func), 0)
 
 #define ExecuteInMainThread(_func)\
-	SendMessage(g_main_window, WM_EXECFUNC, (WPARAM)(_func), 0)
+	SendMessage(g_main_window, WM_EXECFUNC, (uintptr_t)(_func), 0)
 
 #define ExecuteInMainThread_param(_func, _param)\
-	SendMessage(g_main_window, WM_EXECFUNCPARAM, (WPARAM)(_func), (LPARAM)_param)
+	SendMessage(g_main_window, WM_EXECFUNCPARAM, (uintptr_t)(_func), (intptr_t)_param)
 
 extern HWND g_main_window;
 void MainWindow_set_active_tab(HWND new_tab);

@@ -20,15 +20,17 @@
 
 #include "common.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 char *
 strsep(char *restrict *restrict s, const char *restrict delimiters)
 {
+	char *ret;
+
 	*s += strspn(*s, delimiters);
 	if (!**s)
 		return NULL;
-	char *ret = *s;
+	ret = *s;
 	*s += strcspn(*s, delimiters);
 	if (**s)
 		*(*s)++ = '\0';
@@ -38,7 +40,9 @@ strsep(char *restrict *restrict s, const char *restrict delimiters)
 char *
 strpcpy(char *restrict dst, const char *restrict src)
 {
-	size_t len = strlen(src) + 1;
+	size_t len;
+
+	len = strlen(src) + 1;
 	memcpy(dst, src, len);
 	return dst + len;
 }
@@ -47,6 +51,7 @@ wchar_t *
 utf8to16(const char *restrict s)
 {
 	static wchar_t ws[MAX_SERVER_MESSAGE];
+
 	MultiByteToWideChar(CP_UTF8, 0, s, -1, ws, LENGTH(ws));
 	return ws;
 }
@@ -55,6 +60,7 @@ char *
 utf16to8(const wchar_t *restrict ws)
 {
 	static char s[MAX_SERVER_MESSAGE];
+
 	WideCharToMultiByte(CP_UTF8, 0, ws, -1, s, LENGTH(s), NULL, NULL);
 	return s;
 }

@@ -50,17 +50,17 @@
 #define MAX_MESSAGE_LENGTH 1024 //Hardcoded into server
 #define HTONS(x) (uint16_t)((x) << 8 | (x) >> 8)
 
-static DWORD WINAPI connect_proc(void (*on_finish)(void));
+static uint32_t WINAPI connect_proc(void (*on_finish)(void));
 static void login(void);
 static void register_account(void);
 static void send_to_server(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
 
-int g_last_auto_message;
+uint32_t g_last_auto_message;
 BattleStatus g_last_battle_status;
 ClientStatus g_last_client_status;
-static SOCKET g_socket = INVALID_SOCKET;
-static char g_my_password[BASE16_MD5_LENGTH];
-static char g_my_username[MAX_NAME_LENGTH+1];
+static SOCKET s_socket = INVALID_SOCKET;
+static char s_my_password[BASE16_MD5_LENGTH];
+static char s_my_username[MAX_NAME_LENGTH+1];
 
 void
 TasServer_poll(void)
@@ -72,7 +72,7 @@ TasServer_poll(void)
 	int bytes_received;
 	char *s;
 
-	bytes_received = recv(g_socket, buf + buf_len, RECV_SIZE, 0);
+	bytes_received = recv(s_socket, buf + buf_len, RECV_SIZE, 0);
 	if (bytes_received <= 0) {
 		printf("bytes recv = %d, err = %d\n",
 		    bytes_received, WSAGetLastError());
@@ -81,7 +81,7 @@ TasServer_poll(void)
 		return;
 	}
 
-	buf_len += bytes_received;
+	buf_len += (size_t)bytes_received;
 
 	s = buf;
 	for (size_t i=0; i<buf_len; ++i) {
@@ -97,7 +97,7 @@ TasServer_poll(void)
 
 		s = buf + i + 1;
 	}
-	buf_len -= s - buf;
+	buf_len -= (size_t)(s - buf);
 
 	memmove(buf, s, buf_len);
 }
@@ -107,9 +107,9 @@ send_to_server(const char *format, ...)
 {
 	char buf[MAX_MESSAGE_LENGTH];
 	va_list args;
-	size_t len;
+	int len;
 
-	if (g_socket == INVALID_SOCKET)
+	if (s_socket == INVALID_SOCKET)
 		return;
 
 	va_start (args, format);
@@ -122,7 +122,7 @@ send_to_server(const char *format, ...)
 
 	buf[len++] = '\n';
 
-	if (send(g_socket, buf, len, 0) == SOCKET_ERROR) {
+	if (send(s_socket, buf, len, 0) == SOCKET_ERROR) {
 		assert(0);
 		TasServer_disconnect();
 		MainWindow_msg_box("Connection to server interupted",
@@ -134,9 +134,9 @@ void
 TasServer_disconnect(void)
 {
 	KillTimer(g_main_window, 1);
-	shutdown(g_socket, SD_BOTH);
-	closesocket(g_socket);
-	g_socket = INVALID_SOCKET;
+	shutdown(s_socket, SD_BOTH);
+	closesocket(s_socket);
+	s_socket = INVALID_SOCKET;
 	WSACleanup();
 	MainWindow_change_connect(CONNECTION_OFFLINE);
 
@@ -150,20 +150,20 @@ TasServer_disconnect(void)
 }
 
 void CALLBACK
-TasServer_ping(__attribute__((unused)) HWND window, __attribute__((unused)) UINT msg,
-		__attribute__((unused)) UINT_PTR idEvent, __attribute__((unused)) DWORD dwTime)
+TasServer_ping(__attribute__((unused)) HWND window, __attribute__((unused)) uint32_t msg,
+		__attribute__((unused)) uintptr_t idEvent, __attribute__((unused)) uint32_t dwTime)
 {
 	send_to_server("PING");
 }
 
-static DWORD WINAPI
+static uint32_t WINAPI
 connect_proc(void (*on_finish)(void))
 {
 	WSADATA wsa_data;
 	struct hostent *host;
 	struct sockaddr_in server;
 
-	if (g_socket != INVALID_SOCKET)
+	if (s_socket != INVALID_SOCKET)
 		TasServer_disconnect();
 	MainWindow_change_connect(CONNECTION_CONNECTING);
 
@@ -188,35 +188,35 @@ connect_proc(void (*on_finish)(void))
 		.sin_port = HTONS((uint16_t)8200),
 	};
 
-	g_socket = socket(PF_INET, SOCK_STREAM, 0);
+	s_socket = socket(PF_INET, SOCK_STREAM, 0);
 
-	if (connect(g_socket, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
+	if (connect(s_socket, (struct sockaddr *)&server, sizeof server) == SOCKET_ERROR) {
 		MainWindow_msg_box("Could not connect to server.",
 		    "Could not finalize connection.\n"
 		    "Please check your internet connection.");
-		closesocket(g_socket);
-		g_socket = INVALID_SOCKET;
+		closesocket(s_socket);
+		s_socket = INVALID_SOCKET;
 	}
 
-	WSAAsyncSelect(g_socket, g_main_window, WM_POLL_SERVER,
+	WSAAsyncSelect(s_socket, g_main_window, WM_POLL_SERVER,
 	    FD_READ|FD_CLOSE);
 	on_finish();
 
-	SetTimer(g_main_window, 1, 30000 / 2, TasServer_ping);
+	SetTimer(g_main_window, 1, 30000 / 2, (void *)TasServer_ping);
 	return 0;
 }
 
 enum ServerStatus
 TasServer_status(void)
 {
-	return g_socket != INVALID_SOCKET;
+	return s_socket != INVALID_SOCKET;
 }
 
 void
 TasServer_connect(void (*on_finish)(void))
 {
 	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)connect_proc,
-	    (LPVOID)on_finish, 0, 0);
+	    (void *)on_finish, 0, 0);
 }
 
 void
@@ -258,7 +258,7 @@ TasServer_send_join_battle(uint32_t id, const char *password)
 				return;
 			password = buf;
 		}
-		g_host_type = NULL;
+		MyBattle_reset();
 		BattleRoom_show();
 
 		send_to_server("JOINBATTLE %u %s %x",
@@ -350,8 +350,7 @@ TasServer_send_get_ingame_time(void)
 void
 TasServer_send_change_map(const char *map_name)
 {
-	if (g_host_type && g_host_type->set_map)
-		g_host_type->set_map(map_name);
+	MyBattle_set_map(map_name);
 }
 
 void
@@ -374,20 +373,20 @@ login(void)
 	#ifdef VERSION
 	" " STRINGIFY(VERSION)
 	#endif
-	"\t0\ta m sp", g_my_username, g_my_password);//, GetLocalIP() ?: "*");
+	"\t0\ta m sp", s_my_username, s_my_password);//, GetLocalIP() ?: "*");
 }
 
 static void
 register_account(void)
 {
-	send_to_server("REGISTER %s %s", g_my_username, g_my_password);
+	send_to_server("REGISTER %s %s", s_my_username, s_my_password);
 }
 
 void
 TasServer_send_register(const char *username, const char *password)
 {
-	strcpy(g_my_username, username);
-	strcpy(g_my_password, password);
+	strcpy(s_my_username, username);
+	strcpy(s_my_password, password);
 	TasServer_connect(register_account);
 }
 
@@ -396,11 +395,11 @@ TasServer_send_login(const char *username, const char *password)
 /* LOGIN username password cpu local_i_p {lobby name and version} [{user_id}] [{comp_flags}] */
 {
 	if (username && password) {
-		strcpy(g_my_username, username);
-		strcpy(g_my_password, password);
+		strcpy(s_my_username, username);
+		strcpy(s_my_password, password);
 	}
 
-	assert(*g_my_username && *g_my_password);
+	assert(*s_my_username && *s_my_password);
 
 	if (TasServer_status()) {
 		login();

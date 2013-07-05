@@ -36,9 +36,9 @@
 #include "../wincommon.h"
 #include "../tasserver.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
-static BOOL CALLBACK login_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK login_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static int on_login(HWND window, int is_registering);
 
 __attribute__((pure))
@@ -76,7 +76,8 @@ to_md5_2(char *md5, const char *password)
 void
 LoginDialog_create(void)
 {
-	DialogBox(NULL, MAKEINTRESOURCE(IDD_LOGIN), g_main_window, login_proc);
+	DialogBox(NULL, MAKEINTRESOURCE(IDD_LOGIN), g_main_window,
+	    (DLGPROC)login_proc);
 }
 
 static int
@@ -106,7 +107,7 @@ on_login(HWND window, int is_registering)
 
 	}
 
-	char confirm_password[sizeof(password)];
+	char confirm_password[sizeof password];
 retry:
 	confirm_password[0] = 0;
 	if (GetTextDialog2_create(window, "Confirm password", confirm_password,
@@ -124,8 +125,8 @@ retry:
 }
 
 static BOOL CALLBACK
-login_proc(HWND window, UINT msg, WPARAM w_param,
-		__attribute__((unused)) LPARAM l_param)
+login_proc(HWND window, uint32_t msg, uintptr_t w_param,
+		__attribute__((unused)) intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:

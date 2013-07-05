@@ -33,17 +33,17 @@
 #define ALLOC_STEP 10
 
 User g_my_user;
-static User **g_users;
-static size_t g_user_len;
+static User **s_users;
+static size_t s_users_len;
 
 User *
 Users_find(const char *name)
 {
 	if (!strcmp(name, g_my_user.name))
 		return &g_my_user;
-	for (size_t i=0; i<g_user_len; ++i)
-		if (!strcmp(g_users[i]->name, name))
-			return &(*g_users[i]);
+	for (size_t i=0; i<s_users_len; ++i)
+		if (!strcmp(s_users[i]->name, name))
+			return &(*s_users[i]);
 	return NULL;
 }
 
@@ -51,7 +51,7 @@ User *
 Users_get_next(void)
 {
 	static size_t last;
-	return last < g_user_len ? g_users[last++] : (last = 0, NULL);
+	return last < s_users_len ? s_users[last++] : (last = 0, NULL);
 }
 
 User *
@@ -62,20 +62,20 @@ Users_new(uint32_t id, const char *name)
 		return &g_my_user;
 	}
 	size_t i=0;
-	for (; i<g_user_len; ++i)
-		if (g_users[i]->id == id)
+	for (; i<s_users_len; ++i)
+		if (s_users[i]->id == id)
 			break;
 
-	if (i == g_user_len) {
-		if (g_user_len % ALLOC_STEP == 0)
-			g_users = realloc(g_users, (g_user_len + ALLOC_STEP) * sizeof(User *));
-		++g_user_len;
-		g_users[i] = calloc(1, sizeof(User));
-		g_users[i]->id = id;
-		strcpy(g_users[i]->alias, UNTAGGED_NAME(name));
+	if (i == s_users_len) {
+		if (s_users_len % ALLOC_STEP == 0)
+			s_users = realloc(s_users, (s_users_len + ALLOC_STEP) * sizeof *s_users);
+		++s_users_len;
+		s_users[i] = calloc(1, sizeof **s_users);
+		s_users[i]->id = id;
+		strcpy(s_users[i]->alias, UNTAGGED_NAME(name));
 	}
-	SetWindowTextA(g_users[i]->chat_window, name);
-	return g_users[i];
+	SetWindowTextA(s_users[i]->chat_window, name);
+	return s_users[i];
 }
 
 void
@@ -88,7 +88,7 @@ void
 Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 		uint32_t color, const char *dll)
 {
-	Bot *bot = calloc(1, sizeof(*bot));
+	Bot *bot = calloc(1, sizeof *bot);
 	strcpy(bot->name, name);
 	bot->owner = owner;
 	bot->BattleStatus = battle_status;
@@ -108,7 +108,7 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 	++b->user_len;
 	++b->bot_len;
 
-	/* Rebalance(); */
+	/* MyBattle_rebalance(); */
 	Minimap_on_start_position_change();
 	BattleRoom_update_user((void *)bot);
 }
@@ -132,13 +132,13 @@ Users_del_bot(const char *name)
 		g_my_battle->users[i - 1] = g_my_battle->users[i];
 	--g_my_battle->user_len;
 	--g_my_battle->bot_len;
-	/* Rebalance(); */
+	/* MyBattle_rebalance(); */
 	Minimap_on_start_position_change();
 }
 
 void
 Users_reset(void)
 {
-	for (size_t i=0; i<g_user_len; ++i)
-		*g_users[i]->name = '\0';
+	for (size_t i=0; i<s_users_len; ++i)
+		*s_users[i]->name = '\0';
 }

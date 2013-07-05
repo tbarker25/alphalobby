@@ -35,27 +35,27 @@
 #include "user.h"
 
 #define LAUNCH_SPRING(path)\
-	CreateThread(NULL, 0, spring_proc, (LPVOID)(_wcsdup(path)), 0, NULL);
+	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)spring_proc, (void *)(_wcsdup(path)), 0, NULL);
 
-static DWORD WINAPI spring_proc(LPVOID path);
+static uint32_t WINAPI spring_proc(void * path);
 
-static bool g_ingame;
+static bool s_ingame;
 
-static DWORD WINAPI
-spring_proc(LPVOID path)
+static uint32_t WINAPI
+spring_proc(void * path)
 {
 	PROCESS_INFORMATION process_info;
 	STARTUPINFO startup_info = {0};
-	startup_info.cb = sizeof(startup_info);
+	startup_info.cb = sizeof startup_info;
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
-		g_ingame = true;
+		s_ingame = true;
 		TasServer_send_my_client_status(g_last_client_status);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
-		g_ingame = false;
+		s_ingame = false;
 		TasServer_send_my_client_status(g_last_client_status);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
@@ -67,7 +67,7 @@ spring_proc(LPVOID path)
 bool
 Spring_is_ingame(void)
 {
-	return g_ingame;
+	return s_ingame;
 }
 
 void
@@ -93,7 +93,7 @@ Spring_launch(void)
 		fclose(fp);
 		return;
 	}
-	fwrite(buf, 1, buffEnd - buf, fp);
+	fwrite(buf, 1, (size_t)(buffEnd - buf), fp);
 	fclose(fp);
 	wchar_t path[256];
 	_swprintf(path, L"\"%hs\" \"%s\"", g_settings.spring_path, script_path);

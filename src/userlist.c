@@ -33,13 +33,13 @@
 #include "chattab.h"
 #include "chatbox.h"
 
-#define LENGTH(x) (sizeof(x) / sizeof(*x))
+#define LENGTH(x) (sizeof x / sizeof *x)
 
 static void activate(int item_index);
-static BOOL CALLBACK user_list_proc(HWND window, UINT msg, WPARAM w_param, LPARAM l_param);
+static BOOL CALLBACK user_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_init(HWND window);
 
-static HWND g_user_list;
+static HWND s_user_list;
 
 static void
 activate(int item_index)
@@ -48,7 +48,7 @@ activate(int item_index)
 	item_info.mask = LVIF_PARAM;
 	item_info.iItem = item_index;
 	item_info.iSubItem = 2;
-	ListView_GetItem(g_user_list, &item_info);
+	ListView_GetItem(s_user_list, &item_info);
 	/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item_info.lParam)); */
 }
 
@@ -58,26 +58,26 @@ on_init(HWND window)
 	RECT rect;
 	LVCOLUMN column_info;
 
-	DestroyWindow(GetParent(g_user_list));
-	g_user_list = GetDlgItem(window, IDC_USERLIST_LIST);
+	DestroyWindow(GetParent(s_user_list));
+	s_user_list = GetDlgItem(window, IDC_USERLIST_LIST);
 
-	SetWindowLongPtr(g_user_list, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
+	SetWindowLongPtr(s_user_list, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
 			| LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING |
 			LVS_NOCOLUMNHEADER);
 
-	ListView_SetExtendedListViewStyle(g_user_list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-	IconList_enable_for_listview(g_user_list);
+	ListView_SetExtendedListViewStyle(s_user_list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+	IconList_enable_for_listview(s_user_list);
 
-	GetClientRect(g_user_list, &rect);
+	GetClientRect(s_user_list, &rect);
 	column_info.mask = LVCF_SUBITEM | LVCF_WIDTH;
 
-	column_info.cx = rect.right - ICON_SIZE - g_scroll_width;
+	column_info.cx = rect.right - (int)ICON_SIZE - (int)g_scroll_width;
 	column_info.iSubItem = 0;
-	ListView_InsertColumn(g_user_list, 0, (LPARAM)&column_info);
+	ListView_InsertColumn(s_user_list, 0, (uintptr_t)&column_info);
 
 	column_info.cx = ICON_SIZE;
 	column_info.iSubItem = 1;
-	ListView_InsertColumn(g_user_list, 1, (LPARAM)&column_info);
+	ListView_InsertColumn(s_user_list, 1, (uintptr_t)&column_info);
 
 	for (const User *u; (u = Users_get_next());) {
 		if (!*u->name)
@@ -86,7 +86,7 @@ on_init(HWND window)
 		item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
 		item.iItem = INT_MAX;
 		item.iSubItem = 0;
-		item.lParam = (LPARAM)u;
+		item.lParam = (intptr_t)u;
 
 		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
 		_swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
@@ -106,18 +106,18 @@ on_init(HWND window)
 		item.state = INDEXTOOVERLAYMASK(icon_index);
 		item.stateMask = LVIS_OVERLAYMASK;
 
-		item.iItem = ListView_InsertItem(g_user_list, &item);
+		item.iItem = ListView_InsertItem(s_user_list, &item);
 
 		item.mask = LVIF_IMAGE;
 		item.iImage = ICON_FIRST_FLAG + u->country;
 		item.iSubItem = 1;
-		ListView_SetItem(g_user_list, &item);
+		ListView_SetItem(s_user_list, &item);
 	}
 }
 
 static BOOL CALLBACK
-user_list_proc(HWND window, UINT msg, WPARAM w_param,
-		LPARAM l_param)
+user_list_proc(HWND window, uint32_t msg, uintptr_t w_param,
+		intptr_t l_param)
 {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -126,7 +126,7 @@ user_list_proc(HWND window, UINT msg, WPARAM w_param,
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(g_user_list, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(s_user_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
@@ -134,13 +134,13 @@ user_list_proc(HWND window, UINT msg, WPARAM w_param,
 		}
 		return 0;
 	case WM_NOTIFY:
-		if (((LPNMHDR)l_param)->code == LVN_ITEMACTIVATE) {
-			activate(((LPNMITEMACTIVATE)l_param)->iItem);
+		if (((NMHDR *)l_param)->code == LVN_ITEMACTIVATE) {
+			activate(((NMITEMACTIVATE *)l_param)->iItem);
 			DestroyWindow(window);
 		}
 		return 0;
 	case WM_DESTROY:
-		g_user_list = NULL;
+		s_user_list = NULL;
 		return 0;
 	default:
 		return 0;
@@ -150,5 +150,5 @@ user_list_proc(HWND window, UINT msg, WPARAM w_param,
 void
 UserList_show(void)
 {
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, user_list_proc);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)user_list_proc);
 }
