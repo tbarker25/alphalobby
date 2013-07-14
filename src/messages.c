@@ -102,6 +102,12 @@ static void TAS_server            (void);
 static void update_battle_info    (void);
 static void update_bot            (void);
 
+static void     copy_next_sentence          (char *buf);
+static void     copy_next_word              (char *buf);
+static uint32_t get_next_int                (void);
+static char *   get_next_word               (void);
+static void     strip_irc_control_sequences (char *text);
+
 static FILE *s_agreement_file;
 static uint32_t s_time_battle_joined;
 static char *s_command;
@@ -156,46 +162,13 @@ static const Command SERVER_COMMANDS[] = {
 	{"UPDATEBOT",            update_bot},
 };
 
-static void
-copy_next_word(char *buf) {
-	size_t len = strcspn(s_command, " ");
-	char *word = s_command;
-	s_command += len + !!s_command[len];
-	word[len] = '\0';
-	memcpy(buf, word, len + 1);
-}
-
-static char *
-get_next_word(void) {
-	size_t len = strcspn(s_command, " ");
-	char *word = s_command;
-	s_command += len + !!s_command[len];
-	word[len] = '\0';
-	return word;
-}
-
-static uint32_t
-get_next_int(void) {
-	return (uint32_t)atol(get_next_word());
-}
-
-static void
-copy_next_sentence(char *buf) {
-	size_t len = strcspn(s_command, "\t");
-	char *word = s_command;
-	s_command += len + !!s_command[len];
-	word[len] = '\0';
-	memcpy(buf, word, len + 1);
-}
-
 void
 Messages_handle(char *command)
 {
 	s_command = command;
 	char *command_name = get_next_word();
-	typeof(*SERVER_COMMANDS) *com =
-		bsearch(command_name, SERVER_COMMANDS, LENGTH(SERVER_COMMANDS),
-				sizeof *SERVER_COMMANDS, (void *)strcmp);
+	Command *com = bsearch(command_name, SERVER_COMMANDS,
+	    LENGTH(SERVER_COMMANDS), sizeof *SERVER_COMMANDS, (void *)strcmp);
 	if (com)
 		com->func();
 }
@@ -248,7 +221,7 @@ add_user(void)
 static void
 add_start_rect(void)
 {
-	typeof(*g_battle_options.start_rects) *rect = &g_battle_options.start_rects[get_next_int()];
+	StartRect *rect = &g_battle_options.start_rects[get_next_int()];
 	rect->left   = (uint16_t)get_next_int();
 	rect->top    = (uint16_t)get_next_int();
 	rect->right  = (uint16_t)get_next_int();
@@ -551,11 +524,9 @@ left_battle(void)
 			bs.mode = 1;
 			TasServer_send_my_battle_status(bs);
 		}
-		if (g_settings.flags & (1<<DEST_BATTLE)) {
-			BattleRoom_on_left_battle((void *)u);
-			BattleRoom_said_battle(u->name, "has left the battle",
-			    CHAT_SYSTEM);
-		}
+		BattleRoom_on_left_battle(u);
+		BattleRoom_said_battle(u->name, "has left the battle",
+		    CHAT_SYSTEM);
 	}
 }
 
@@ -660,6 +631,8 @@ said_battle_ex(void)
 	assert(u);
 	if (!u)
 		return;
+
+	strip_irc_control_sequences(text);
 
 	// Check for autohost
 	// welcome message is configurable, but chance_of_autohost should usually be between 5 and 8.
@@ -852,4 +825,56 @@ static void
 update_bot(void)
 {
 	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
+}
+
+static void
+strip_irc_control_sequences(char *text)
+{
+	int skips = 0;
+	char *c = text;
+
+	for (; *c; ++c) {
+		if (*c == 3) {
+			++c;
+			skips += 2;
+
+		} else if ((signed char)*c >= 0 && !isprint(*c))
+			++skips;
+
+		else
+			c[-skips] = *c;
+	}
+	c[-skips] = (char)'\0';
+}
+
+static void
+copy_next_word(char *buf) {
+	size_t len = strcspn(s_command, " ");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
+	word[len] = '\0';
+	memcpy(buf, word, len + 1);
+}
+
+static char *
+get_next_word(void) {
+	size_t len = strcspn(s_command, " ");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
+	word[len] = '\0';
+	return word;
+}
+
+static uint32_t
+get_next_int(void) {
+	return (uint32_t)atol(get_next_word());
+}
+
+static void
+copy_next_sentence(char *buf) {
+	size_t len = strcspn(s_command, "\t");
+	char *word = s_command;
+	s_command += len + !!s_command[len];
+	word[len] = '\0';
+	memcpy(buf, word, len + 1);
 }
