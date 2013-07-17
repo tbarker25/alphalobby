@@ -43,7 +43,7 @@ typedef struct KeyPair{
 
 static KeyPair get_line(FILE *fd);
 
-typeof(g_settings) g_settings;
+struct Settings g_settings;
 wchar_t g_data_dir[MAX_PATH];
 
 static const KeyPair DEFAULT_SETTINGS[] = {

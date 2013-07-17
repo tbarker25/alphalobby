@@ -46,6 +46,7 @@
 #undef UNITSYNC_API_H
 
 #define LENGTH(x) (sizeof x / sizeof *x)
+#define swap(_a, _b) {typeof(_a) tmp = _a; _a = _b; _b = tmp;}
 
 static const struct {
 	void **proc;
@@ -64,16 +65,17 @@ typedef struct OptionList {
 	int len;
 }OptionList;
 
-static void create_mod_file(const char *mod_name);
-static void create_map_file(const char *map_name);
-static void write_info_map(const char *map_name, const char *map_type, gzFile gz_file);
-static OptionList load_options(gzFile fd);
-static void init_options(int option_len, gzFile fd);
-static uint32_t WINAPI syncProc (__attribute__((unused)) void * unused);
-static void print_last_error(const wchar_t *title);
+static void            create_mod_file  (const char *mod_name);
+static void            create_map_file  (const char *map_name);
+static void            init_options     (int option_len, gzFile);
+static OptionList      load_options     (gzFile);
+static void            print_last_error (const wchar_t *title);
+static void            reload           (void);
+static uint32_t WINAPI syncProc         (void *unused);
+static void            write_info_map   (const char *map_name, const char *map_type, gzFile);
 
 //Shared between threads:
-static uint8_t s_task_reload, /* task_set_minimap, */ /* task_set_info, */ task_set_battle_status;
+static uint8_t s_task_reload, /* task_set_minimap, */ /* task_set_info, */ s_task_set_status;
 static HANDLE s_event;
 
 //malloc new value, swap atomically, and free old value:
@@ -112,34 +114,9 @@ syncProc (__attribute__((unused)) void *unused)
 	s_task_reload=1;
 	while (1) {
 		if (s_task_reload) {
+			reload();
 			s_task_reload = 0;
-			Init(0, 0);
-
-			task_set_battle_status = 1;
-
-			for (int i=0; i<g_mod_len; ++i)
-				free(g_mods[i]);
-			free(g_mods);
-			g_mod_len = GetPrimaryModCount();
-			g_mods = malloc((size_t)g_mod_len * sizeof g_mods[0]);
-			for (int i=0; i<g_mod_len; ++i)
-				g_mods[i] = _strdup(GetPrimaryModName(i));
-
-			for (int i=0; i<g_map_len; ++i)
-				free(g_maps[i]);
-			free(g_maps);
-			g_map_len = GetMapCount();
-			g_maps = malloc((size_t)g_map_len * sizeof g_maps[0]);
-			for (int i=0; i<g_map_len; ++i)
-				g_maps[i] = _strdup(GetMapName(i));
-
-			void reset_map_and_mod(void) {
-				if (g_my_battle) {
-					Sync_on_changed_mod(g_my_battle->mod_name);
-					Sync_on_changed_map(g_my_battle->map_name);
-				}
-			}
-			ExecuteInMainThread(reset_map_and_mod);
+			s_task_set_status = 1;
 			s_have_tried_download = 1;
 		} else if ((s = (void *)__sync_fetch_and_and(&s_mod_to_save, NULL))) {
 			create_mod_file(s);
@@ -147,9 +124,9 @@ syncProc (__attribute__((unused)) void *unused)
 		} else if ((s = (void *)__sync_fetch_and_and(&s_map_to_save, NULL))) {
 			create_map_file(s);
 			free(s);
-		} else if (task_set_battle_status) {
+		} else if (s_task_set_status) {
 			TasServer_send_my_battle_status(g_last_battle_status);
-			task_set_battle_status = 0;
+			s_task_set_status = 0;
 		} else {
 			WaitForSingleObject(s_event, INFINITE);
 		}
@@ -167,6 +144,45 @@ void
 Sync_init(void)
 {
 	CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)syncProc, NULL, 0, NULL);
+}
+
+static void
+reload(void)
+{
+	char **mods;
+	char **maps;
+	int mods_len;
+	int maps_len;
+
+	Init(0, 0);
+
+	mods_len = GetPrimaryModCount();
+	mods = malloc((size_t)mods_len * sizeof mods[0]);
+	for (int i=0; i<mods_len; ++i)
+		mods[i] = _strdup(GetPrimaryModName(i));
+
+	maps_len = GetMapCount();
+	maps = malloc((size_t)maps_len * sizeof maps[0]);
+	for (int i=0; i<maps_len; ++i)
+		maps[i] = _strdup(GetMapName(i));
+
+	void reset_map_and_mod(void) {
+		swap(mods, g_mods);
+		swap(maps, g_maps);
+		swap(mods_len, g_mod_len);
+		swap(maps_len, g_map_len);
+		if (g_my_battle) {
+			Sync_on_changed_mod(g_my_battle->mod_name);
+			Sync_on_changed_map(g_my_battle->map_name);
+		}
+	}
+	ExecuteInMainThread(reset_map_and_mod);
+	for (int i=0; i<mods_len; ++i)
+		free(mods[i]);
+	free(mods);
+	for (int i=0; i<maps_len; ++i)
+		free(maps[i]);
+	free(maps);
 }
 
 static void
@@ -380,27 +396,29 @@ create_mod_file(const char *mod_name)
 
 	uint32_t side_pics[side_len][16*16];
 	for (uint8_t i=0; i<side_len; ++i) {
-		char is_b_m_p = 0;
+		bool is_bmp = false;
 		char vfs_path[128];
 		int n = sprintf(vfs_path, "SidePics/%s.png", side_names[i]);
-		int fd = OpenFileVFS(vfs_path);
-		if (!fd) {
-			memcpy(&vfs_path[n - 3], (char[]){'b', 'm', 'p'}, 3);
-			is_b_m_p = 1;
-			fd = OpenFileVFS(vfs_path);
-		}
-		if (!fd) {
-			continue;
+		int sidepic_fd = OpenFileVFS(vfs_path);
+		if (!sidepic_fd) {
+			vfs_path[n - 3] = 'b';
+			vfs_path[n - 2] = 'm';
+			vfs_path[n - 1] = 'p';
+			is_bmp = true;
+			sidepic_fd = OpenFileVFS(vfs_path);
 		}
 
-		uint8_t buf[FileSizeVFS(fd)];
-		ReadFileVFS(fd, buf, (int)sizeof buf);
-		CloseFileVFS(fd);
+		if (!sidepic_fd)
+			continue;
+
+		uint8_t buf[FileSizeVFS(sidepic_fd)];
+		ReadFileVFS(sidepic_fd, buf, (int)sizeof buf);
+		CloseFileVFS(sidepic_fd);
 		ilLoadL(IL_TYPE_UNKNOWN, buf, sizeof buf);
 		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, side_pics[i]);
 
 		//Set white as transpareny for BMP:
-		if (is_b_m_p) {
+		if (is_bmp) {
 			for (int j=0; j<16 * 16; ++j)
 				if (side_pics[i][j] == 0xFFFFFFFF)
 					side_pics[i][j] &= 0x00FFFFFF;
@@ -474,7 +492,7 @@ Sync_on_changed_mod(const char *mod_name)
 	gzclose(fd);
 	BattleRoom_on_change_mod();
 	MyBattle_update_mod_options();
-	task_set_battle_status = 1;
+	s_task_set_status = 1;
 	SetEvent(s_event);
 }
 
@@ -563,7 +581,7 @@ Sync_on_changed_map(const char *map_name)
 
 	// task_set_minimap = 1;
 	MyBattle_update_mod_options();
-	task_set_battle_status = 1;
+	s_task_set_status = 1;
 	SetEvent(s_event);
 }
 

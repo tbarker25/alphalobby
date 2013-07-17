@@ -24,9 +24,12 @@
 struct User;
 enum ChatType;
 
+void ChatTab_add_user_to_channel        (const char *channel, const struct User *);
 void ChatTab_focus_channel   (const char *channel);
 void ChatTab_focus_private   (struct User *);
 void ChatTab_on_said_private (struct User *, const char *text, enum ChatType);
 void ChatTab_on_said_channel (const char *channel, struct User *, const char *text, enum ChatType);
+void ChatTab_remove_user_from_channel(const char *channel, const struct User *);
+void ChatTab_join_channel(const char *channel_name);
 
 #endif /* end of include guard: CHAT_TAB_H */

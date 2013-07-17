@@ -276,17 +276,7 @@ TasServer_send_my_battle_status(struct BattleStatus battle_status)
 		BattleStatus; uint32_t as_int;
 	} bs, last_bs;
 
-	if (!g_battle_info_finished) {
-		/* TODO: remove this */
-		puts("battleinfo not finished");
-		return;
-	}
-
 	bs.BattleStatus = battle_status;
-
-	/* TODO remove this */
-	if (!bs.as_int)
-		bs.BattleStatus = *(BattleStatus *)0;
 
 	bs.sync = Sync_is_synced() ? SYNC_SYNCED : SYNC_UNSYNCED;
 	last_bs.BattleStatus = g_last_battle_status;
@@ -295,9 +285,6 @@ TasServer_send_my_battle_status(struct BattleStatus battle_status)
 		g_last_battle_status = battle_status;
 		send_to_server("MYBATTLESTATUS %d %d",
 		    bs.as_int, g_my_user.color);
-	} else {
-		/* TODO: remove this */
-		printf("dup battle_status %d\n", bs.as_int);
 	}
 }
 
@@ -328,9 +315,6 @@ TasServer_send_my_client_status(ClientStatus status)
 		g_last_client_status = cs.ClientStatus;
 		send_to_server("MYSTATUS %d", cs.as_int);
 
-	} else {
-		/* TODO: remove this */
-		puts("dup client status");
 	}
 }
 
@@ -450,16 +434,16 @@ TasServer_send_say_battle(const char *text, bool is_ex)
 }
 
 void
-TasServer_send_say_channel(const char *text, bool is_ex, const char *dest)
+TasServer_send_say_channel(const char *text, bool is_ex, const char *dst)
 {
-	send_to_server(is_ex ? "SAYEX %s %s" : "SAY %s %s", dest, text);
+	send_to_server(is_ex ? "SAYEX %s %s" : "SAY %s %s", dst, text);
 }
 
 void
-TasServer_send_say_private(const char *text, bool is_ex, const User *user)
+TasServer_send_say_private(const char *text, bool is_ex, const char *username)
 {
 	send_to_server(is_ex ? "SAYPRIVATEEX %s %s" : "SAYPRIVATE %s %s",
-	    user->name, text);
+	    username, text);
 }
 
 void

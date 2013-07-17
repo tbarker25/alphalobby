@@ -44,12 +44,13 @@ static HWND s_user_list;
 static void
 activate(int item_index)
 {
-	LVITEM item_info;
-	item_info.mask = LVIF_PARAM;
-	item_info.iItem = item_index;
-	item_info.iSubItem = 2;
-	ListView_GetItem(s_user_list, &item_info);
-	/* ChatWindow_set_active_tab(Chat_get_private_window((User *)item_info.lParam)); */
+	LVITEM info;
+
+	info.mask = LVIF_PARAM;
+	info.iItem = item_index;
+	info.iSubItem = 2;
+	ListView_GetItem(s_user_list, &info);
+	ChatTab_focus_private((User *)info.lParam);
 }
 
 static void
@@ -65,7 +66,8 @@ on_init(HWND window)
 			| LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING |
 			LVS_NOCOLUMNHEADER);
 
-	ListView_SetExtendedListViewStyle(s_user_list, LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
+	ListView_SetExtendedListViewStyle(s_user_list,
+	    LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
 	IconList_enable_for_listview(s_user_list);
 
 	GetClientRect(s_user_list, &rect);
@@ -80,15 +82,17 @@ on_init(HWND window)
 	ListView_InsertColumn(s_user_list, 1, (uintptr_t)&column_info);
 
 	for (const User *u; (u = Users_get_next());) {
+		LVITEM item;
+		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
+		int state_icon;
+
 		if (!*u->name)
 			continue;
-		LVITEM item;
 		item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
 		item.iItem = INT_MAX;
 		item.iSubItem = 0;
 		item.lParam = (intptr_t)u;
 
-		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
 		_swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
 				? L"%hs (%hs)" : L"%hs",
 				u->name, u->alias);
@@ -98,12 +102,12 @@ on_init(HWND window)
 			: u->battle ? ICONMASK_INGAME
 			: -1;
 
-		int icon_index = ICONMASK_USER;
+		state_icon = ICONMASK_USER;
 		if (u->away)
-		icon_index |= ICONMASK_AWAY;
+		state_icon |= ICONMASK_AWAY;
 		if (u->ignore)
-		icon_index |= ICONMASK_IGNORE;
-		item.state = INDEXTOOVERLAYMASK(icon_index);
+		state_icon |= ICONMASK_IGNORE;
+		item.state = INDEXTOOVERLAYMASK(state_icon);
 		item.stateMask = LVIS_OVERLAYMASK;
 
 		item.iItem = ListView_InsertItem(s_user_list, &item);
@@ -120,28 +124,34 @@ user_list_proc(HWND window, uint32_t msg, uintptr_t w_param,
 		intptr_t l_param)
 {
 	switch (msg) {
+
 	case WM_INITDIALOG:
 		on_init(window);
 		return 0;
+
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(s_user_list, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(s_user_list, -1,
+				LVNI_SELECTED));
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			DestroyWindow(window);
 			return 0;
 		}
 		return 0;
+
 	case WM_NOTIFY:
 		if (((NMHDR *)l_param)->code == LVN_ITEMACTIVATE) {
 			activate(((NMITEMACTIVATE *)l_param)->iItem);
 			DestroyWindow(window);
 		}
 		return 0;
+
 	case WM_DESTROY:
 		s_user_list = NULL;
 		return 0;
+
 	default:
 		return 0;
 	}
@@ -150,5 +160,6 @@ user_list_proc(HWND window, uint32_t msg, uintptr_t w_param,
 void
 UserList_show(void)
 {
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)user_list_proc);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL,
+	    (DLGPROC)user_list_proc);
 }

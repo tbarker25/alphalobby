@@ -21,8 +21,6 @@
 
 #define UNTAGGED_NAME(name) ((name)[0] == '[' ? strchr((name), ']') + 1 : (name))
 
-typedef struct HWND__* HWND;
-
 typedef struct __attribute__((packed)) BattleStatus {
 	unsigned int          : 1;
 	unsigned int ready    : 1;
@@ -67,10 +65,9 @@ typedef struct UserBot {
 typedef struct User {
 	UserBot;
 
-	HWND chat_window;
 	uint32_t cpu, id;
 	char *script_password;
-	char *skill;
+	uint8_t trueskill;
 	char alias[MAX_NAME_LENGTH_NUL];
 	bool ignore;
 	uint8_t country;

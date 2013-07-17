@@ -51,7 +51,7 @@
 #define MIN_REQUEST_SIZE (512 * 1024)
 
 #define THREAD_ONFINISH_FLAG 0x80000000
-#define DEFINE_THREADED(_func) ((typeof(_func) *)((uintptr_t)_func | THREAD_ONFINISH_FLAG))
+#define DEFINE_THREADED(_func) ((void (*)(RequestContext *))((uintptr_t)_func | THREAD_ONFINISH_FLAG))
 
 typedef enum DownloadStatus {
 	DL_INACTIVE               = 0x00,
@@ -146,7 +146,7 @@ execute_on_finish_helper(HINTERNET request_handle)
 	puts("execute_on_finish_helper 1");
 	RequestContext *req; uint32_t req_size = sizeof req;
 	WinHttpQueryOption(request_handle, WINHTTP_OPTION_CONTEXT_VALUE, &req, (void *)&req_size);
-	((typeof(req->on_finish))((uintptr_t)req->on_finish & ~THREAD_ONFINISH_FLAG))(req);
+	((void (*)(RequestContext *))((uintptr_t)req->on_finish & ~THREAD_ONFINISH_FLAG))(req);
 	WinHttpCloseHandle(request_handle);
 	puts("execute_on_finish_helper 2");
 	return 0;
@@ -316,8 +316,8 @@ save_file(RequestContext *req)
 }
 
 static const char message_template_start[] =
-R"(<?xml version="1.0" encoding="utf-8"?><soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"><soap12:Body>    <Downloader_get_file xmlns="http://tempuri.org/"><internal_name>)";
-static const char message_template_end[] = R"(</internal_name></Downloader_get_file></soap12:Body></soap12:Envelope>)";
+"(<?xml version=\"1.0\" encoding=\"utf-8\"?><soap12:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soap12=\"http://www.w3.org/2003/05/soap-envelope\"><soap12:Body>    <Downloader_get_file xmlns=\"http://tempuri.org/\"><internal_name>)";
+static const char message_template_end[] = "(</internal_name></Downloader_get_file></soap12:Body></soap12:Envelope>)";
 
 static void
 handle_map_sources(RequestContext *req)
@@ -499,16 +499,16 @@ doit(char *name)
 
 		if (g_settings.selected_packages) {
 			size_t len = strlen(g_settings.selected_packages);
-			char buf[len + 1];
-			buf[len] = '\0';
-			char *start = buf;
+			char buf2[len + 1];
+			buf2[len] = '\0';
+			char *start = buf2;
 			for (size_t i=0; i<len; ++i) {
-				buf[i] = g_settings.selected_packages[i];
-				if (buf[i] != ';')
+				buf2[i] = g_settings.selected_packages[i];
+				if (buf2[i] != ';')
 					continue;
-				buf[i] = '\0';
+				buf2[i] = '\0';
 				doit(start);
-				start = buf + i + 1;
+				start = buf2 + i + 1;
 			}
 			doit(start);
 		}
@@ -627,11 +627,12 @@ _handle_stream(RequestContext *req)
 		i += file_size + 4;
 	}
 
-	if (req->ses->total_files == ++req->ses->fetched_files) {
-		wchar_t *path = Settings_get_data_dir(req->ses->package_path);
-		write_file(path, req->ses->package_bytes, req->ses->package_len);
-		req->ses->error = NULL;
-	}
+	if (req->ses->total_files != ++req->ses->fetched_files)
+		return;
+
+	wchar_t *package_path = Settings_get_data_dir(req->ses->package_path);
+	write_file(package_path, req->ses->package_bytes, req->ses->package_len);
+	req->ses->error = NULL;
 }
 
 static void

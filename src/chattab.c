@@ -19,6 +19,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <malloc.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -28,32 +29,44 @@
 #include <commctrl.h>
 
 #include "battle.h"
-#include "tasserver.h"
 #include "chatbox.h"
+#include "chatlist.h"
 #include "chattab.h"
 #include "common.h"
+#include "layoutmetrics.h"
 #include "mainwindow.h"
 #include "mybattle.h"
 #include "resource.h"
+#include "tasserver.h"
 #include "user.h"
 #include "wincommon.h"
 
 #define LENGTH(x) (sizeof x / sizeof *x)
+#define foreach(_x, _xs) \
+	for (typeof(&*_xs) _x = _xs; _x < _xs + sizeof _xs / sizeof *_xs; ++_x)
 
 enum DialogId {
 	DLG_TAB,
 	DLG_LAST = DLG_TAB,
 };
 
-static void             _init             (void);
+typedef struct TabItem {
+	struct TabItem *next;
+	HWND chat_window;
+	HWND list_window;
+	char name[];
+} TabItem;
+
+static void              _init             (void);
 static intptr_t CALLBACK chat_window_proc  (HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
-static void             resize_active_tab (void);
+static void              resize_active_tab (void);
 
-static HWND s_chat_window;
 static HWND s_tab_control;
-static HWND active_tab;
+static HWND s_chat_window;
 
-static HWND s_channel_windows[128];
+static TabItem *private_tabs;
+static TabItem *channel_tabs;
+static TabItem *s_active_tab;
 
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_TAB] = {
@@ -66,55 +79,39 @@ static void
 resize_active_tab(void)
 {
 	RECT rect;
+	int list_width;
 
 	GetClientRect(s_tab_control, &rect);
 	TabCtrl_AdjustRect(s_tab_control, FALSE, &rect);
-	MoveWindow(active_tab, rect.left, rect.top, rect.right - rect.left,
-			rect.bottom - rect.top, 1);
+	if (!s_active_tab)
+		return;
+
+	list_width = MAP_X(100);
+
+	MoveWindow(s_active_tab->chat_window, rect.left, rect.top,
+	    rect.right - rect.left - list_width, rect.bottom - rect.top, 1);
+	MoveWindow(s_active_tab->list_window, rect.right - list_width,
+	    rect.top, list_width, rect.bottom - rect.top, 1);
 }
 
-static int
-get_tab_index(HWND tab_item)
-{
-	int tab_len;
-
-	tab_len = TabCtrl_GetItemCount(s_tab_control);
-	for (int i=0; i<tab_len; ++i) {
-		TCITEM info;
-
-		info.mask = TCIF_PARAM;
-		TabCtrl_GetItem(s_tab_control, i, &info);
-		if ((HWND)info.lParam == tab_item)
-			return i;
-	}
-	return -1;
-}
-
-static int
-add_tab(HWND tab)
+static void
+add_tab(TabItem *item)
 {
 	wchar_t window_title[MAX_NAME_LENGTH_NUL];
-	int item_index;
-
-	item_index = get_tab_index(tab);
-	if  (item_index >= 0)
-		return item_index;
-
-	GetWindowText(tab, window_title, MAX_NAME_LENGTH_NUL);
-
 	TCITEM info;
+
+	GetWindowText(item->chat_window, window_title, MAX_NAME_LENGTH_NUL);
+
 	info.mask = TCIF_TEXT | TCIF_PARAM;
 	info.pszText = window_title;
-	info.lParam = (intptr_t)tab;
+	info.lParam = (intptr_t)item;
 
-	item_index = TabCtrl_InsertItem(s_tab_control, 1000, &info);
-	if (item_index == 0) {
-		active_tab = tab;
-		ShowWindow(tab, 1);
-		resize_active_tab();
-	}
-
-	return item_index;
+	TabCtrl_InsertItem(s_tab_control, INT_MAX, &info);
+	/* if (item_index == 0) { */
+	/* [> s_active_tab = tab; <] */
+	/* ShowWindow(tab, 1); */
+	/* resize_active_tab(); */
+	/* } */
 }
 
 #if 0
@@ -124,7 +121,7 @@ remove_tab(HWND tab_item)
 	int index = get_tab_index(tab_item);
 	TabCtrl_DeleteItem(s_tab_control, index);
 
-	if (tab_item != active_tab)
+	if (tab_item != s_active_tab)
 		return;
 
 	ShowWindow(tab_item, 0);
@@ -136,40 +133,49 @@ remove_tab(HWND tab_item)
 	info.mask = TCIF_PARAM;
 	TabCtrl_GetItem(s_tab_control, index, &info);
 
-	active_tab = (HWND)info.lParam;
-	ShowWindow(active_tab, 1);
+	s_active_tab = (HWND)info.lParam;
+	ShowWindow(s_active_tab, 1);
 	TabCtrl_SetCurSel(s_tab_control, index);
 }
 #endif
 
-static void
-focus_tab(HWND tab)
+static int
+get_tab_index(TabItem *tab_item)
 {
-	int item_index;
+	int item_len;
 
-	item_index = add_tab(tab);
-	TabCtrl_SetCurSel(s_tab_control, item_index);
-	ShowWindow(active_tab, 0);
-	active_tab = tab;
-	ShowWindow(active_tab, 1);
+	item_len = SendMessage(s_tab_control, TCM_GETITEMCOUNT, 0, 0);
+
+	for (int i=0; i<item_len; ++i) {
+		TCITEM info;
+
+		info.mask = TCIF_PARAM;
+		SendMessage(s_tab_control, TCM_GETITEM, (uintptr_t)i,
+		    (intptr_t)&info);
+		if (tab_item == (TabItem *)info.lParam)
+			return i;
+	}
+	return -1;
+}
+
+static void
+focus_tab(TabItem *tab_item)
+{
+	int index;
+	/* item_index = add_tab(tab); */
+	index = get_tab_index(tab_item);
+	TabCtrl_SetCurSel(s_tab_control, index);
+	if (s_active_tab) {
+		ShowWindow(s_active_tab->chat_window, 0);
+		ShowWindow(s_active_tab->list_window, 0);
+	}
+	s_active_tab = tab_item;
+	/* s_active_tab->chat_window = tab; */
+	ShowWindow(tab_item->chat_window, 1);
+	ShowWindow(tab_item->list_window, 1);
 	resize_active_tab();
 	MainWindow_set_active_tab(s_chat_window);
 }
-
-static void say_hello(const char *text, bool unused, const void *dest)
-{
-	printf("hello %s from %s\n", text, (char *)dest);
-}
-
-static void doit(void)
-{
-	HWND chat_window = CreateWindow(WC_CHATBOX, L"TestWindow", WS_CHILD,
-	    0, 0, 0, 0,
-	    s_tab_control, 0, NULL, NULL);
-	focus_tab(chat_window);
-	ChatBox_set_say_function(chat_window, say_hello, "blah");
-}
-
 
 static intptr_t CALLBACK
 chat_window_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
@@ -177,10 +183,8 @@ chat_window_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 	switch (msg) {
 	case WM_CREATE:
 		s_chat_window = window;
-
 		CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 		s_tab_control = GetDlgItem(window, DLG_TAB);
-		doit();
 		return 0;
 
 	case WM_SIZE:
@@ -194,115 +198,149 @@ chat_window_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 		return 0;
 
 	case WM_NOTIFY: {
-		NMHDR *info = (void *)l_param;
+		NMHDR *note;
+		int tab_index;
+		TCITEM info;
 
-		if (info->hwndFrom == s_tab_control && info->code == TCN_SELCHANGE) {
-			int tab_index = TabCtrl_GetCurSel(info->hwndFrom);
-			TCITEM info;
-			info.mask = TCIF_PARAM;
-			TabCtrl_GetItem(s_tab_control, tab_index, &info);
-			focus_tab((HWND)info.lParam);
+		note = (void *)l_param;
+		if (note->idFrom != DLG_TAB || note->code != TCN_SELCHANGE)
+			break;
+		tab_index = TabCtrl_GetCurSel(note->hwndFrom);
+		if (tab_index < 0)
 			return 0;
-		}
-	}	break;
+		info.mask = TCIF_PARAM;
+		SendMessage(s_tab_control, TCM_GETITEM, (uintptr_t)tab_index,
+		    (intptr_t)&info);
+		focus_tab((TabItem *)info.lParam);
+		return 0;
+	}
 	}
 	return DefWindowProc(window, msg, w_param, l_param);
 }
 
 static void __attribute__((constructor))
 _init(void)
-{	WNDCLASS window_class = {
+{
+	WNDCLASS window_class = {
 		.lpszClassName = WC_CHATTAB,
 		.lpfnWndProc   = (WNDPROC)chat_window_proc,
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClass(&window_class);
 }
 
-static HWND get_user_window(User *user)
+static TabItem *
+get_user_window(User *user)
 {
-	HWND chat_window;
+	TabItem **tab_item;
 
-	if (user->chat_window)
-		return user->chat_window;
-	chat_window = CreateWindow(WC_CHATBOX,
+	tab_item = &private_tabs;
+	while (*tab_item) {
+		if (!strcmp((*tab_item)->name, user->name))
+			return *tab_item;
+		tab_item = &(*tab_item)->next;
+	}
+
+	*tab_item = calloc(1, strlen(user->name) + 1 + sizeof **tab_item);
+
+	(*tab_item)->chat_window = CreateWindow(WC_CHATBOX,
 	    utf8to16(user->name), WS_CHILD,
 	    0, 0, 0, 0,
 	    s_tab_control, 0, NULL, NULL);
-	focus_tab(chat_window);
-	ChatBox_set_say_function(chat_window,
-	    (SayFunction *)TasServer_send_say_private, user->name);
-	user->chat_window = chat_window;
-	return chat_window;
+
+	strcpy((*tab_item)->name, user->name);
+
+	ChatBox_set_say_function((*tab_item)->chat_window,
+	    (SayFunction *)TasServer_send_say_private, NULL, user->name);
+	return *tab_item;
 }
 
 void
 ChatTab_on_said_private(User *user, const char *text, ChatType chat_type)
 {
-	HWND user_window;
-
-	user_window = get_user_window(user);
-	ChatBox_append(user_window,
+	ChatBox_append(get_user_window(user)->chat_window,
 	    chat_type == CHAT_SELF ? g_my_user.name : user->name,
 	    chat_type, text);
 }
 
-static HWND
+static TabItem *
 get_channel_window(const char *channel)
 {
-	for (size_t i = 0; i < LENGTH(s_channel_windows); ++i) {
-		HWND channel_window;
-		char buf[128];
+	TabItem **tab_item;
 
-		if (s_channel_windows[i]) {
-			GetWindowTextA(s_channel_windows[i], buf, sizeof buf);
-			if (!strcmp(channel, buf))
-				return s_channel_windows[i];
-		}
-		channel_window = CreateWindow(WC_CHATBOX,
-		    utf8to16(channel), WS_CHILD,
-		    0, 0, 0, 0,
-		    s_tab_control, 0, NULL, NULL);
-		s_channel_windows[i] = channel_window;
-		focus_tab(channel_window);
-		/* TODO mem leak here */
-		ChatBox_set_say_function(channel_window,
-		    (SayFunction *)TasServer_send_say_channel, _strdup(channel));
-
-		return channel_window;
+	for (tab_item = &channel_tabs; *tab_item; tab_item = &(*tab_item)->next) {
+		if (!strcmp(channel, (*tab_item)->name))
+			return *tab_item;
 	}
-	assert(0);
-	return NULL;
+
+	*tab_item = calloc(1, strlen(channel) + 1 + sizeof **tab_item);
+
+	(*tab_item)->chat_window = CreateWindow(WC_CHATBOX,
+	    utf8to16(channel), WS_CHILD,
+	    0, 0, 0, 0,
+	    s_tab_control, 0, NULL, NULL);
+
+	(*tab_item)->list_window = CreateWindow(WC_CHATLIST, L"TestWindow", WS_CHILD,
+	    0, 0, 0, 0,
+	    s_tab_control, 0, NULL, NULL);
+
+	strcpy((*tab_item)->name, channel);
+
+	add_tab(*tab_item);
+
+	ChatBox_set_say_function((*tab_item)->chat_window,
+	    (SayFunction *)TasServer_send_say_channel,
+	    TasServer_send_leave_channel, channel);
+
+	return *tab_item;
 }
 
 void
 ChatTab_on_said_channel(const char *channel, struct User *user,
     const char *text, enum ChatType chat_type)
 {
-	HWND channel_window;
+	TabItem *tab_item;
 
-	channel_window = get_channel_window(channel);
-	ChatBox_append(channel_window, user->name, chat_type, text);
+	tab_item = get_channel_window(channel);
+	ChatBox_append(tab_item->chat_window, user->name, chat_type, text);
 }
 
 void
 ChatTab_focus_channel(const char *channel)
 {
-	HWND channel_window;
+	TabItem *tab_item;
 
-	channel_window = get_channel_window(channel);
-	focus_tab(channel_window);
+	tab_item = get_channel_window(channel);
+	focus_tab(tab_item);
 }
 
 void
-ChatTab_focus_private(struct User *user)
+ChatTab_focus_private(User *user)
 {
-	HWND user_window;
+	TabItem *tab_item;
 
-	user_window = get_user_window(user);
-	focus_tab(user_window);
+	tab_item = get_user_window(user);
+	focus_tab(tab_item);
+}
+
+void
+ChatTab_add_user_to_channel(const char *channel, const User *user)
+{
+	TabItem *tab_item;
+
+	tab_item = get_channel_window(channel);
+	ChatList_add_user(tab_item->list_window, user);
+}
+
+void
+ChatTab_remove_user_from_channel(const char *channel, const User *user)
+{
+	TabItem *tab_item;
+
+	tab_item = get_channel_window(channel);
+	ChatList_remove_user(tab_item->list_window, user);
 }
 
 #if 0
@@ -324,5 +362,18 @@ Chat_save_windows(void)
 	free(g_settings.autojoin);
 	g_settings.autojoin = _strdup(autojoin_channels);
 }
-
 #endif
+
+void
+ChatTab_join_channel(const char *channel_name)
+{
+	for (const char *c=channel_name; *c; ++c) {
+		if (!isalnum(*c) && *c != '[' && *c != ']') {
+			MainWindow_msg_box("Couldn't join channel", "Unicode channels are not allowed.");
+			return;
+		}
+	}
+
+	TasServer_send_join_channel(channel_name);
+	focus_tab(get_channel_window(channel_name));
+}

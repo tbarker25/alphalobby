@@ -137,4 +137,6 @@ extern uint32_t       g_udp_help_port;
 extern bool           g_battle_info_finished;
 extern uint32_t       g_last_auto_unspec;
 
+extern bool           g_is_using_trueskill;
+
 #endif /* end of include guard: BATTLETOOLS_H */
