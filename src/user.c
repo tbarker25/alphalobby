@@ -30,7 +30,7 @@
 #include "mybattle.h"
 #include "user.h"
 
-#define ALLOC_STEP 10
+#define ALLOC_STEP 128
 
 User g_my_user;
 static User **s_users;
@@ -107,7 +107,6 @@ Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 	++b->user_len;
 	++b->bot_len;
 
-	/* MyBattle_rebalance(); */
 	Minimap_on_start_position_change();
 	BattleRoom_update_user((void *)bot);
 }
@@ -131,7 +130,6 @@ Users_del_bot(const char *name)
 		g_my_battle->users[i - 1] = g_my_battle->users[i];
 	--g_my_battle->user_len;
 	--g_my_battle->bot_len;
-	/* MyBattle_rebalance(); */
 	Minimap_on_start_position_change();
 }
 

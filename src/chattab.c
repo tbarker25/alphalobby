@@ -106,12 +106,7 @@ add_tab(TabItem *item)
 	info.pszText = window_title;
 	info.lParam = (intptr_t)item;
 
-	TabCtrl_InsertItem(s_tab_control, INT_MAX, &info);
-	/* if (item_index == 0) { */
-	/* [> s_active_tab = tab; <] */
-	/* ShowWindow(tab, 1); */
-	/* resize_active_tab(); */
-	/* } */
+	SendMessage(s_tab_control, TCM_INSERTITEM, INT_MAX, (intptr_t)&info);
 }
 
 #if 0
@@ -162,8 +157,10 @@ static void
 focus_tab(TabItem *tab_item)
 {
 	int index;
-	/* item_index = add_tab(tab); */
+
 	index = get_tab_index(tab_item);
+	assert(index >= 0);
+
 	TabCtrl_SetCurSel(s_tab_control, index);
 	if (s_active_tab) {
 		ShowWindow(s_active_tab->chat_window, 0);
@@ -251,6 +248,7 @@ get_user_window(User *user)
 	    s_tab_control, 0, NULL, NULL);
 
 	strcpy((*tab_item)->name, user->name);
+	add_tab(*tab_item);
 
 	ChatBox_set_say_function((*tab_item)->chat_window,
 	    (SayFunction *)TasServer_send_say_private, NULL, user->name);

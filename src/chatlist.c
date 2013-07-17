@@ -181,10 +181,10 @@ chatlist_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 		}
 	}
 
-
 	default:
 		break;
 	}
+
 	return DefWindowProc(window, msg, w_param, l_param);
 }
 
