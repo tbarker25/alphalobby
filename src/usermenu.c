@@ -83,7 +83,7 @@ UserMenu_spawn(UserBot *s, HWND window)
 		AppendMenu(menus[0], u->ignore ? MF_CHECKED : 0, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
-		AppendMenu(menus[0], 0, RING, L"MainWindow_ring");
+		AppendMenu(menus[0], 0, RING, L"Ring");
 		if (s->mode)
 			AppendMenu(menus[0], 0, SPEC, L"Force spectate");
 		AppendMenu(menus[0], 0, KICK, L"Kick");
@@ -143,9 +143,11 @@ UserMenu_spawn(UserBot *s, HWND window)
 		return;
 
 	case SPEC:
+		TasServer_send_force_spectator(u);
 		return;
 
 	case RING:
+		TasServer_send_ring(u);
 		return;
 
 	default:
