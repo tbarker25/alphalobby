@@ -114,6 +114,7 @@ send_to_server(const char *format, ...)
 
 	va_start (args, format);
 	len = vsprintf(buf, format, args);
+	assert((size_t)len < sizeof buf);
 	va_end(args);
 
 	#ifndef NDEBUG
@@ -344,6 +345,12 @@ TasServer_send_rename(const char *new_username)
 }
 
 void
+TasServer_send_ring(const User *user)
+{
+	send_to_server("RING %s", user->name);
+}
+
+void
 TasServer_send_change_password(const char *old_password, const char *new_password)
 {
 	send_to_server("CHANGEPASSWORD %s %s", old_password, new_password);
@@ -456,6 +463,12 @@ void
 TasServer_send_force_team(const char *name, int team)
 {
 	send_to_server("FORCETEAMNO %s %d" , name, team);
+}
+
+void
+TasServer_send_force_spectator(const User *user)
+{
+	send_to_server("FORCESPECTATORMODE %s", user->name);
 }
 
 void
