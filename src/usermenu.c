@@ -31,13 +31,14 @@
 #include "mybattle.h"
 #include "sync.h"
 #include "user.h"
+#include "dialogs/gettextdialog.h"
+#include "dialogs/colordialog.h"
 
 void
 UserMenu_spawn(UserBot *s, HWND window)
 {
-	printf("%p %p\n", s, window);
-#if 0
-	enum menuID {
+	enum MenuId {
+		INVALID = 0,
 		CHAT = 1, IGNORED, ALIAS, ID, ALLY, SIDE, COLOR, KICK,
 			RING, SPEC,
 		LAST=SPEC,
@@ -48,87 +49,107 @@ UserMenu_spawn(UserBot *s, HWND window)
 	};
 
 	HMENU menus[100];
+	enum MenuId clicked;
+	POINT point;
+	User *u;
+	int last_menu;
 
-	int last_menu = AI_MENU;
+	u = (User *)s;
+	last_menu = AI_MENU;
 	for (int i=0; i<=last_menu; ++i)
 		menus[i] = CreatePopupMenu();
 
-	uint32_t battle_status = s->battle_status;
-
 	for (uint8_t i=0; i<16; ++i) {
 		wchar_t buf[3];
+
 		_swprintf(buf, L"%d", i+1);
-		AppendMenu(menus[TEAM_MENU], i == s->team ? MF_CHECKED : 0, FLAG_TEAM | i, buf);
-		AppendMenu(menus[ALLY_MENU], i == s->ally ? MF_CHECKED : 0, FLAG_ALLY | i, buf);
+		AppendMenu(menus[TEAM_MENU], i == s->team ? MF_CHECKED : 0, (uintptr_t)FLAG_TEAM | i, buf);
+		AppendMenu(menus[ALLY_MENU], i == s->ally ? MF_CHECKED : 0, (uintptr_t)FLAG_ALLY | i, buf);
 	}
 
 	for (size_t i=0; *g_side_names[i]; ++i)
 		AppendMenuA(menus[SIDE_MENU], i == s->side ? MF_CHECKED : 0, FLAG_SIDE | i, g_side_names[i]);
 
 
-	if (battle_status & BS_AI) {
+	if (s->ai) {
 		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[ALLY_MENU], L"Set team");
 		AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[SIDE_MENU], L"Set faction");
 		AppendMenu(menus[0], 0, COLOR, L"Set color");
 		AppendMenu(menus[0], 0, KICK, L"Remove bot");
-	} else if (&s->user != &g_my_user) {
+
+	} else if (s != (UserBot *)&g_my_user) {
 		AppendMenu(menus[0], 0, CHAT, L"Private chat");
-		AppendMenu(menus[0], s->user.ignore * MF_CHECKED, IGNORED, L"Ignore");
+		AppendMenu(menus[0], u->ignore ? MF_CHECKED : 0, IGNORED, L"Ignore");
 		AppendMenu(menus[0], 0, ALIAS, L"Set alias");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
 		AppendMenu(menus[0], 0, RING, L"MainWindow_ring");
-		if (battle_status & BS_MODE)
+		if (s->mode)
 			AppendMenu(menus[0], 0, SPEC, L"Force spectate");
 		AppendMenu(menus[0], 0, KICK, L"Kick");
 		AppendMenu(menus[0], MF_SEPARATOR, 0, NULL);
 		AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[TEAM_MENU], L"Set ID");
 		AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[ALLY_MENU], L"Set team");
+
 	} else { //(u == &g_my_user)
-		if (battle_status & BS_MODE) {
+		if (s->mode) {
 			AppendMenu(menus[0], 0, SPEC, L"Spectate");
 			AppendMenu(menus[0], MF_POPUP, (uintptr_t)menus[TEAM_MENU], L"Set ID");
 			AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[ALLY_MENU], L"Set team");
 			AppendMenu(menus[0], MF_POPUP, (uintptr_t )menus[SIDE_MENU], L"Set faction");
 			AppendMenu(menus[0], 0, COLOR, L"Set color");
-		} else
+
+		} else {
 			AppendMenu(menus[0], 0, SPEC, L"Unspectate");
+		}
 	}
+
 	SetMenuDefaultItem(menus[0], 1, 0);
 
-	POINT pt;
-	GetCursorPos(&pt);
-	int clicked = TrackPopupMenuEx(menus[0], TPM_RETURNCMD, pt.x, pt.y, window, NULL);
+	GetCursorPos(&point);
+	clicked = TrackPopupMenuEx(menus[0], TPM_RETURNCMD, point.x, point.y, window, NULL);
+
+	for (int i=0; i<=last_menu; ++i)
+		DestroyMenu(menus[i]);
+
 	switch (clicked) {
-	case 0:
-		break;
+
+	case INVALID:
+		return;
+
 	case CHAT:
-		ChatWindow_set_active_tab(Chat_get_private_window(&s->user));
-		break;
+		ChatTab_focus_private((User *)s);
+		return;
+
 	case IGNORED:
-		s->user.ignore ^= 1;
-		/* UpdateUser(&s->user); */
-		break;
+		u->ignore = !u->ignore;
+		return;
+
 	case ALIAS: {
-		char title[128], buf[MAX_NAME_LENGTH_NUL];
+		char title[128];
+		char buf[MAX_NAME_LENGTH_NUL];
+
 		sprintf(title, "Set alias for %s", s->name);
-		if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof buf)) {
-			strcpy(s->user.alias, buf);
-			/* UpdateUser(&s->user); */
-		}
-		} break;
+		if (!GetTextDialog_create(title, strcpy(buf, UNTAGGED_NAME(s->name)), sizeof buf))
+			strcpy(u->alias, buf);
+		return;
+	}
 	case COLOR:
-		CreateColorDlg(s);
-		break;
+		ColorDialog_create(s);
+		return;
+
 	case KICK:
 		TasServer_send_kick(s);
-		break;
+		return;
+
 	case SPEC:
-		break;
+		return;
+
 	case RING:
-		break;
+		return;
+
 	default:
-		if (clicked & AI_FLAG) {
+		/* if (clicked & AI_FLAG) { */
 			// size_t len = GetMenuStringA(menus[AI_MENU], clicked, NULL, 0, MF_BYCOMMAND);
 			// free(s->bot.dll);
 			// s->bot.dll = malloc(len+1);
@@ -152,15 +173,11 @@ UserMenu_spawn(UserBot *s, HWND window)
 			// default:
 				// break;
 			// }
-		} else
+		/* } else */
 			/* TasServer_send_my_battle_status(s, */
 					/* (clicked & ~(FLAG_TEAM | FLAG_ALLY | FLAG_SIDE)) << (clicked & FLAG_TEAM ? TEAM_OFFSET : clicked & FLAG_ALLY ? ALLY_OFFSET : SIDE_OFFSET), */
 					/* clicked & FLAG_TEAM ? BS_TEAM : clicked & FLAG_ALLY ? BS_ALLY : BS_SIDE); */
 
-		break;
+		return;
 	}
-
-	for (int i=0; i<=last_menu; ++i)
-		DestroyMenu(menus[i]);
-#endif
 }
