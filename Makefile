@@ -1,15 +1,15 @@
 LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lShlwapi -lz -ldevil -lshell32 -Llib
-CFLAGS:= -ffast-math -fshort-enums -std=gnu99 -march=i686 -fplan9-extensions -mno-ms-bitfields
+CFLAGS:= -ffast-math -fshort-enums -std=gnu11 -march=i686 -fplan9-extensions -mno-ms-bitfields
 CC:=gcc
 
-WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra -Wconversion -Wwrite-strings -Wformat=2 -Wstrict-aliasing=1 -Wpointer-arith
+WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra -Wconversion -Wwrite-strings -Wformat=2 -Wstrict-aliasing -Wpointer-arith -Wshadow
 WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DSTRICT -DNO_OLDNAMES
 
 ifdef VERSION
 	CFLAGS+= -DVERSION=$(VERSION) -DNDEBUG
 	BUILD_DIR:=release
 	LDFLAGS+= -lmsvcrt
-	CFLAGS+= -s -Os -flto -fomit-frame-pointer
+	CFLAGS+= -s -Os -flto -fomit-frame-pointer -ffast-math
 	WIN_CFLAGS+= -mwindows
 	WARNINGS+= -Wmissing-prototypes -Wmissing-declarations
 else

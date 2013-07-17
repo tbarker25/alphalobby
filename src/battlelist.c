@@ -413,7 +413,7 @@ _init(void)
 		.lpszClassName = WC_BATTLELIST,
 		.cbSize        = sizeof class_info,
 		.lpfnWndProc   = (WNDPROC)battlelist_proc,
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClassEx(&class_info);

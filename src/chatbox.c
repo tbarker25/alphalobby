@@ -64,26 +64,26 @@ enum {
 #define COLOR_TIMESTAMP RGB(200,200,200)
 
 typedef struct WindowData {
-	const char *dest;
-	SayFunction *say_func;
+	SayFunction *on_say;
+	OnCloseFunction *on_close;
 
 	uint32_t last_scroll_time;
 
 	int last_index, end, last_pos, offset;
 	wchar_t buf[8192], *input_hint, *buf_end;
+	char dst[];
 } WindowData;
 
-static void             _init             (void);
-static void             put_text          (HWND,   const char *, COLORREF, uint32_t effects);
+static void              _init             (void);
+static void              put_text          (HWND,   const char *, COLORREF, uint32_t effects);
 static intptr_t CALLBACK chat_box_proc     (HWND,   uint32_t msg, uintptr_t, intptr_t);
-static void             on_create         (HWND,   intptr_t);
-static void             on_size           (HWND,   int width,    int height);
+static void              on_create         (HWND);
+static void              on_size           (HWND,   int width,    int height);
 static intptr_t CALLBACK log_proc          (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
 static intptr_t CALLBACK input_box_proc    (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
-static void             on_escape_command (char *, WindowData *, HWND);
-static void             on_tab            (HWND,   WindowData *);
-static BOOL CALLBACK    enum_child_proc   (HWND,   uintptr_t user);
-static void             update_user       (HWND,   User *,       int index);
+static void              on_escape_command (char *, WindowData *, HWND);
+static int               on_link           (ENLINK *);
+static void              on_tab            (HWND,   WindowData *);
 
 static const COLORREF CHAT_COLORS[CHAT_LAST+1] = {
 	[CHAT_EX]        = RGB(225, 152, 163),
@@ -108,196 +108,17 @@ static const DialogItem DIALOG_ITEMS[] = {
 	}
 };
 
-static void
-on_tab(HWND window, WindowData *data)
-{
-	char text[MAX_TEXT_MESSAGE_LENGTH];
-
-	GetWindowTextA(window, text, LENGTH(text));
-	if (data->last_pos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
-		data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
-		data->offset = 0;
-		data->last_index = 0;
-	}
-	int offset = data->offset;
-	int end = data->end + offset;
-	int start = data->end + offset;
-
-	while (start - offset && !isspace(text[start - 1 - offset]))
-		--start;
-
-	text[end] = L'\0';
-}
-
-static void
-on_escape_command(char *command, WindowData *data, HWND window)
-{
-	char *code = strsep(&command, " ");
-
-	if (!strcmp(code, "me")) {
-		data->say_func(command, true, data->dest);
-
-	} else if (!strcmp(code, "resync")) {
-		Sync_reload();
-
-	} else if (!strcmp(code, "dlmap")) {
-		DownloadMap(command);
-
-	} else if (!strcmp(code, "start")) {
-		Spring_launch();
-
-	} else if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
-		char *username = strsep(&command, " ");
-		User *u = Users_find(username);
-		if (u) {
-			TasServer_send_say_private(command, u, false);
-			return;
-			/* ChatWindow_set_active_tab(Chat_get_private_window(u)); */
-		}
-		char buf[128];
-		sprintf(buf, "Could not send message: %s is not logged in.", username);
-		ChatBox_append(GetParent(window), NULL, CHAT_SYSTEM, buf);
-
-	} else if (!strcmp(code, "j") || !strcmp(code, "join")) {
-		/* Chat_join_channel(command, 1); */
-
-	} else if (!strcmp(code, "away")) {
-		ClientStatus cs = g_last_client_status;
-		cs.away = !cs.away;
-		TasServer_send_my_client_status(cs);
-
-	} else if (!strcmp(code, "ingametime")) {
-		TasServer_send_get_ingame_time();
-
-	} else if (!strcmp(code, "split")) {
-		char *split_type = strsep(&command, " ");
-		SplitType type = !strcmp(split_type, "h") ? SPLIT_HORZ
-			: !strcmp(split_type, "v") ? SPLIT_VERT
-			: !strcmp(split_type, "c1") ? SPLIT_CORNERS1
-			: !strcmp(split_type, "c2") ? SPLIT_CORNERS2
-			: SPLIT_LAST+1;
-		if (type <= SPLIT_LAST)
-			MyBattle_set_split(type, atoi(command));
-
-	} else if (!strcmp(code, "ingame")) {
-		ClientStatus cs = g_last_client_status;
-		cs.ingame = !cs.ingame;
-		TasServer_send_my_client_status(cs);
-	}
-}
-
-static intptr_t CALLBACK
-input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
-		uintptr_t _unused, WindowData *data)
-{
-	if (msg != WM_KEYDOWN)
-		return DefSubclassProc(window, msg, w_param, l_param);
-
-	if (w_param != VK_TAB)
-		data->end = -1;
-
-	switch (w_param) {
-	case VK_TAB:
-		on_tab(window, data);
-		return 0;
-
-	case VK_DOWN:
-		if (!data->input_hint)
-			return 0;
-
-		while (++data->input_hint != data->buf
-		    && data->input_hint != data->buf_end
-		    && ((data->input_hint)[-1] || !*data->input_hint))
-			if (data->input_hint >= data->buf+LENGTH(data->buf)-1)
-				data->input_hint = data->buf - 1;
-
-		SetWindowText(window, data->input_hint);
-		return 0;
-
-	case VK_UP: {
-		if (!data->input_hint)
-			return 0;
-		while ((--data->input_hint != data->buf)
-				&& data->input_hint != data->buf_end
-				&& ((data->input_hint)[-1] || !*data->input_hint))
-			if (data->input_hint < data->buf)
-				data->input_hint = data->buf + LENGTH(data->buf) - 1;
-		SetWindowText(window, data->input_hint);
-	}	return 0;
-
-	case '\r': {
-		if ((ptrdiff_t)LENGTH(data->buf) - (data->buf_end - data->buf) < MAX_TEXT_MESSAGE_LENGTH) {
-			data->buf_end = data->buf;
-			size_t len = (LENGTH(data->buf) - (size_t)(data->buf_end - data->buf)) * sizeof *data->buf;
-			memset(data->buf_end, '\0', len);
-		}
-		int len = GetWindowTextW(window, data->buf_end, MAX_TEXT_MESSAGE_LENGTH);
-		if (len <= 0)
-			return 0;
-
-		char text_a[len * 3];
-		WideCharToMultiByte(CP_UTF8, 0, data->buf_end, -1, text_a, (int)sizeof text_a, NULL, NULL);
-
-		SetWindowText(window, NULL);
-
-		if (text_a[0] == '/') {
-			on_escape_command(text_a + 1, data, window);
-		} else {
-			data->say_func(text_a, false, data->dest);
-		}
-
-		data->last_scroll_time = 0;
-		data->buf_end += len+1;
-		data->input_hint = data->buf_end;
-	}	return 0;
-
-	default:
-		return DefSubclassProc(window, msg, w_param, l_param);
-	}
-}
-
-
-static intptr_t CALLBACK
-log_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
-		__attribute__((unused)) uintptr_t uIdSubclass, WindowData *data)
-{
-	if (msg == WM_VSCROLL)
-		data->last_scroll_time = GetTickCount();
-
-	return DefSubclassProc(window, msg, w_param, l_param);
-}
-
-static void
-on_size(HWND window, int width, int height)
-{
-	HWND input = GetDlgItem(window, DLG_INPUT);
-	HWND log   = GetDlgItem(window, DLG_LOG);
-
-	MoveWindow(log, 0, 0, width, height - MAP_Y(14), 1);
-	MoveWindow(input, 0, height - MAP_Y(14), width, MAP_Y(14), 1);
-}
-
-static void
-on_create(HWND window, intptr_t l_param)
-{
-	HWND log_window;
-
-	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
-
-	log_window = GetDlgItem(window, DLG_LOG);
-	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
-	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
-	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-}
-
 void
-ChatBox_set_say_function(HWND window, SayFunction say_func, const char *dest)
+ChatBox_set_say_function(HWND window, SayFunction on_say,
+    OnCloseFunction on_close, const char *dst)
 {
 	WindowData *data;
 
-	data = calloc(1, sizeof *data);
-	data->dest     = dest;
-	data->say_func = say_func;
+	data = calloc(1, sizeof *data + (dst ? strlen(dst) + 1 : 0));
+	if (dst)
+		strcpy(data->dst, dst);
+	data->on_say = on_say;
+	data->on_close = on_close;
 	data->buf_end  = data->buf;
 
 	SetWindowLongPtr(window, GWLP_USERDATA, (intptr_t)data);
@@ -307,154 +128,6 @@ ChatBox_set_say_function(HWND window, SayFunction say_func, const char *dest)
 
 	SetWindowSubclass(GetDlgItem(window, DLG_INPUT),
 	    (SUBCLASSPROC)input_box_proc, 0, (uintptr_t)data);
-}
-
-static int
-on_message_filter(HWND window, MSGFILTER *info)
-{
-	if (info->msg != WM_RBUTTONUP)
-		return 0;
-
-#if 0
-	WindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
-
-	HMENU menu = CreatePopupMenu();
-	AppendMenu(menu, 0, 1, L"Copy");
-	AppendMenu(menu, 0, 2, L"Clear window");
-	AppendMenu(menu, g_settings.flags & SETTING_TIMESTAMP ? MF_CHECKED : 0, 3, L"Timestamp messages");
-
-	/* if (data->type == DEST_PRIVATE) */
-		/* AppendMenu(menu, 0, 6, L"Ignore user"); */
-
-	/* AppendMenu(menu, g_settings.flags & (1<<data->type) ? MF_CHECKED : 0, 4, L"Show login/logout"); */
-
-	/* AppendMenu(menu, 0, 5, (const wchar_t *[]){L"Leave Battle", L"Close private chat", L"Leave channel", L"Hide server log"}[data->type]); */
-
-	POINT pt = {.x = LOWORD(info->lParam), .y = HIWORD(info->lParam)};
-	ClientToScreen(info->nmhdr.hwndFrom, &pt);
-
-	int index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, window, NULL);
-	DestroyMenu(menu);
-	switch (index) {
-	case 1: {
-		CHARRANGE info;
-		SendMessage(note->hwndFrom, EM_EXGETSEL, 0, (uintptr_t)&info);
-		HGLOBAL *mem_buff = GlobalAlloc(GMEM_MOVEABLE, sizeof wchar_t * (info.cpMax - info.cpMin + 1));
-		SendMessage(note->hwndFrom, EM_GETSELTEXT, 0, (uintptr_t)GlobalLock(mem_buff));
-		GlobalUnlock(mem_buff);
-		OpenClipboard(window);
-		EmptyClipboard();
-		SetClipboardData(CF_UNICODETEXT, mem_buff);
-		CloseClipboard();
-		return 1;
-	}
-	case 2:
-		SetWindowText(info->nmhdr.hwndFrom, NULL);
-		return 1;
-	case 3: case 4: {
-		MENUITEMINFO info = {.cbSize = sizeof MENUITEMINFO, .fMask = MIIM_STATE};
-		GetMenuItemInfo(menu, index, 0, &info);
-		int new_val = !(info.fState & MFS_CHECKED);
-		if (index == 3)
-			data->type = DEST_LAST + 1;
-		g_settings.flags = (g_settings.flags & ~(1<<data->type)) | new_val<<data->type;
-		return 1;
-	}
-
-	case 6: {
-		User *u = Users_find(data->name);
-		if (u)
-			u->ignore = 1;
-	}	// FALLTHROUGH:
-	case 5:
-		SendMessage(data->type == DEST_BATTLE ? GetParent(window) : window, WM_CLOSE, 0, 0);
-		return 1;
-	default:
-		return 1;
-	}
-#endif
-	return 1;
-}
-
-static int
-on_link(ENLINK *link_info)
-{
-	wchar_t url[256];
-	GETTEXTEX get_text_info;
-
-	if (link_info->msg != WM_LBUTTONUP)
-		return 0;
-
-	SendMessage(link_info->nmhdr.hwndFrom, EM_EXSETSEL, 0,
-	    (intptr_t)&link_info->chrg);
-
-	get_text_info.cb       = sizeof url;
-	get_text_info.flags    = GT_SELECTION;
-	get_text_info.codepage = 1200;
-
-	SendMessage(link_info->nmhdr.hwndFrom, EM_GETTEXTEX,
-	    (uintptr_t)&get_text_info, (intptr_t)url);
-
-	ShellExecute(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL);
-	return 1;
-}
-
-static intptr_t CALLBACK
-chat_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
-{
-    switch (msg) {
-	case WM_CREATE:
-		on_create(window, l_param);
-		return 0;
-
-	case WM_CLOSE: {
-		/* ChatWindowData *data = (void *)GetWindowLongPtr(window, GWLP_USERDATA); */
-		/* if (data->type == DEST_CHANNEL) */
-			/* TasServer_send_leave_channel(data->name); */
-		/* ChatWindow_remove_tab(window); */
-		return 0;
-	}
-	case WM_SIZE:
-		on_size(window, LOWORD(l_param), HIWORD(l_param));
-		return 0;
-
-	case WM_COMMAND:
-		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL)) {
-			WindowData *data;
-			data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
-			data->last_scroll_time = GetTickCount();
-		}
-		break;
-
-	case WM_NOTIFY: {
-		NMHDR *note = (NMHDR *)l_param;
-
-		if (note->idFrom == DLG_LOG && note->code == EN_MSGFILTER)
-			return on_message_filter(window, (MSGFILTER *)l_param);
-
-		if (note->idFrom == DLG_LOG && note->code == EN_LINK)
-			return on_link((ENLINK *)l_param);
-
-	}	break;
-	}
-	return DefWindowProc(window, msg, w_param, l_param);
-}
-
-static void
-put_text(HWND window, const char *text, COLORREF color, uint32_t effects)
-{
-	CHARFORMAT format;
-	SETTEXTEX set_text_info;
-
-	format.cbSize = sizeof format;
-	format.dwMask = CFM_BOLD | CFM_COLOR;
-	format.dwEffects = effects;
-	format.crTextColor = color;
-	SendMessage(window, EM_SETCHARFORMAT, SCF_SELECTION, (intptr_t)&format);
-
-	set_text_info.flags = ST_SELECTION;
-	set_text_info.codepage = 65001;
-	SendMessage(window, EM_SETTEXTEX, (uintptr_t)&set_text_info, (intptr_t)text);
 }
 
 void
@@ -513,6 +186,384 @@ ChatBox_append(HWND window, const char *username, ChatType type, const char *tex
 	}
 }
 
+static void
+put_text(HWND window, const char *text, COLORREF color, uint32_t effects)
+{
+	CHARFORMAT format;
+	SETTEXTEX set_text_info;
+
+	format.cbSize = sizeof format;
+	format.dwMask = CFM_BOLD | CFM_COLOR;
+	format.dwEffects = effects;
+	format.crTextColor = color;
+	SendMessage(window, EM_SETCHARFORMAT, SCF_SELECTION, (intptr_t)&format);
+
+	set_text_info.flags = ST_SELECTION;
+	set_text_info.codepage = 65001;
+	SendMessage(window, EM_SETTEXTEX, (uintptr_t)&set_text_info, (intptr_t)text);
+}
+
+static void
+copy_selected_to_clipboard(HWND window)
+{
+	CHARRANGE char_range;
+	HGLOBAL  *global_mem;
+	wchar_t  *selected_text;
+	size_t    text_len;
+
+	if (!OpenClipboard(window))
+		return;
+	SendMessage(window, EM_EXGETSEL, 0, (intptr_t)&char_range);
+	text_len = (size_t)(char_range.cpMax - char_range.cpMin + 1);
+	global_mem = GlobalAlloc(GMEM_MOVEABLE,
+	    sizeof *selected_text * text_len);
+	if (!global_mem)
+		goto cleanup;
+
+	selected_text = GlobalLock(global_mem);
+	SendMessage(window, EM_GETSELTEXT, 0, (intptr_t)selected_text);
+	GlobalUnlock(global_mem);
+	EmptyClipboard();
+	SetClipboardData(CF_UNICODETEXT, global_mem);
+cleanup:
+	CloseClipboard();
+}
+
+static void
+right_click_menu(HWND log_window, intptr_t cursor_pos)
+{
+	enum MenuOption {
+		COPY, CLEAR
+	};
+
+	POINT           point;
+	HMENU           menu;
+	enum MenuOption menu_option;
+
+	menu = CreatePopupMenu();
+	AppendMenu(menu, 0, 1, L"Copy");
+	AppendMenu(menu, 0, 2, L"Clear window");
+
+	point.x = LOWORD(cursor_pos);
+	point.y = HIWORD(cursor_pos);
+	ClientToScreen(log_window, &point);
+
+	menu_option = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y,
+	    GetParent(log_window), NULL);
+	DestroyMenu(menu);
+
+	switch (menu_option) {
+	case COPY:
+		copy_selected_to_clipboard(log_window);
+		return;
+
+	case CLEAR:
+		SetWindowText(log_window, NULL);
+		return;
+	}
+}
+
+static intptr_t CALLBACK
+chat_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
+{
+    switch (msg) {
+	case WM_CREATE:
+		on_create(window);
+		return 0;
+
+	case WM_CLOSE: {
+		WindowData *data;
+
+		data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
+		if (data->on_close)
+			data->on_close(data->dst);
+		free(data);
+		/* ChatWindow_remove_tab(window); */
+		return 0;
+	}
+	case WM_SIZE:
+		on_size(window, LOWORD(l_param), HIWORD(l_param));
+		return 0;
+
+	case WM_COMMAND:
+		if (w_param == MAKEWPARAM(DLG_LOG, EN_VSCROLL)) {
+			WindowData *data;
+
+			data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
+			data->last_scroll_time = GetTickCount();
+			return 0;
+		}
+		break;
+
+	case WM_NOTIFY: {
+		NMHDR *note = (NMHDR *)l_param;
+
+		if (note->idFrom != DLG_LOG)
+			break;
+
+		if (note->code == EN_LINK)
+			return on_link((ENLINK *)l_param);
+
+		if (note->code == EN_MSGFILTER) {
+			MSGFILTER *info = (void *)l_param;
+			if (info->msg != WM_RBUTTONUP)
+				return 0;
+
+			right_click_menu(note->hwndFrom, info->lParam);
+			return 1;
+		}
+		break;
+	}
+	}
+	return DefWindowProc(window, msg, w_param, l_param);
+}
+
+static int
+on_link(ENLINK *link_info)
+{
+	wchar_t   url[256];
+	GETTEXTEX get_text_info;
+
+	if (link_info->msg != WM_LBUTTONUP)
+		return 0;
+
+	SendMessage(link_info->nmhdr.hwndFrom, EM_EXSETSEL, 0,
+	    (intptr_t)&link_info->chrg);
+
+	get_text_info.cb       = sizeof url;
+	get_text_info.flags    = GT_SELECTION;
+	get_text_info.codepage = 1200;
+
+	SendMessage(link_info->nmhdr.hwndFrom, EM_GETTEXTEX,
+	    (uintptr_t)&get_text_info, (intptr_t)url);
+
+	ShellExecute(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL);
+	return 1;
+}
+
+static void
+on_escape_command(char *command, WindowData *data, HWND window)
+{
+	char *code;
+
+	code = strsep(&command, " ");
+
+	if (!strcmp(code, "me")) {
+		data->on_say(command, true, data->dst);
+		return;
+	}
+
+	if (!strcmp(code, "resync")) {
+		Sync_reload();
+		return;
+	}
+
+	if (!strcmp(code, "dlmap")) {
+		DownloadMap(command);
+		return;
+	}
+
+	if (!strcmp(code, "start")) {
+		Spring_launch();
+		return;
+	}
+
+	if (!strcmp(code, "msg") || !strcmp(code, "pm")) {
+		char  buf[128];
+		char *username;
+		User *user;
+
+		username = strsep(&command, " ");
+		if ((user = Users_find(username))) {
+			TasServer_send_say_private(command, false, user->name);
+			return;
+		}
+		sprintf(buf, "Could not send message: %s is not logged in.", username);
+		ChatBox_append(GetParent(window), NULL, CHAT_SYSTEM, buf);
+		return;
+	}
+
+	if (!strcmp(code, "j") || !strcmp(code, "join")) {
+		TasServer_send_join_channel(command + (*command == '#'));
+		return;
+	}
+
+	if (!strcmp(code, "away")) {
+		ClientStatus cs;
+
+		cs = g_last_client_status;
+		cs.away = !cs.away;
+		TasServer_send_my_client_status(cs);
+		return;
+	}
+
+	if (!strcmp(code, "ingametime")) {
+		TasServer_send_get_ingame_time();
+		return;
+	}
+
+	if (!strcmp(code, "split")) {
+		char      *split_type;
+		SplitType  type;
+
+		split_type = strsep(&command, " ");
+		type = !strcmp(split_type, "h") ? SPLIT_HORZ
+			: !strcmp(split_type, "v") ? SPLIT_VERT
+			: !strcmp(split_type, "c1") ? SPLIT_CORNERS1
+			: !strcmp(split_type, "c2") ? SPLIT_CORNERS2
+			: SPLIT_LAST+1;
+		if (type <= SPLIT_LAST)
+			MyBattle_set_split(type, atoi(command));
+		return;
+	}
+
+	if (!strcmp(code, "ingame")) {
+		ClientStatus cs;
+
+		cs = g_last_client_status;
+		cs.ingame = !cs.ingame;
+		TasServer_send_my_client_status(cs);
+		return;
+	}
+}
+
+static void
+on_tab(HWND window, WindowData *data)
+{
+	char text[MAX_TEXT_MESSAGE_LENGTH];
+	int  offset;
+	int  end;
+	int  start;
+
+	GetWindowTextA(window, text, LENGTH(text));
+	if (data->last_pos != SendMessage(window, EM_GETSEL, 0, 0) || data->end < 0) {
+		data->end = LOWORD(SendMessage(window, EM_GETSEL, 0, 0));
+		data->offset = 0;
+		data->last_index = 0;
+	}
+	offset = data->offset;
+	end = data->end + offset;
+	start = data->end + offset;
+
+	while (start - offset && !isspace(text[start - 1 - offset]))
+		--start;
+
+	text[end] = L'\0';
+}
+
+static intptr_t CALLBACK
+input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
+		__attribute__((unused)) uintptr_t _unused, WindowData *data)
+{
+	if (msg != WM_KEYDOWN)
+		return DefSubclassProc(window, msg, w_param, l_param);
+
+	if (w_param != VK_TAB)
+		data->end = -1;
+
+	switch (w_param) {
+	case VK_TAB:
+		on_tab(window, data);
+		return 0;
+
+	case VK_DOWN:
+		if (!data->input_hint)
+			return 0;
+
+		while (++data->input_hint != data->buf
+		    && data->input_hint != data->buf_end
+		    && ((data->input_hint)[-1] || !*data->input_hint))
+			if (data->input_hint >= data->buf+LENGTH(data->buf)-1)
+				data->input_hint = data->buf - 1;
+
+		SetWindowText(window, data->input_hint);
+		return 0;
+
+	case VK_UP: {
+		if (!data->input_hint)
+			return 0;
+		while ((--data->input_hint != data->buf)
+				&& data->input_hint != data->buf_end
+				&& ((data->input_hint)[-1] || !*data->input_hint))
+			if (data->input_hint < data->buf)
+				data->input_hint = data->buf + LENGTH(data->buf) - 1;
+		SetWindowText(window, data->input_hint);
+	}	return 0;
+
+	case '\r': {
+		int  len;
+		char *text_a;
+		if ((ptrdiff_t)LENGTH(data->buf) - (data->buf_end - data->buf)
+		    < MAX_TEXT_MESSAGE_LENGTH) {
+			size_t len2;
+			data->buf_end = data->buf;
+			len2 = (LENGTH(data->buf) - (size_t)(data->buf_end - data->buf)) * sizeof *data->buf;
+			memset(data->buf_end, '\0', len2);
+		}
+		len = GetWindowTextW(window, data->buf_end,
+		    MAX_TEXT_MESSAGE_LENGTH);
+		if (len <= 0)
+			return 0;
+		text_a = _alloca((size_t)len * 3);
+		WideCharToMultiByte(CP_UTF8, 0, data->buf_end, -1, text_a,
+		    (int)len * 3, NULL, NULL);
+
+		SetWindowText(window, NULL);
+
+		if (text_a[0] == '/') {
+			on_escape_command(text_a + 1, data, window);
+		} else {
+			data->on_say(text_a, false, data->dst);
+		}
+
+		data->last_scroll_time = 0;
+		data->buf_end += len+1;
+		data->input_hint = data->buf_end;
+	}	return 0;
+
+	default:
+		return DefSubclassProc(window, msg, w_param, l_param);
+	}
+}
+
+
+static intptr_t CALLBACK
+log_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
+		__attribute__((unused)) uintptr_t uIdSubclass, WindowData *data)
+{
+	if (msg == WM_VSCROLL)
+		data->last_scroll_time = GetTickCount();
+
+	return DefSubclassProc(window, msg, w_param, l_param);
+}
+
+static void
+on_size(HWND window, int width, int height)
+{
+	HWND input;
+	HWND log;
+
+	log = GetDlgItem(window, DLG_LOG);
+	MoveWindow(log, 0, 0, width, height - MAP_Y(14), 1);
+
+	input = GetDlgItem(window, DLG_INPUT);
+	MoveWindow(input, 0, height - MAP_Y(14), width, MAP_Y(14), 1);
+}
+
+static void
+on_create(HWND window)
+{
+	HWND log_window;
+
+	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
+
+	log_window = GetDlgItem(window, DLG_LOG);
+	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
+	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
+	SendMessage(log_window, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS
+	    | ENM_SCROLL);
+}
+
 static void __attribute__((constructor))
 _init(void)
 {
@@ -520,7 +571,7 @@ _init(void)
 		.lpszClassName = WC_CHATBOX,
 		.lpfnWndProc   = (WNDPROC)chat_box_proc,
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClass(&window_class);

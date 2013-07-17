@@ -395,7 +395,7 @@ on_draw(HWND window)
 	rect.top += MAP_Y(18);
 	rect.bottom -= MAP_Y(36);
 
-	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH) (COLOR_BTNFACE+1));
+	FillRect(ps.hdc, &ps.rcPaint, (HBRUSH)(COLOR_BTNFACE + 1));
 
 	if (!s_minimap_pixels)
 		return;
@@ -478,6 +478,7 @@ on_split_size_scroll(void) {
 	int split_size;
 
 	/* find which split button is checked: */
+	split_type = 0;
 	while (!SendDlgItemMessage(s_minimap,
 				DLG_SPLIT_FIRST + split_type,
 				BM_GETCHECK, 0, 0)) {
@@ -555,7 +556,7 @@ _init (void)
 		.cbSize        = sizeof window_class,
 		.lpfnWndProc   = (WNDPROC)minimap_proc,
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClassEx(&window_class);

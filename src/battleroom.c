@@ -284,6 +284,8 @@ set_player_icon(const UserBot *u, int list_index)
 	IconIndex side_icon;
 	IconIndex status_icon;
 	IconIndex status_overlay;
+	IconIndex rank_icon;
+	User *user;
 
 	side_icon = -1;
 	if (u->mode && *g_side_names[u->side])
@@ -295,10 +297,24 @@ set_player_icon(const UserBot *u, int list_index)
 	if (u->ai)
 		return;
 
-	User *user = (User *)u;
+	user = (User *)u;
 
 	set_icon(list_index, COLUMN_FLAG, ICON_FIRST_FLAG + user->country, 0);
-	set_icon(list_index, COLUMN_RANK, ICON_FIRST_RANK + user->rank, 0);
+
+	if (!g_is_using_trueskill) {
+		rank_icon = user->rank + ICON_FIRST_RANK;
+
+	} else if (user->trueskill) {
+		rank_icon = user->trueskill / 5 - 2 + ICON_FIRST_RANK;
+		rank_icon = rank_icon < ICON_FIRST_RANK ? ICON_FIRST_RANK
+		          : rank_icon > ICON_LAST_RANK  ? ICON_LAST_RANK
+		          : rank_icon;
+
+	} else {
+		rank_icon = 0;
+	}
+
+	set_icon(list_index, COLUMN_RANK, rank_icon, 0);
 
 	{
 		LVITEM item;
@@ -503,7 +519,7 @@ on_create(HWND window)
 
 
 	HWND chat_window = GetDlgItem(window, DLG_CHAT);
-	ChatBox_set_say_function(chat_window, (SayFunction *)TasServer_send_say_battle, NULL);
+	ChatBox_set_say_function(chat_window, (SayFunction *)TasServer_send_say_battle, NULL, NULL);
 
 	HWND info_list = GetDlgItem(window, DLG_INFOLIST);
 #define INSERT_COLUMN(__w, __n) { \
@@ -584,8 +600,8 @@ get_tooltip(const User *u)
 				Country_get_name(u->country),
 				(float)u->cpu / 1000);
 
-	if (u->skill)
-		APPEND(L"\nSkill: %hs", u->skill);
+	if (u->trueskill)
+		APPEND(L"\nTrueSkill: %d", u->trueskill);
 
 	if (!u->mode) {
 		APPEND(L"\nSpectator");
@@ -858,7 +874,7 @@ _init (void)
 		.cbSize        = sizeof window_class,
 		.lpfnWndProc   = (WNDPROC)battle_room_proc,
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClassEx(&window_class);

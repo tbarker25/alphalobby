@@ -36,17 +36,10 @@ typedef enum ChatType {
 	CHAT_LAST = CHAT_SERVEROUT,
 }ChatType;
 
-typedef enum ChatDest {
-	DEST_BATTLE,
-	DEST_PRIVATE,
-	DEST_CHANNEL,
-	DEST_SERVER,
-	DEST_LAST = DEST_SERVER,
-}ChatDest;
-
 typedef cdecl void (SayFunction)(const char *text, bool is_ex, const void *dst);
+typedef cdecl void (OnCloseFunction)(const char *dst);
 
-void ChatBox_append           (HWND window, const char *username, ChatType type, const char *text);
-void ChatBox_set_say_function (HWND window, SayFunction, const char *dest);
+void ChatBox_append(HWND window, const char *username, ChatType type, const char *text);
+void ChatBox_set_say_function(HWND window, SayFunction, OnCloseFunction, const char *dst);
 
 #endif /* end of include guard: CHATBOX_H */

@@ -147,7 +147,7 @@ _init(void)
 		.cbSize        = sizeof window_class,
 		.lpfnWndProc   = (WNDPROC)download_list_proc,
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClassEx(&window_class);

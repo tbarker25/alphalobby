@@ -134,7 +134,6 @@ static const TBBUTTON TOOLBAR_BUTTONS[] = {
 	{ ICON_HOSTBATTLE,  ID_HOSTBATTLE,   TBSTATE_DISABLED,BTNS_AUTOSIZE, {}, 0, (intptr_t)L"Host Battle"},
 #endif
 	{ ICON_CHAT,        ID_CHAT,         TBSTATE_DISABLED,BTNS_DROPDOWN | BTNS_AUTOSIZE, {}, 0, (intptr_t)L"Chat"},
-	// { I_IMAGENONE,       ID_CHAT,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (intptr_t)L"Users"},
 	{ ICON_OPTIONS,     ID_OPTIONS,      TBSTATE_ENABLED, BTNS_AUTOSIZE | BTNS_WHOLEDROPDOWN, {}, 0, (intptr_t)L"Options"},
 	{ ICON_DOWNLOADS,   ID_DOWNLOADS,    TBSTATE_ENABLED, BTNS_AUTOSIZE, {}, 0, (intptr_t)L"Downloads"},
 };
@@ -569,7 +568,7 @@ _init(void)
 		.lpfnWndProc   = (WNDPROC)main_window_proc,
 		.hIcon         = IconList_get_icon(ICON_ALPHALOBBY),
 		.hCursor       = LoadCursor(NULL, (wchar_t *)IDC_ARROW),
-		.hbrBackground = (HBRUSH)(COLOR_BTNFACE+1),
+		.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1),
 	};
 
 	RegisterClassEx(&window_class);

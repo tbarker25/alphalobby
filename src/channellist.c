@@ -23,6 +23,7 @@
 #include <windows.h>
 #include <commctrl.h>
 
+#include "chattab.h"
 #include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
@@ -40,10 +41,15 @@ static HWND s_channel_list;
 static void
 activate(int item_index)
 {
-	wchar_t name[MAX_NAME_LENGTH_NUL];
+	char name[MAX_NAME_LENGTH_NUL];
+	LVITEMA info;
 
-	ListView_GetItemText(s_channel_list, item_index, 0, name, LENGTH(name));
-	/* Chat_join_channel(utf16to8(name), 1); */
+	info.iSubItem = 0;
+	info.pszText = name;
+	info.cchTextMax = sizeof(name);
+	SendMessage(s_channel_list, LVM_GETITEMTEXTA, (uintptr_t)item_index,
+	    (intptr_t)&info);
+	ChatTab_join_channel(name);
 }
 
 static void

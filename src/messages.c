@@ -195,6 +195,8 @@ add_bot(void)
 	char *name = get_next_word();
 	User *owner = Users_find(get_next_word());
 	assert(owner);
+	if (!owner)
+		return;
 	bs.as_int = get_next_int();
 	uint32_t color = get_next_int();
 	Users_add_bot(name, owner, bs.BattleStatus, color, s_command);
@@ -257,6 +259,10 @@ battle_opened(void)
 	copy_next_word(founder_name);
 	b->founder = Users_find(founder_name);
 	assert(b->founder);
+	if (!b->founder) {
+		Battles_del(b);
+		return;
+	}
 	b->user_len = 1;
 	b->founder->battle = b;
 
@@ -337,6 +343,9 @@ client_battle_status(void)
 	} bs;
 
 	u = Users_find(get_next_word());
+	assert(u);
+	if (!u)
+		return;
 	bs.as_int = get_next_int();
 
 	MyBattle_update_battle_status(u, bs.BattleStatus, get_next_int());
@@ -345,19 +354,32 @@ client_battle_status(void)
 static void
 clients(void)
 {
+	const char *channel_name;
+
+	channel_name = get_next_word();
+	while (*s_command) {
+		User *u;
+
+		u = Users_find(get_next_word());
+		assert(u);
+		if (u)
+			ChatTab_add_user_to_channel(channel_name, u);
+	}
 }
 
 static void
 client_status(void)
 {
 	union {
-		ClientStatus; uint8_t as_int;
+		ClientStatus;
+		uint8_t as_int;
 	} status;
 
 	ClientStatus previous;
 	User *u;
 
 	u = Users_find(get_next_word());
+	assert(u);
 	if (!u)
 		return;
 
@@ -374,8 +396,7 @@ client_status(void)
 	if (!u->battle)
 		return;
 
-	if (previous.ingame != u->ingame
-			&& u == u->battle->founder) {
+	if (previous.ingame != u->ingame && u == u->battle->founder) {
 		BattleList_update_battle(u->battle);
 
 		if (g_my_battle == u->battle && u->ingame && u != &g_my_user)
@@ -430,8 +451,8 @@ joined(void)
 	user = Users_find(get_next_word());
 	assert(user);
 	if (user)
-		ChatTab_on_said_channel(channel, user, "Has joined the channel",
-		    CHAT_SYSTEM);
+		ChatTab_on_said_channel(channel, user,
+		    "Has joined the channel", CHAT_SYSTEM);
 }
 
 static void
@@ -484,9 +505,12 @@ left(void)
 	channel = get_next_word();
 	user = Users_find(get_next_word());
 	assert(user);
-	if (user)
-		ChatTab_on_said_channel(channel, user, "has left the channel",
-		    CHAT_SYSTEM);
+	if (!user)
+		return;
+
+	ChatTab_on_said_channel(channel, user, "has left the channel",
+	    CHAT_SYSTEM);
+	ChatTab_remove_user_from_channel(channel, user);
 }
 
 static void
@@ -600,23 +624,33 @@ said(void)
 {
 	const char *channel;
 	User *user;
+	char *text;
 
 	channel = get_next_word();
 	user = Users_find(get_next_word());
 	assert(user);
-	if (user)
-		ChatTab_on_said_channel(channel, user, s_command, CHAT_NORMAL);
+	if (!user)
+		return;
+	text = s_command;
+	strip_irc_control_sequences(text);
+
+	ChatTab_on_said_channel(channel, user, text, CHAT_NORMAL);
 }
 
 static void
 said_battle(void)
 {
 	User *u;
+	char *text;
 
 	u = Users_find(get_next_word());
 	assert(u);
+	if (!u)
+		return;
+	text = s_command;
+	strip_irc_control_sequences(text);
 
-	MyBattle_said_battle(u, s_command, CHAT_NORMAL);
+	MyBattle_said_battle(u, text, CHAT_NORMAL);
 }
 
 static void
@@ -626,12 +660,11 @@ said_battle_ex(void)
 	char *text;
 
 	u = Users_find(get_next_word());
-	text =  s_command;
-
 	assert(u);
 	if (!u)
 		return;
 
+	text = s_command;
 	strip_irc_control_sequences(text);
 
 	// Check for autohost
@@ -648,20 +681,22 @@ said_battle_ex(void)
 		chance_of_autohost += strstr(text, u->name) != NULL;
 		chance_of_autohost += strstr(text, "!help") != NULL;
 
-		char said_spads = strstr(text, "SPADS") != NULL;
-		char said_springie = strstr(text, "Springie") != NULL;
+		bool said_spads = strstr(text, "SPADS") != NULL;
+		bool said_springie = strstr(text, "Springie") != NULL;
 		chance_of_autohost += said_spads;
 		chance_of_autohost += said_springie;
 
-		if (chance_of_autohost > 3){
+		if (chance_of_autohost > 3) {
 			if (said_spads) {
 				Spads_set_as_host();
+
 			} else if (said_springie) {
 				Springie_set_as_host();
+
 			} else {
 				g_last_auto_message = GetTickCount();
-				TasServer_send_say_private("!version", false, u);
-				TasServer_send_say_private("!springie", false, u);
+				TasServer_send_say_private("!version", false, u->name);
+				TasServer_send_say_private("!springie", false, u->name);
 			}
 		}
 	}
@@ -674,32 +709,40 @@ said_ex(void)
 {
 	const char *channel;
 	User *user;
+	char *text;
 
 	channel = get_next_word();
 	user = Users_find(get_next_word());
 	assert(user);
-	if (user)
-		ChatTab_on_said_channel(channel, user, s_command, CHAT_EX);
+	if (!user)
+		return;
+	text = s_command;
+	strip_irc_control_sequences(text);
+
+	ChatTab_on_said_channel(channel, user, text, CHAT_EX);
 }
 
 static void
 said_private(void)
 {
 	User *user;
+	char *text;
 
 	user = Users_find(get_next_word());
 	assert(user);
 	if (!user || user->ignore)
 		return;
+	text = s_command;
+	strip_irc_control_sequences(text);
 
-	if (RelayHost_on_private_message(user->name, s_command))
+	if (RelayHost_on_private_message(user->name, text))
 		return;
 
-	// Zero-K juggler sends matchmaking s_command "!join <host>"
+	// Zero-K juggler sends matchmaking text "!join <host>"
 	if (g_my_battle
 			&& user == g_my_battle->founder
-			&& !memcmp(s_command, "!join ", sizeof "!join " - 1)) {
-		User *host = Users_find(s_command + sizeof "!join " - 1);
+			&& !memcmp(text, "!join ", sizeof "!join " - 1)) {
+		User *host = Users_find(text + sizeof "!join " - 1);
 		if (host && host->battle)
 			TasServer_send_join_battle(host->battle->id, NULL);
 		return;
@@ -707,61 +750,72 @@ said_private(void)
 
 	// Check for pms that identify an autohost
 	if (g_my_battle && user == g_my_battle->founder
-			&& strstr(s_command, user->name)
-			&& strstr(s_command, "running")) {
+			&& strstr(text, user->name)
+			&& strstr(text, "running")) {
 
 		// Response to "!springie":
 		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
-		if (strstr(s_command, "Springie")) {
+		if (strstr(text, "Springie")) {
 			Springie_set_as_host();
 			return;
 		}
 
 		// Response to "!version":
 		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
-		if (strstr(s_command, "SPADS")) {
+		if (strstr(text, "SPADS")) {
 			Spads_set_as_host();
 			return;
 		}
 	}
 
 	// Normal chat message:
-	ChatTab_on_said_private(user, s_command, 0);
+	ChatTab_on_said_private(user, text, 0);
 }
 
 static void
 said_private_ex(void)
 {
 	User *user;
+	char *text;
 
 	user = Users_find(get_next_word());
 	assert(user);
 	if (!user || user->ignore)
 		return;
+	text = s_command;
+	strip_irc_control_sequences(text);
 
-	ChatTab_on_said_private(user, s_command, CHAT_EX);
+	ChatTab_on_said_private(user, text, CHAT_EX);
 }
 
 static void
 say_private(void)
 {
 	User *u;
+	char *text;
 
 	u = Users_find(get_next_word());
 	assert(u);
-	if (u)
-		ChatTab_on_said_private(u, s_command, CHAT_SELF);
+	if (!u)
+		return;
+	text = s_command;
+
+	ChatTab_on_said_private(u, text, CHAT_SELF);
 }
 
 static void
 say_private_ex(void)
 {
 	User *u;
+	char *text;
 
 	u = Users_find(get_next_word());
 	assert(u);
-	if (u)
-		ChatTab_on_said_private(u, s_command, CHAT_SELFEX);
+	if (!u)
+		return;
+	text = s_command;
+
+	ChatTab_on_said_private(u, text, CHAT_SELFEX);
 }
 
 static void
@@ -815,7 +869,7 @@ update_battle_info(void)
 	b->map_hash = get_next_int();
 	copy_next_sentence(b->map_name);
 
-	if (b == g_my_battle && (b->map_hash != last_map_hash || !g_map_hash))
+	if (b == g_my_battle && (b->map_hash != last_map_hash))
 		Sync_on_changed_map(b->map_name);
 
 	BattleList_update_battle(b);
@@ -834,7 +888,7 @@ strip_irc_control_sequences(char *text)
 	char *c = text;
 
 	for (; *c; ++c) {
-		if (*c == 3) {
+		if (*c == (char)0x03) {
 			++c;
 			skips += 2;
 
@@ -844,7 +898,7 @@ strip_irc_control_sequences(char *text)
 		else
 			c[-skips] = *c;
 	}
-	c[-skips] = (char)'\0';
+	c[-skips] = '\0';
 }
 
 static void

@@ -19,6 +19,11 @@
 #ifndef CHATLIST_H
 #define CHATLIST_H
 
+struct User;
+
 #define WC_CHATLIST L"Chatlist"
+
+void ChatList_add_user(HWND, const struct User *);
+void ChatList_remove_user(HWND, const struct User *);
 
 #endif /* end of include guard: CHATLIST_H */

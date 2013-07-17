@@ -66,6 +66,8 @@ int g_map_len = 0;
 char **g_mods;
 int g_mod_len = 0;
 
+bool g_is_using_trueskill;
+
 static char *s_script;
 
 void (*MyBattle_force_ally) (const User *, int ally_id);
@@ -170,6 +172,7 @@ MyBattle_left_battle(void)
 	g_my_user.BattleStatus = (BattleStatus){0};
 	g_last_battle_status = (BattleStatus){0};
 	g_battle_info_finished = 0;
+	g_is_using_trueskill = false;
 
 	g_my_battle = NULL;
 	if (g_battle_to_join)
@@ -183,7 +186,9 @@ MyBattle_left_battle(void)
 void
 MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t color)
 {
-	BattleStatus last_bs = u->BattleStatus;
+	BattleStatus last_bs;
+
+	last_bs = u->BattleStatus;
 	u->BattleStatus = bs;
 	u->color = color;
 
@@ -225,18 +230,23 @@ void
 MyBattle_change_option(Option *restrict opt)
 {
 	char val[128];
+
 	switch (opt->type) {
-		HMENU menu;
 	case opt_bool:
 		val[0] = opt->val[0] == '0' ? '1' : '0';
 		val[1] = '\0';
 		break;
+
 	case opt_number:
 		val[0] = '\0';
 		if (GetTextDialog_create(opt->name, val, 128))
 			return;
 		break;
-	case opt_list:
+
+	case opt_list: {
+		int clicked;
+		HMENU menu;
+
 		menu = CreatePopupMenu();
 		for (int j=0; j < opt->list_item_len; ++j)
 			AppendMenuA(menu, 0, (uintptr_t)j + 1, opt->list_items[j].name);
@@ -244,15 +254,16 @@ MyBattle_change_option(Option *restrict opt)
 		POINT point;
 		GetCursorPos(&point);
 		void func(int *i) {
-			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, g_main_window, NULL);
+			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x,
+			    point.y, g_main_window, NULL);
 		}
-		int clicked;
 		SendMessage(g_main_window, WM_EXECFUNCPARAM, (uintptr_t)func, (intptr_t)&clicked);
+		DestroyMenu(menu);
 		if (!clicked)
 			return;
 		strcpy(val, opt->list_items[clicked - 1].key);
-		DestroyMenu(menu);
 		break;
+	}
 	default:
 		return;
 	}
@@ -263,16 +274,20 @@ MyBattle_change_option(Option *restrict opt)
 static void
 set_option_from_tag(char *restrict key, const char *restrict val)
 {
+	const char *section;
+
 	_strlwr(key);
 	if (strcmp(strsep(&key, "/"), "game")) {
 		printf("unrecognized script key ?/%s=%s\n", key, val);
 		return;
 	}
 
-	const char *section = strsep(&key, "/");
+	section = strsep(&key, "/");
 
 	if (!strcmp(section, "startpostype")) {
-		StartPosType start_pos_type = atoi(val);
+		StartPosType start_pos_type;
+
+		start_pos_type = atoi(val);
 		if (start_pos_type != g_battle_options.start_pos_type) {
 			;// task_set_minimap = 1;
 		}
@@ -302,17 +317,31 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 
 
 	if (!strcmp(section, "players")) {
-		char *username = strsep(&key, "/");
+		char *username;
+
+		username = strsep(&key, "/");
 		if (strcmp(key, "skill")) {
 			printf("unrecognized player option %s=%s\n", key, val);
 			return;
 		}
 		for (uint8_t i=0; i<g_my_battle->user_len; ++i) {
-			UserBot *u = g_my_battle->users[i];
-			if (!u->ai && !_stricmp(u->name, username)) {
-				free(((User *)u)->skill);
-				((User *)u)->skill = _strdup(val);
+			User *u;
+			int skill;
+
+			u = (User *)g_my_battle->users[i];
+			if (_stricmp(u->name, username))
+				continue;
+
+			while (!isdigit(*val))
+				++val;
+			skill = atoi(val);
+			if (skill < 0 || skill > UINT8_MAX) {
+				assert(0);
+				return;
 			}
+			u->trueskill = (uint8_t)atoi(val);
+			g_is_using_trueskill = true;
+			return;
 		}
 		return;
 	}
@@ -349,10 +378,13 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 static void
 set_options_from_script(void)
 {
-	char *script = _strdup(s_script);
-	char *to_free = script;
-
+	char *script;
+	char *to_free;
 	char *key, *val;
+
+	script = _strdup(s_script);
+	to_free = script;
+
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
 		set_option_from_tag(key, val);
 

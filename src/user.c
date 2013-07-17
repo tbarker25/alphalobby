@@ -74,7 +74,6 @@ Users_new(uint32_t id, const char *name)
 		s_users[i]->id = id;
 		strcpy(s_users[i]->alias, UNTAGGED_NAME(name));
 	}
-	SetWindowTextA(s_users[i]->chat_window, name);
 	return s_users[i];
 }
 
