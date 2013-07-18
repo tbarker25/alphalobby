@@ -238,10 +238,12 @@ right_click_menu(HWND window, intptr_t cursor_pos)
 	};
 
 	WindowData      *data;
+	HWND             log_window;
 	POINT            point;
 	HMENU            menu;
 	enum MenuOption  menu_option;
 
+	log_window = GetDlgItem(window, DLG_LOG);
 	data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
 	menu = CreatePopupMenu();
 	AppendMenu(menu, 0, COPY,       L"&Copy");
@@ -252,7 +254,7 @@ right_click_menu(HWND window, intptr_t cursor_pos)
 
 	point.x = LOWORD(cursor_pos);
 	point.y = HIWORD(cursor_pos);
-	ClientToScreen(GetDlgItem(window, DLG_LOG), &point);
+	ClientToScreen(log_window, &point);
 
 	menu_option = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y,
 	    window, NULL);
@@ -260,7 +262,7 @@ right_click_menu(HWND window, intptr_t cursor_pos)
 
 	switch (menu_option) {
 	case COPY:
-		copy_selected_to_clipboard(window);
+		copy_selected_to_clipboard(log_window);
 		return;
 
 	case SELECT_ALL: {
@@ -268,12 +270,11 @@ right_click_menu(HWND window, intptr_t cursor_pos)
 
 		char_range.cpMin = 0;
 		char_range.cpMax = -1;
-		SendDlgItemMessage(window, DLG_LOG, EM_EXSETSEL, 0,
-		    (intptr_t)&char_range);
+		SendMessage(log_window, EM_EXSETSEL, 0, (intptr_t)&char_range);
 		return;
 	}
 	case CLEAR:
-		SetDlgItemText(window, DLG_LOG, NULL);
+		SetWindowText(log_window, NULL);
 		return;
 
 	case LEAVE:

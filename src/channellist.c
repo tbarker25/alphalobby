@@ -46,7 +46,7 @@ activate(int item_index)
 
 	info.iSubItem = 0;
 	info.pszText = name;
-	info.cchTextMax = sizeof(name);
+	info.cchTextMax = sizeof name;
 	SendMessage(s_channel_list, LVM_GETITEMTEXTA, (uintptr_t)item_index,
 	    (intptr_t)&info);
 	ChatTab_join_channel(name);

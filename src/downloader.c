@@ -338,10 +338,12 @@ handle_map_sources(RequestContext *req)
 		char *end = strchr(s, '<');
 		*end = 0;
 		wchar_t path[256], host[256];
-		if (FALSE == WinHttpCrackUrl(utf8to16(s), 0, ICU_DECODE, &(URL_COMPONENTS){
-					.dwStructSize = sizeof(URL_COMPONENTS),
+		URL_COMPONENTS url_components = {
+					.dwStructSize = sizeof url_components,
 					.lpszHostName = host, .dwHostNameLength = LENGTH(host),
-					.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)}))
+					.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)
+		};
+		if (!WinHttpCrackUrl(utf8to16(s), 0, ICU_DECODE, &url_components))
 			continue;
 		wchar_t *name = wcsrchr(path, '/');
 		size_t size = (wcslen(name) + wcslen(g_data_dir) + LENGTH(L"maps")) * sizeof *name;
