@@ -98,7 +98,7 @@ static void say_private_ex        (void);
 static void server_msg            (void);
 static void server_message_box    (void);
 static void set_script_tags       (void);
-static void TAS_server            (void);
+static void tas_server            (void);
 static void update_battle_info    (void);
 static void update_bot            (void);
 
@@ -157,7 +157,7 @@ static const Command SERVER_COMMANDS[] = {
 	{"SERVERMSG",            server_msg},
 	{"SERVERMSGBOX",         server_message_box },
 	{"SETSCRIPTTAGS",        set_script_tags},
-	{"TASServer",            TAS_server},
+	{"TASServer",            tas_server},
 	{"UPDATEBATTLEINFO",     update_battle_info},
 	{"UPDATEBOT",            update_bot},
 };
@@ -837,7 +837,7 @@ set_script_tags(void)
 }
 
 static void
-TAS_server(void)
+tas_server(void)
 {
 	get_next_word(); //= server_version
 	const char *server_spring_version = get_next_word();

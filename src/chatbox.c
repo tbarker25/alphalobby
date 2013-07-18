@@ -66,24 +66,26 @@ enum {
 typedef struct WindowData {
 	SayFunction *on_say;
 	OnCloseFunction *on_close;
+	const char *dst;
 
 	uint32_t last_scroll_time;
 
 	int last_index, end, last_pos, offset;
 	wchar_t buf[8192], *input_hint, *buf_end;
-	char dst[];
 } WindowData;
 
-static void              _init             (void);
-static void              put_text          (HWND,   const char *, COLORREF, uint32_t effects);
 static intptr_t CALLBACK chat_box_proc     (HWND,   uint32_t msg, uintptr_t, intptr_t);
-static void              on_create         (HWND);
-static void              on_size           (HWND,   int width,    int height);
-static intptr_t CALLBACK log_proc          (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
+static void              copy_selected_to_clipboard (HWND);
 static intptr_t CALLBACK input_box_proc    (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
+static intptr_t CALLBACK log_proc          (HWND,   uint32_t msg, uintptr_t, intptr_t, uintptr_t, WindowData *);
+static void              on_create         (HWND);
 static void              on_escape_command (char *, WindowData *, HWND);
 static int               on_link           (ENLINK *);
+static void              on_size           (HWND,   int width,    int height);
 static void              on_tab            (HWND,   WindowData *);
+static void              put_text          (HWND,   const char *, COLORREF, uint32_t effects);
+static void              right_click_menu  (HWND,   intptr_t cursor_pos);
+static void              _init             (void);
 
 static const COLORREF CHAT_COLORS[CHAT_LAST+1] = {
 	[CHAT_EX]        = RGB(225, 152, 163),
@@ -114,9 +116,8 @@ ChatBox_set_say_function(HWND window, SayFunction on_say,
 {
 	WindowData *data;
 
-	data = calloc(1, sizeof *data + (dst ? strlen(dst) + 1 : 0));
-	if (dst)
-		strcpy(data->dst, dst);
+	data = calloc(1, sizeof *data);
+	data->dst = dst;
 	data->on_say = on_say;
 	data->on_close = on_close;
 	data->buf_end  = data->buf;
@@ -230,35 +231,53 @@ cleanup:
 }
 
 static void
-right_click_menu(HWND log_window, intptr_t cursor_pos)
+right_click_menu(HWND window, intptr_t cursor_pos)
 {
 	enum MenuOption {
-		COPY, CLEAR
+		COPY, SELECT_ALL, CLEAR, LEAVE
 	};
 
-	POINT           point;
-	HMENU           menu;
-	enum MenuOption menu_option;
+	WindowData      *data;
+	POINT            point;
+	HMENU            menu;
+	enum MenuOption  menu_option;
 
+	data = (WindowData *)GetWindowLongPtr(window, GWLP_USERDATA);
 	menu = CreatePopupMenu();
-	AppendMenu(menu, 0, 1, L"Copy");
-	AppendMenu(menu, 0, 2, L"Clear window");
+	AppendMenu(menu, 0, COPY,       L"&Copy");
+	AppendMenu(menu, 0, SELECT_ALL, L"Select &All");
+	AppendMenu(menu, 0, CLEAR,      L"Clear Log");
+	if (data->on_close)
+		AppendMenu(menu, 0, LEAVE, L"Leave");
 
 	point.x = LOWORD(cursor_pos);
 	point.y = HIWORD(cursor_pos);
-	ClientToScreen(log_window, &point);
+	ClientToScreen(GetDlgItem(window, DLG_LOG), &point);
 
 	menu_option = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y,
-	    GetParent(log_window), NULL);
+	    window, NULL);
 	DestroyMenu(menu);
 
 	switch (menu_option) {
 	case COPY:
-		copy_selected_to_clipboard(log_window);
+		copy_selected_to_clipboard(window);
 		return;
 
+	case SELECT_ALL: {
+		CHARRANGE char_range;
+
+		char_range.cpMin = 0;
+		char_range.cpMax = -1;
+		SendDlgItemMessage(window, DLG_LOG, EM_EXSETSEL, 0,
+		    (intptr_t)&char_range);
+		return;
+	}
 	case CLEAR:
-		SetWindowText(log_window, NULL);
+		SetDlgItemText(window, DLG_LOG, NULL);
+		return;
+
+	case LEAVE:
+		data->on_close(data->dst);
 		return;
 	}
 }
@@ -309,7 +328,7 @@ chat_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 			if (info->msg != WM_RBUTTONUP)
 				return 0;
 
-			right_click_menu(note->hwndFrom, info->lParam);
+			right_click_menu(window, info->lParam);
 			return 1;
 		}
 		break;
@@ -525,7 +544,6 @@ input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 		return DefSubclassProc(window, msg, w_param, l_param);
 	}
 }
-
 
 static intptr_t CALLBACK
 log_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
