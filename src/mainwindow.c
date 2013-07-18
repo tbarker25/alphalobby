@@ -229,7 +229,6 @@ on_destroy(void)
 	RECT *r;
 
 	TasServer_disconnect();
-	/* Chat_save_windows(); */
 	window_placement.length = sizeof window_placement;
 	GetWindowPlacement(g_main_window, &window_placement);
 	r = &window_placement.rcNormalPosition;
@@ -463,13 +462,6 @@ main_window_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 
 	case WM_CREATE_DLG_ITEM:
 		return (intptr_t)CreateDlgItem(window, (DialogItem *)l_param, w_param);
-
-	case WM_TIMER:
-		if (w_param == 1) {
-			// TasServer_ping();
-			return 0;
-		}
-		break;
 	}
 	return DefWindowProc(window, msg, w_param, l_param);
 }
@@ -506,14 +498,23 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 		__attribute__((unused)) PSTR cmd_line,
 		__attribute__((unused)) int cmd_show)
 {
+	int32_t left;
+	int32_t top;
+	int32_t width;
+	int32_t height;
+
 	Settings_init();
 
 	LoadLibrary(L"Riched20.dll");
 
-	int32_t left = CW_USEDEFAULT, top = CW_USEDEFAULT, width = CW_USEDEFAULT, height = CW_USEDEFAULT;
 	const char *window_placement = Settings_load_str("window_placement");
-	if (window_placement)
-		sscanf(window_placement, "%d,%d,%d,%d", &left, &top, &width, &height);
+	if (!window_placement
+	    || sscanf(window_placement, "%d,%d,%d,%d", &left, &top, &width, &height) != 4) {
+		left = CW_USEDEFAULT;
+		top = CW_USEDEFAULT;
+		width = CW_USEDEFAULT;
+		height = CW_USEDEFAULT;
+	}
 
 	Sync_init();
 	CreateWindowEx(0, WC_ALPHALOBBY, L"AlphaLobby", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
