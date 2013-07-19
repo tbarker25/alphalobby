@@ -292,20 +292,3 @@ ChatList_remove_user(HWND window, const User *user)
 	    (intptr_t)&info);
 	SendMessage(list, LVM_DELETEITEM, (uintptr_t)index, 0);
 }
-
-/* void */
-/* ChatList_update_user(HWND window, const User *user) */
-/* { */
-	/* HWND list; */
-	/* LVFINDINFO info; */
-	/* int index; */
-
-	/* list = GetDlgItem(window, DLG_LIST); */
-
-	/* info.flags = LVFI_PARAM; */
-	/* info.lParam = (intptr_t)user; */
-
-	/* index = SendMessage(window, LVM_FINDITEM, (uintptr_t)-1, */
-	    /* (intptr_t)&info); */
-	/* update_user(list, user, index); */
-/* } */

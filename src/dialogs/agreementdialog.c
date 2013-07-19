@@ -43,26 +43,34 @@ static BOOL CALLBACK
 agreement_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
-	case WM_INITDIALOG:
-	{
+
+	case WM_INITDIALOG: {
 		EDITSTREAM info;
 
 		info.dwCookie = (uintptr_t)l_param;
 		info.pfnCallback = (void *)edit_stream_callback;
 		SendDlgItemMessage(window, IDC_AGREEMENT_TEXT, EM_STREAMIN,
 		    SF_RTF, (intptr_t)&info);
-		break;
+		return 0;
 	}
 	case WM_COMMAND:
 		switch (w_param) {
+
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 			TasServer_send_confirm_agreement();
-			//FALLTHROUGH:
+			/* FALLTHROUGH */
+
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
-		} break;
+			return 0;
+
+		default:
+			return 0;
+		}
+
+	default:
+		return 0;
 	}
-	return 0;
 }
 
 static uint32_t CALLBACK

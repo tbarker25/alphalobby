@@ -42,26 +42,26 @@ static HWND s_channel_list;
 void
 ChannelList_add_channel(const char *name, const char *user_len, const char *desc)
 {
-	int item_index;
+	int index;
 	LVITEM item;
 
 	item.mask = LVIF_TEXT;
 	item.iSubItem = 0;
 	item.pszText = utf8to16(name);
-	item_index = ListView_InsertItem(s_channel_list, &item);
+	index = ListView_InsertItem(s_channel_list, &item);
 
-	assert(item_index != -1);
+	assert(index != -1);
 
-	ListView_SetItemText(s_channel_list, item_index, 1, utf8to16(user_len));
-	ListView_SetItemText(s_channel_list, item_index, 2, utf8to16(desc));
+	ListView_SetItemText(s_channel_list, index, 1, utf8to16(user_len));
+	ListView_SetItemText(s_channel_list, index, 2, utf8to16(desc));
 }
 
 void
 ChannelList_show(void)
 {
-	/* DestroyWindow(GetParent(s_channel_list)); */
 	assert(s_channel_list == NULL);
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)channel_list_proc);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL,
+	    (DLGPROC)channel_list_proc);
 	TasServer_send_get_channels();
 }
 
@@ -112,12 +112,14 @@ static BOOL CALLBACK
 channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
 	switch (msg) {
+
 	case WM_INITDIALOG:
 		on_init(window);
 		return 0;
 
 	case WM_COMMAND:
 		switch (w_param) {
+
 		case MAKEWPARAM(IDOK, BN_CLICKED):
 			activate(ListView_GetNextItem(s_channel_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
