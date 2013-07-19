@@ -30,6 +30,7 @@
 #include "layoutmetrics.h"
 #include "resource.h"
 #include "user.h"
+#include "userlist.h"
 #include "chattab.h"
 #include "chatbox.h"
 

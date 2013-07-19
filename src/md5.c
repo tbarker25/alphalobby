@@ -53,9 +53,9 @@ typedef struct {
 
 #define MD5_INITIAL_BUFF {0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476}
 
-static void update();
-static void final();
-static void transform();
+static void update(MD5_CTX *restrict md_context, const void *restrict in_buf, unsigned int in_len);
+static void final(MD5_CTX *md_context);
+static void transform(uint32_t *restrict buf, uint32_t *restrict in);
 
 static const uint8_t PADDING[64] = {0x80};
 __thread uint8_t _md5Checksum[16];

@@ -9,6 +9,7 @@
 #include "chatbox.h"
 #include "common.h"
 #include "host_spads.h"
+#include "host_springie.h"
 #include "mybattle.h"
 #include "user.h"
 

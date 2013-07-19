@@ -54,6 +54,7 @@ static uint32_t WINAPI connect_proc(void (*on_finish)(void));
 static void login(void);
 static void register_account(void);
 static void send_to_server(const char *format, ...) __attribute__ ((format (ms_printf, 1, 2)));
+static void CALLBACK ping(HWND, uint32_t, uintptr_t, uint32_t);
 
 uint32_t g_last_auto_message;
 BattleStatus g_last_battle_status;
@@ -150,8 +151,8 @@ TasServer_disconnect(void)
 	/* Chat_on_disconnect(); */
 }
 
-void CALLBACK
-TasServer_ping(__attribute__((unused)) HWND window, __attribute__((unused)) uint32_t msg,
+static void CALLBACK
+ping(__attribute__((unused)) HWND window, __attribute__((unused)) uint32_t msg,
 		__attribute__((unused)) uintptr_t idEvent, __attribute__((unused)) uint32_t dwTime)
 {
 	send_to_server("PING");
@@ -203,7 +204,7 @@ connect_proc(void (*on_finish)(void))
 	    FD_READ|FD_CLOSE);
 	on_finish();
 
-	SetTimer(g_main_window, 1, 30000 / 2, (void *)TasServer_ping);
+	SetTimer(g_main_window, 1, 30000 / 2, (void *)ping);
 	return 0;
 }
 

@@ -446,6 +446,11 @@ BattleRoom_resize_columns(void)
 static void
 on_size(intptr_t l_param)
 {
+	int width;
+	int h;
+	HDWP dwp;
+	int minimap_x;
+
 #define INFO_WIDTH (MAP_Y(140))
 #define LIST_WIDTH 280
 #define INFO_HEIGHT (MAP_Y(200))
@@ -458,10 +463,10 @@ on_size(intptr_t l_param)
 #define YS MAP_Y(S)
 #define YH MAP_Y(14)
 
-	int width = LOWORD(l_param), h = HIWORD(l_param);
+	width = LOWORD(l_param), h = HIWORD(l_param);
 
 
-	HDWP dwp = BeginDeferWindowPos(DLG_LAST + 1);
+	dwp = BeginDeferWindowPos(DLG_LAST + 1);
 
 #define MOVE_ID(id, x, y, cx, cy)\
 	(DeferWindowPos(dwp, (GetDlgItem(s_battle_room, (id))), NULL, (x), (y), (cx), (cy), 0))
@@ -469,7 +474,7 @@ on_size(intptr_t l_param)
 
 	MOVE_ID(DLG_INFOLIST, XS, YS, INFO_WIDTH, INFO_HEIGHT);
 	MOVE_ID(DLG_PLAYERLIST, INFO_WIDTH + 2*XS, YS, LIST_WIDTH, INFO_HEIGHT);
-	int minimap_x = INFO_WIDTH + LIST_WIDTH + 3*XS;
+	minimap_x = INFO_WIDTH + LIST_WIDTH + 3*XS;
 	MOVE_ID(DLG_MINIMAP, minimap_x, YS, width - minimap_x - XS, INFO_HEIGHT);
 	MOVE_ID(DLG_CHAT, XS, CHAT_TOP, CHAT_WIDTH - MAP_X(7), h - INFO_HEIGHT - 3*YS);
 
@@ -508,6 +513,11 @@ tooltip_subclass(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 static void
 on_create(HWND window)
 {
+	HWND chat_window;
+	HWND player_list;
+	HWND info_list;
+	HWND tooltip;
+
 	assert(!s_battle_room);
 	s_battle_room = window;
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
@@ -518,10 +528,10 @@ on_create(HWND window)
 	}
 
 
-	HWND chat_window = GetDlgItem(window, DLG_CHAT);
+	chat_window = GetDlgItem(window, DLG_CHAT);
 	ChatBox_set_say_function(chat_window, (SayFunction *)TasServer_send_say_battle, NULL, NULL);
 
-	HWND info_list = GetDlgItem(window, DLG_INFOLIST);
+	info_list = GetDlgItem(window, DLG_INFOLIST);
 #define INSERT_COLUMN(__w, __n) { \
 	LVCOLUMN c; c.mask = 0; \
 	ListView_InsertColumn((__w), (__n), &c);} \
@@ -531,7 +541,7 @@ on_create(HWND window)
 	ListView_EnableGroupView(info_list, TRUE);
 	ListView_SetExtendedListViewStyle(info_list, LVS_EX_FULLROWSELECT);
 
-	HWND player_list = GetDlgItem(window, DLG_PLAYERLIST);
+	player_list = GetDlgItem(window, DLG_PLAYERLIST);
 	for (int i=0; i <= COLUMN_LAST; ++i)
 		INSERT_COLUMN(player_list, i);
 #undef INSERT_COLUMN
@@ -541,8 +551,9 @@ on_create(HWND window)
 	ListView_EnableGroupView(player_list, TRUE);
 	for (int i=0; i<=16; ++i) {
 		wchar_t buf[LENGTH("Spectators")];
-		_swprintf(buf, i<16 ? L"Team %d" : L"Spectators", i+1);
 		LVGROUP group_info;
+
+		_swprintf(buf, i<16 ? L"Team %d" : L"Spectators", i+1);
 		group_info.cbSize = sizeof group_info;
 		group_info.mask = LVGF_HEADER | LVGF_GROUPID;
 		group_info.pszHeader = buf;
@@ -550,11 +561,11 @@ on_create(HWND window)
 		ListView_InsertGroup(player_list, -1, &group_info);
 	}
 
-	HWND hwndTip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, 0,
+	tooltip = CreateWindowEx(0, TOOLTIPS_CLASS, NULL, 0,
 			0, 0, 0, 0,
 			window, NULL, NULL, NULL);
 
-	SendMessage(hwndTip, TTM_SETMAXTIPWIDTH, 0, 200);
+	SendMessage(tooltip, TTM_SETMAXTIPWIDTH, 0, 200);
 
 	TOOLINFO tool_info = {
 		sizeof tool_info, TTF_SUBCLASS | TTF_IDISHWND | TTF_TRANSPARENT,
@@ -562,13 +573,12 @@ on_create(HWND window)
 		.lpszText = LPSTR_TEXTCALLBACK,
 	};
 
-	SendMessage(hwndTip, TTM_ADDTOOL, 0, (intptr_t)&tool_info);
-	SetWindowSubclass(player_list, (SUBCLASSPROC)tooltip_subclass, 0, (uintptr_t)hwndTip);
+	SendMessage(tooltip, TTM_ADDTOOL, 0, (intptr_t)&tool_info);
+	SetWindowSubclass(player_list, (SUBCLASSPROC)tooltip_subclass, 0, (uintptr_t)tooltip);
 
 	tool_info.uId = (uintptr_t)info_list;
-	SendMessage(hwndTip, TTM_ADDTOOL, 0, (intptr_t)&tool_info);
-	SetWindowSubclass(info_list, (SUBCLASSPROC)tooltip_subclass, 0, (uintptr_t)hwndTip);
-
+	SendMessage(tooltip, TTM_ADDTOOL, 0, (intptr_t)&tool_info);
+	SetWindowSubclass(info_list, (SUBCLASSPROC)tooltip_subclass, 0, (uintptr_t)tooltip);
 }
 
 static wchar_t *
@@ -576,6 +586,7 @@ get_tooltip(const User *u)
 {
 	static wchar_t buf[128];
 	size_t buf_used = 0;
+	const char *side_name;
 
 #define APPEND(...) { \
 	int read = _snwprintf(buf + buf_used, \
@@ -608,7 +619,7 @@ get_tooltip(const User *u)
 		return buf;
 	}
 
-	const char *side_name = g_side_names[u->side];
+	side_name = g_side_names[u->side];
 
 	APPEND(L"\nPlayer %d - Team %d",
 			u->team,
@@ -822,11 +833,13 @@ BattleRoom_on_change_mod(void)
 	item.mask = LVIF_PARAM;
 
 	for (item.iItem = -1; (item.iItem = SendMessage(player_list, LVM_GETNEXTITEM, (uintptr_t)item.iItem, 0)) >= 0;) {
+		UserBot *u;
+
 		item.mask = LVIF_PARAM;
 		SendMessage(player_list, LVM_GETITEM, 0, (intptr_t)&item);
 		item.mask = LVIF_IMAGE;
 		item.iSubItem = COLUMN_SIDE;
-		UserBot *u = (void *)item.lParam;
+		u = (void *)item.lParam;
 		item.iImage = u->mode
 			&& *g_side_names[u->side] ? ICON_FIRST_SIDE + (int)u->side : -1;
 		SendMessage(player_list, LVM_SETITEM, 0, (intptr_t)&item);

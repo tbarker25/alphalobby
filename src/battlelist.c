@@ -333,11 +333,8 @@ BattleList_add_battle(Battle *b)
 	item.lParam = (intptr_t)b;
 	item.pszText = utf8to16(b->founder->name);
 
-	__attribute__((unused))
-	int index = SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_INSERTITEM,
+	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_INSERTITEM,
 			0, (intptr_t)&item);
-
-	assert(index >= 0);
 }
 
 static void

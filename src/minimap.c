@@ -49,22 +49,19 @@ enum DialogId {
 	DLG_LAST = DLG_CHANGE_MAP,
 };
 
-static void copy_start_positions (uint32_t *dst, int width, int height);
-static void copy_start_boxes     (uint32_t *pixels, int width, int height);
-static void copy_start_positions (uint32_t *dst, int width, int height);
+static void copy_heightmap       (uint32_t *dst, int width, int height);
 static void copy_metalmap        (uint32_t *dst, int width, int height);
 static void copy_minimap         (uint32_t *dst, int width, int height);
 static void copy_normalmap       (uint32_t *dst, int width, int height);
-static void copy_metalmap        (uint32_t *dst, int width, int height);
-static void copy_heightmap       (uint32_t *dst, int width, int height);
-static void copy_normalmap       (uint32_t *dst, int width, int height);
-static void _init                (void);
+static void copy_start_boxes     (uint32_t *dst, int width, int height);
+static void copy_start_positions (uint32_t *dst, int width, int height);
 static intptr_t CALLBACK minimap_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_create            (HWND window);
 static void on_draw              (HWND window);
 static void on_size              (intptr_t l_param);
 static void on_split_size_scroll (void);
 static void set_split            (SplitType type, int size);
+static void _init                (void);
 
 static HWND s_minimap;
 static enum MinimapType s_minimap_type = MINIMAP_NORMAL;
