@@ -240,7 +240,7 @@ on_destroy(void)
 	sprintf(window_placement_text, "%ld,%ld,%ld,%ld", r->left, r->top, r->right, r->bottom);
 	Settings_save_str("window_placement", window_placement_text);
 	Sync_cleanup();
-	Settings_save_aliases();
+	Users_cleanup();
 	PostQuitMessage(0);
 }
 

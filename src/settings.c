@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2013, Thomas Barker
  * All rights reserved.
@@ -19,6 +20,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <windows.h>
 #include <Shlobj.h>
@@ -26,10 +28,10 @@
 #include "battle.h"
 #include "chatbox.h"
 #include "chattab.h"
-#include "tasserver.h"
 #include "common.h"
 #include "mybattle.h"
 #include "settings.h"
+#include "tasserver.h"
 #include "user.h"
 
 #define CONFIG_PATH (Settings_get_data_dir(L"alphalobby.conf"))
@@ -139,13 +141,6 @@ Settings_init(void)
 	wcscat(g_data_dir, L"\\My Games\\Spring\\");
 	SHCreateDirectoryEx(NULL, g_data_dir, NULL);
 
-	fd = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"r");
-	if (fd) {
-		for (KeyPair s; (s = get_line(fd)).key;)
-			Users_new((uint32_t)atol(s.key), s.val);
-		fclose(fd);
-	}
-
 	for(size_t i=0; i<LENGTH(DEFAULT_SETTINGS); ++i)
 		((char **)&g_settings)[i] = DEFAULT_SETTINGS[i].is_int ? (void *)DEFAULT_SETTINGS[i].val
 		                         : DEFAULT_SETTINGS[i].val ? _strdup(DEFAULT_SETTINGS[i].val)
@@ -165,17 +160,6 @@ Settings_init(void)
 				}
 			}
 	fclose(fd);
-}
-
-void
-Settings_save_aliases(void)
-{
-	FILE *alias_file = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"w");
-	if (!alias_file)
-		return;
-	for (const User *u; (u = Users_get_next());)
-		fprintf(alias_file, "%u=%s\n", u->id, u->alias);
-	fclose(alias_file);
 }
 
 void
