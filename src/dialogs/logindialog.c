@@ -84,6 +84,9 @@ static int
 on_login(HWND window, int is_registering)
 {
 	char username[MAX_NAME_LENGTH+1];
+	char password[BASE16_MD5_LENGTH+1];
+	char confirm_password[sizeof password];
+
 	if (!GetDlgItemTextA(window, IDC_LOGIN_USERNAME, username, LENGTH(username))) {
 		MessageBox(window, L"Enter a username less than "
 				STRINGIFY(MAX_NAME_LENGTH) L" characters.",
@@ -91,9 +94,7 @@ on_login(HWND window, int is_registering)
 		return 1;
 	}
 
-	char password[BASE16_MD5_LENGTH+1];
 	to_md5_2(password, GetDlgItemTextA2(window, IDC_LOGIN_PASSWORD));
-
 
 	if (SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0)) {
 		Settings_save_str("username", username);
@@ -107,7 +108,6 @@ on_login(HWND window, int is_registering)
 
 	}
 
-	char confirm_password[sizeof password];
 retry:
 	confirm_password[0] = 0;
 	if (GetTextDialog2_create(window, "Confirm password", confirm_password,
@@ -129,9 +129,11 @@ login_proc(HWND window, uint32_t msg, uintptr_t w_param,
 		__attribute__((unused)) intptr_t l_param)
 {
 	switch (msg) {
-	case WM_INITDIALOG:
+	case WM_INITDIALOG: {
+		char *pw;
+
 		SetDlgItemText(window, IDC_LOGIN_USERNAME, utf8to16(Settings_load_str("username")));
-		char *pw = Settings_load_str("password");
+		pw = Settings_load_str("password");
 		if (pw) {
 			SetDlgItemText(window, IDC_LOGIN_PASSWORD, utf8to16(pw));
 			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 1, 0);
@@ -140,6 +142,7 @@ login_proc(HWND window, uint32_t msg, uintptr_t w_param,
 		} else
 			EnableWindow(GetDlgItem(window, IDC_LOGIN_AUTOCONNECT), 0);
 		return 1;
+	}
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):

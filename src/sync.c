@@ -29,7 +29,6 @@
 #include "battleroom.h"
 #include "tasserver.h"
 #include "common.h"
-#include "downloader.h"
 #include "iconlist.h"
 #include "mainwindow.h"
 #include "minimap.h"
@@ -80,7 +79,7 @@ static HANDLE s_event;
 
 //malloc new value, swap atomically, and free old value:
 static const char *s_map_to_save, *s_mod_to_save;
-static char s_have_tried_download;
+/* static char s_have_tried_download; */
 
 //Sync thread only:
 static char s_current_mod[MAX_TITLE];
@@ -98,9 +97,11 @@ print_last_error(const wchar_t *title)
 static uint32_t WINAPI __attribute__((noreturn))
 syncProc (__attribute__((unused)) void *unused)
 {
-	ilInit();
+	HMODULE lib_unit_sync;
+	void *s;
 
-	HMODULE lib_unit_sync = LoadLibrary(L"unitsync.dll");
+	ilInit();
+	lib_unit_sync = LoadLibrary(L"unitsync.dll");
 	if (!lib_unit_sync)
 		print_last_error(L"Could not load unitsync.dll");
 
@@ -109,7 +110,6 @@ syncProc (__attribute__((unused)) void *unused)
 		assert(*x[i].proc);
 	}
 
-	void *s;
 	s_event = CreateEvent(NULL, FALSE, 0, NULL);
 	s_task_reload=1;
 	while (1) {
@@ -117,7 +117,7 @@ syncProc (__attribute__((unused)) void *unused)
 			reload();
 			s_task_reload = 0;
 			s_task_set_status = 1;
-			s_have_tried_download = 1;
+			/* s_have_tried_download = 1; */
 		} else if ((s = (void *)__sync_fetch_and_and(&s_mod_to_save, NULL))) {
 			create_mod_file(s);
 			free(s);
@@ -153,6 +153,16 @@ reload(void)
 	char **maps;
 	int mods_len;
 	int maps_len;
+	void reset_map_and_mod(void) {
+		swap(mods, g_mods);
+		swap(maps, g_maps);
+		swap(mods_len, g_mod_len);
+		swap(maps_len, g_map_len);
+		if (g_my_battle) {
+			Sync_on_changed_mod(g_my_battle->mod_name);
+			Sync_on_changed_map(g_my_battle->map_name);
+		}
+	}
 
 	Init(0, 0);
 
@@ -166,16 +176,6 @@ reload(void)
 	for (int i=0; i<maps_len; ++i)
 		maps[i] = _strdup(GetMapName(i));
 
-	void reset_map_and_mod(void) {
-		swap(mods, g_mods);
-		swap(maps, g_maps);
-		swap(mods_len, g_mod_len);
-		swap(maps_len, g_map_len);
-		if (g_my_battle) {
-			Sync_on_changed_mod(g_my_battle->mod_name);
-			Sync_on_changed_map(g_my_battle->map_name);
-		}
-	}
 	ExecuteInMainThread(reset_map_and_mod);
 	for (int i=0; i<mods_len; ++i)
 		free(mods[i]);
@@ -188,9 +188,13 @@ reload(void)
 static void
 init_options(int option_len, gzFile fd)
 {
+	Option *options;
+	char *s;
+	size_t options_size;
+
 	assert(option_len < 256);
-	Option *options = calloc(10000, 1);
-	char *s = (void *)&options[option_len];
+	options = calloc(10000, 1);
+	s = (void *)&options[option_len];
 
 	for (int i=0; i<option_len; ++i) {
 		options[i].type = GetOptionType(i);
@@ -242,7 +246,7 @@ init_options(int option_len, gzFile fd)
 			}
 		}
 	}
-	size_t options_size = (size_t)(s - (uintptr_t)options);
+	options_size = (size_t)(s - (uintptr_t)options);
 	assert(options_size < 10000);
 
 	gzwrite(fd, &options_size, 4);
@@ -257,6 +261,7 @@ load_options(gzFile fd)
 {
 	int32_t options_size;
 	int32_t option_len;
+	Option *options;
 
 	gzread(fd, &options_size, sizeof options_size);
 	gzread(fd, &option_len, sizeof option_len);
@@ -266,7 +271,7 @@ load_options(gzFile fd)
 	assert(options_size < 10000 && options_size > 0);
 	assert(option_len < 100 && option_len > 0);
 
-	Option *options = calloc(1, (size_t)options_size);
+	options = calloc(1, (size_t)options_size);
 	gzread(fd, options, (size_t)options_size);
 
 	for (int i=0; i<option_len; ++i) {
@@ -319,19 +324,20 @@ create_map_file(const char *map_name)
 	char file_path[MAX_PATH];
 	char tmp_file_path[MAX_PATH];
 	struct MapInfo_ map_info;
+	gzFile gz_file;
 
 	map_hash = GetMapChecksumFromName(map_name);
 
 	if (!map_hash) {
-		if (!s_have_tried_download)
-			DownloadMap(map_name);
+		/* if (!s_have_tried_download) */
+			/* DownloadMap(map_name); */
 		return;
 	}
 
 	GetTempPathA(MAX_PATH, tmp_file_path);
 	GetTempFileNameA(tmp_file_path, NULL, 0, tmp_file_path);
 
-	gzFile gz_file = gzopen(tmp_file_path, "wb");
+	gz_file = gzopen(tmp_file_path, "wb");
 	gzputc(gz_file, SYNCFILE_VERSION);
 	gzwrite(gz_file, &map_hash, sizeof map_hash);
 	map_info.description = map_info._description;
@@ -360,75 +366,91 @@ create_map_file(const char *map_name)
 static void
 create_mod_file(const char *mod_name)
 {
+	int mod_index;
+	char tmp_file_path[MAX_PATH];
+	uint32_t mod_hash;
+	uint8_t side_len;
+	char file_path[MAX_PATH];
+	gzFile fd;
+
 	RemoveAllArchives();
 	GetPrimaryModCount(); //todo investigate if we only need it on reinit
-	int mod_index = GetPrimaryModIndex(mod_name);
+	mod_index = GetPrimaryModIndex(mod_name);
 	if (mod_index < 0) {
-		if (!s_have_tried_download)
-			DownloadMod(mod_name);
+		/* if (!s_have_tried_download) */
+			/* DownloadMod(mod_name); */
 		return;
 	}
 
 	GetPrimaryModArchiveCount(mod_index);
 	AddAllArchives(GetPrimaryModArchive(mod_index));
 
-	char tmp_file_path[MAX_PATH];
 	GetTempPathA(MAX_PATH, tmp_file_path);
 	GetTempFileNameA(tmp_file_path, NULL, 0, tmp_file_path);
 
-	gzFile fd = gzopen(tmp_file_path, "wb");
+	fd = gzopen(tmp_file_path, "wb");
 	gzputc(fd, SYNCFILE_VERSION);
 
-	uint32_t mod_hash = GetPrimaryModChecksum(mod_index);
+	mod_hash = GetPrimaryModChecksum(mod_index);
 	gzwrite(fd, &mod_hash, sizeof mod_hash);
 
 	init_options(GetModOptionCount(), fd);
 
-	uint8_t side_len = (uint8_t)GetSideCount();
+	side_len = (uint8_t)GetSideCount();
 	gzputc(fd, side_len);
-	char side_names[side_len][32];
-	memset(side_names, '\0', (size_t)(side_len*32));
-	for (uint8_t i=0; i<side_len; ++i) {
-		assert(strlen(GetSideName(i)) < 32);
-		strcpy(side_names[i], GetSideName(i));
-	}
-	gzwrite(fd, side_names, sizeof side_names);
+	{
+		char side_names[side_len][32];
+		uint32_t side_pics[side_len][16*16];
 
-	uint32_t side_pics[side_len][16*16];
-	for (uint8_t i=0; i<side_len; ++i) {
-		bool is_bmp = false;
-		char vfs_path[128];
-		int n = sprintf(vfs_path, "SidePics/%s.png", side_names[i]);
-		int sidepic_fd = OpenFileVFS(vfs_path);
-		if (!sidepic_fd) {
-			vfs_path[n - 3] = 'b';
-			vfs_path[n - 2] = 'm';
-			vfs_path[n - 1] = 'p';
-			is_bmp = true;
+		memset(side_names, '\0', (size_t)(side_len*32));
+		for (uint8_t i=0; i<side_len; ++i) {
+			assert(strlen(GetSideName(i)) < 32);
+			strcpy(side_names[i], GetSideName(i));
+		}
+		gzwrite(fd, side_names, sizeof side_names);
+
+		for (uint8_t i=0; i<side_len; ++i) {
+			bool is_bmp;
+			char vfs_path[128];
+			int n;
+			int sidepic_fd;
+
+			is_bmp = false;
+			n = sprintf(vfs_path, "SidePics/%s.png", side_names[i]);
 			sidepic_fd = OpenFileVFS(vfs_path);
+
+			if (!sidepic_fd) {
+				vfs_path[n - 3] = 'b';
+				vfs_path[n - 2] = 'm';
+				vfs_path[n - 1] = 'p';
+				is_bmp = true;
+				sidepic_fd = OpenFileVFS(vfs_path);
+			}
+
+			if (!sidepic_fd)
+				continue;
+
+			{
+				uint8_t buf[FileSizeVFS(sidepic_fd)];
+
+				ReadFileVFS(sidepic_fd, buf, (int)sizeof buf);
+				CloseFileVFS(sidepic_fd);
+				ilLoadL(IL_TYPE_UNKNOWN, buf, sizeof buf);
+				ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, side_pics[i]);
+			}
+
+			//Set white as transpareny for BMP:
+			if (is_bmp) {
+				for (int j=0; j<16 * 16; ++j)
+					if (side_pics[i][j] == 0xFFFFFFFF)
+						side_pics[i][j] &= 0x00FFFFFF;
+			}
 		}
-
-		if (!sidepic_fd)
-			continue;
-
-		uint8_t buf[FileSizeVFS(sidepic_fd)];
-		ReadFileVFS(sidepic_fd, buf, (int)sizeof buf);
-		CloseFileVFS(sidepic_fd);
-		ilLoadL(IL_TYPE_UNKNOWN, buf, sizeof buf);
-		ilCopyPixels(0, 0, 0, 16, 16, 1, IL_BGRA, IL_UNSIGNED_BYTE, side_pics[i]);
-
-		//Set white as transpareny for BMP:
-		if (is_bmp) {
-			for (int j=0; j<16 * 16; ++j)
-				if (side_pics[i][j] == 0xFFFFFFFF)
-					side_pics[i][j] &= 0x00FFFFFF;
-		}
+		gzwrite(fd, side_pics, sizeof side_pics);
 	}
-	gzwrite(fd, side_pics, sizeof side_pics);
 
 	gzclose(fd);
 
-	char file_path[MAX_PATH];
 	sprintf(file_path, "%lscache\\alphalobby\\%s.ModData", g_data_dir, mod_name);
 	SHCreateDirectoryExW(NULL, Settings_get_data_dir(L"cache\\alphalobby"), NULL);
 	MoveFileExA(tmp_file_path, file_path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
@@ -462,7 +484,7 @@ Sync_on_changed_mod(const char *mod_name)
 		fd = 0;
 	}
 	if (!fd) {
-		s_have_tried_download = 0;
+		/* s_have_tried_download = 0; */
 		g_side_len = 0;
 		g_mod_hash = 0;
 		s_current_mod[0] = 0;
@@ -499,6 +521,15 @@ Sync_on_changed_mod(const char *mod_name)
 void
 Sync_on_changed_map(const char *map_name)
 {
+	char file_path[MAX_PATH];
+	gzFile fd;
+	OptionList option_list;
+	static uint16_t *pixels;
+	static uint8_t *height_map_pixels;
+	uint16_t h[2];
+	static uint8_t *metal_map_pixels;
+	uint16_t d[2];
+
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(g_main_window, NULL));
 
 	if (!_stricmp(s_current_map, map_name))
@@ -510,10 +541,9 @@ Sync_on_changed_map(const char *map_name)
 	g_map_options = NULL;
 	g_map_option_len = 0;
 
-	char file_path[MAX_PATH];
 	sprintf(file_path, "%lscache\\alphalobby\\%s.MapData", g_data_dir, map_name);
 
-	gzFile fd = NULL;
+	fd = NULL;
 
 	for (int i=0; i<g_map_len; ++i) {
 		if (!strcmp(map_name, g_maps[i])) {
@@ -529,7 +559,7 @@ Sync_on_changed_map(const char *map_name)
 	}
 
 	if (!fd) {
-		s_have_tried_download = 0;
+		/* s_have_tried_download = 0; */
 		g_map_hash = 0;
 		s_current_map[0] = 0;
 		Minimap_set_bitmap(NULL, 0, 0, NULL, 0, 0, NULL);
@@ -546,29 +576,24 @@ Sync_on_changed_map(const char *map_name)
 	g_map_info.description = g_map_info.description;
 	g_map_info.author = g_map_info.author;
 
-	OptionList option_list = load_options(fd);
+	option_list = load_options(fd);
 	g_map_options = option_list.xs;
 	g_map_option_len = option_list.len;
 
 	//Texture pixels:
-	static uint16_t *pixels;
 	if (!pixels)
 		pixels = malloc(MAP_SIZE * sizeof *pixels);
 
 	gzread(fd, pixels,MAP_SIZE * sizeof pixels[0]);
 
 	//Heightmap pixels:
-	static uint8_t *height_map_pixels;
 	free(height_map_pixels);
-	uint16_t h[2];
 	gzread(fd, h, 4);
 	height_map_pixels = malloc((size_t)(h[0] * h[1]));
 	gzread(fd, height_map_pixels, (size_t)(h[0] *  h[1]));
 
 	//Metalmap pixels:
-	static uint8_t *metal_map_pixels;
 	free(metal_map_pixels);
-	uint16_t d[2];
 	gzread(fd, d, 4);
 	metal_map_pixels = malloc((size_t)(d[0] * d[1]));
 	gzread(fd, metal_map_pixels, (size_t)(d[0] *  d[1]));
@@ -650,13 +675,20 @@ next_ai:;
 void CALLBACK
 Sync_add_replays_to_listview(HWND list_view_window)
 {
-	int handle = InitFindVFS("demos/*.sdf");
+	int handle;
+
+	handle = InitFindVFS("demos/*.sdf");
 	if (handle < 0) //Init_file_vFS has a different error return than FindFilesVFS
 		return;
 	do {
 		char buf[1024];
+		LVITEMA info;
+
+		info.mask = LVIF_TEXT;
+		info.iItem = 0;
+		info.pszText = buf + sizeof "demos/" - 1;
 		handle = FindFilesVFS(handle, buf, sizeof buf);
-		SendMessageA(list_view_window, LVM_INSERTITEMA, 0, (intptr_t)&(LVITEMA){LVIF_TEXT, 0, .pszText = buf + sizeof "demos/" - 1});
+		SendMessageA(list_view_window, LVM_INSERTITEMA, 0, (intptr_t)&info);
 	} while (handle);
 }
 

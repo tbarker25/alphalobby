@@ -57,12 +57,14 @@ Users_get_next(void)
 User *
 Users_new(uint32_t id, const char *name)
 {
+	size_t i;
+
 	if (!strcmp(g_my_user.name, name)) {
 		g_my_user.id = id;
 		return &g_my_user;
 	}
-	size_t i=0;
-	for (; i<s_users_len; ++i)
+
+	for (i=0; i<s_users_len; ++i)
 		if (s_users[i]->id == id)
 			break;
 
@@ -87,17 +89,21 @@ void
 Users_add_bot(const char *name, User *owner, BattleStatus battle_status,
 		uint32_t color, const char *dll)
 {
-	Bot *bot = calloc(1, sizeof *bot);
-	strcpy(bot->name, name);
-	bot->owner = owner;
-	bot->BattleStatus = battle_status;
-	bot->ai = 1;
-	bot->mode = 1;
-	bot->color = color;
-	bot->dll = _strdup(dll);
+	Bot *bot;
+	Battle *b;
+	int i;
 
-	Battle *b = g_my_battle;
-	int i=b->user_len - b->bot_len;
+	bot               = calloc(1, sizeof *bot);
+	strcpy(bot->name, name);
+	bot->owner        = owner;
+	bot->BattleStatus = battle_status;
+	bot->ai           = 1;
+	bot->mode         = 1;
+	bot->color        = color;
+	bot->dll          = _strdup(dll);
+
+	b = g_my_battle;
+	i = b->user_len - b->bot_len;
 	while (i<b->user_len
 			&& _stricmp(b->users[i]->name, bot->name) < 0)
 		++i;

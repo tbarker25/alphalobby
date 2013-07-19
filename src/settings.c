@@ -110,9 +110,10 @@ Settings_save_int(const char *key, int val)
 void
 Settings_open_default_channels(void)
 {
+	char buf[strlen(g_settings.autojoin) + 1];
+
 	if (!g_settings.autojoin)
 		return;
-	char buf[strlen(g_settings.autojoin) + 1];
 	strcpy(buf, g_settings.autojoin);
 	/* char *s, *s2 = buf; */
 
@@ -133,11 +134,13 @@ Settings_reset(void)
 void
 Settings_init(void)
 {
+	FILE *fd;
+
 	SHGetFolderPath(NULL, CSIDL_FLAG_CREATE | CSIDL_PERSONAL, NULL, 0, g_data_dir);
 	wcscat(g_data_dir, L"\\My Games\\Spring\\");
 	SHCreateDirectoryEx(NULL, g_data_dir, NULL);
 
-	FILE *fd = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"r");
+	fd = _wfopen(Settings_get_data_dir(L"aliases.conf"), L"r");
 	if (fd) {
 		for (KeyPair s; (s = get_line(fd)).key;)
 			Users_new((uint32_t)atol(s.key), s.val);
@@ -179,19 +182,23 @@ Settings_save_aliases(void)
 void
 Settings_save_str(const char *key, const char *val)
 {
-	printf("saving %s=%s\n", key, val);
 	wchar_t tmp_config_name[MAX_PATH];
+	FILE *tmp_config;
+	const wchar_t *config_path;
+	FILE *old_config;
+
+	printf("saving %s=%s\n", key, val);
 	GetTempPath(MAX_PATH, tmp_config_name);
 	GetTempFileName(tmp_config_name, NULL, 0, tmp_config_name);
 
-	FILE *tmp_config = _wfopen(tmp_config_name, L"w");
+	tmp_config = _wfopen(tmp_config_name, L"w");
 	assert(tmp_config);
 	if (!tmp_config)
 		return;
 
-	const wchar_t *config_path = Settings_get_data_dir(L"alphalobby.conf");
+	config_path = Settings_get_data_dir(L"alphalobby.conf");
 
-	FILE *old_config = _wfopen(config_path, L"r");
+	old_config = _wfopen(config_path, L"r");
 	if (old_config) {
 		for (KeyPair s; (s = get_line(old_config)).key;) {
 			if (key && !strcmp(key, s.key))

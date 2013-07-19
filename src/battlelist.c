@@ -31,7 +31,6 @@
 #include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
-#include "downloader.h"
 #include "iconlist.h"
 #include "mybattle.h"
 #include "sync.h"
@@ -57,7 +56,7 @@ static intptr_t         get_index_from_battle(const Battle *b);
 static Battle *         get_battle_from_index(int index);
 static void             on_create       (HWND window);
 static void             on_get_info_tip (NMLVGETINFOTIP *info);
-static void             on_item_right_click(POINT pt);
+static void             on_item_right_click(POINT point);
 static void             resize_columns  (void);
 static void             set_item_text   (int index, int column, const char *text);
 static void             sort_listview   (int new_order);
@@ -150,7 +149,7 @@ get_battle_from_index(int index)
 }
 
 static void
-on_item_right_click(POINT pt)
+on_item_right_click(POINT point)
 {
 	enum MenuId {
 		FAIL, JOIN, DL_MAP, DL_MOD,
@@ -161,10 +160,12 @@ on_item_right_click(POINT pt)
 	HMENU menu;
 	HMENU user_menu;
 	int item_clicked;
+	LVHITTESTINFO hit_test;
+
+	hit_test.pt = point;
 
 	index = SendDlgItemMessage(s_battle_list, DLG_LIST,
-			LVM_SUBITEMHITTEST, 0,
-			(intptr_t)&(LVHITTESTINFO){.pt = pt});
+			LVM_SUBITEMHITTEST, 0, (intptr_t)&hit_test);
 
 	if (index < 0)
 		return;
@@ -190,9 +191,9 @@ on_item_right_click(POINT pt)
 
 	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 
-	ClientToScreen(s_battle_list, &pt);
+	ClientToScreen(s_battle_list, &point);
 
-	item_clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y,
+	item_clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y,
 			s_battle_list, NULL);
 
 	DestroyMenu(user_menu);
@@ -207,11 +208,11 @@ on_item_right_click(POINT pt)
 		return;
 
 	case DL_MAP:
-		DownloadMap(b->map_name);
+		/* DownloadMap(b->map_name); */
 		return;
 
 	case DL_MOD:
-		DownloadMod(b->mod_name);
+		/* DownloadMod(b->mod_name); */
 		return;
 
 	default:

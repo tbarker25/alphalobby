@@ -37,7 +37,6 @@
 #include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
-#include "downloader.h"
 #include "iconlist.h"
 #include "layoutmetrics.h"
 #include "mainwindow.h"
@@ -378,7 +377,7 @@ on_escape_command(char *command, WindowData *data, HWND window)
 	}
 
 	if (!strcmp(code, "dlmap")) {
-		DownloadMap(command);
+		/* DownloadMap(command); */
 		return;
 	}
 

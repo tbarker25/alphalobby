@@ -48,18 +48,22 @@ get_text_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
+		HWND text_box;
 		const char **s = (void *)l_param;
+
 		SetWindowTextA(window, s[0]);
-		HWND textbox = GetDlgItem(window, IDC_GETTEXT);
-		SetWindowTextA(textbox, s[1]);
-		SetWindowLongPtr(textbox, GWLP_USERDATA, (intptr_t)s[2]);
+		text_box = GetDlgItem(window, IDC_GETTEXT);
+		SetWindowTextA(text_box, s[1]);
+		SetWindowLongPtr(text_box, GWLP_USERDATA, (intptr_t)s[2]);
 		SetWindowLongPtr(window, GWLP_USERDATA, (intptr_t)s[1]);
 		return 0;
 	}
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED): {
-			char *buf = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
+			char *buf;
+
+			buf = (void *)GetWindowLongPtr(window, GWLP_USERDATA);
 			GetDlgItemTextA(window, IDC_GETTEXT, buf, GetWindowLongPtr(GetDlgItem(window, IDC_GETTEXT), GWLP_USERDATA));
 			EndDialog(window, 0);
 			return 1;
