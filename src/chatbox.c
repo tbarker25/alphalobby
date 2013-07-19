@@ -511,6 +511,7 @@ input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 	case '\r': {
 		int  len;
 		char *text_a;
+
 		if ((ptrdiff_t)LENGTH(data->buf) - (data->buf_end - data->buf)
 		    < MAX_TEXT_MESSAGE_LENGTH) {
 			size_t len2;
@@ -573,7 +574,6 @@ on_create(HWND window)
 	HWND log_window;
 
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
-
 	log_window = GetDlgItem(window, DLG_LOG);
 	SendMessage(log_window, EM_EXLIMITTEXT, 0, INT_MAX);
 	SendMessage(log_window, EM_AUTOURLDETECT, TRUE, 0);
