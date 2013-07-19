@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -172,7 +171,7 @@ MyBattle_left_battle(void)
 	g_my_user.BattleStatus = (BattleStatus){0};
 	g_last_battle_status = (BattleStatus){0};
 	g_battle_info_finished = 0;
-	g_is_using_trueskill = false;
+	g_is_using_trueskill = 0;
 
 	g_my_battle = NULL;
 	if (g_battle_to_join)
@@ -342,7 +341,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 				return;
 			}
 			u->trueskill = (uint8_t)atoi(val);
-			g_is_using_trueskill = true;
+			g_is_using_trueskill = 1;
 			return;
 		}
 		return;

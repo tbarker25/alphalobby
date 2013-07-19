@@ -18,7 +18,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -72,7 +71,7 @@ Settings_load_str2(char *restrict buf, const char *restrict key)
 {
 	FILE *fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
-		return true;
+		return 1;
 
 	for (KeyPair s; (s = get_line(fd)).key;) {
 		if (strcmp(key, s.key))
@@ -80,10 +79,10 @@ Settings_load_str2(char *restrict buf, const char *restrict key)
 
 		strcpy(buf, s.val);
 		fclose(fd);
-		return false;
+		return 0;
 	}
 	fclose(fd);
-	return true;
+	return 1;
 }
 
 char *

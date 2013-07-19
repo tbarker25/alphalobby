@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -50,12 +49,12 @@ spring_proc(void * path)
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
-		s_ingame = true;
+		s_ingame = 1;
 		TasServer_send_my_client_status(g_last_client_status);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
-		s_ingame = false;
+		s_ingame = 0;
 		TasServer_send_my_client_status(g_last_client_status);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");

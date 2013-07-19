@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <sys\stat.h>
 

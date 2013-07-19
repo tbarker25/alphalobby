@@ -1,5 +1,5 @@
 LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lShlwapi -lz -ldevil -lshell32 -Llib
-CFLAGS:= -ffast-math -fshort-enums -std=gnu11 -march=i686 -fplan9-extensions -mno-ms-bitfields
+CFLAGS:= -ffast-math -fshort-enums -std=gnu11 -march=i686 -fplan9-extensions -mno-ms-bitfields -Dbool=_Bool
 CC:=gcc
 
 WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra -Wconversion -Wwrite-strings -Wformat=2 -Wstrict-aliasing -Wpointer-arith -Wshadow -Wformat=2 -Wredundant-decls -Wnested-externs -Winline -Wdeclaration-after-statement
