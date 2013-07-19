@@ -68,7 +68,7 @@ typedef struct User {
 	uint32_t cpu, id;
 	char *script_password;
 	uint8_t trueskill;
-	char alias[MAX_NAME_LENGTH_NUL];
+	char *alias;
 	bool ignore;
 	uint8_t country;
 	ClientStatus;
@@ -84,13 +84,14 @@ typedef struct Bot {
 	struct Bot *next;
 } Bot;
 
-void   Users_add_bot(const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *dll);
-void   Users_del(User *);
-void   Users_del_bot(const char *name);
-User * Users_find(const char username[]) __attribute__((pure));
-User * Users_get_next(void);
-User * Users_new(uint32_t id, const char *name);
-void   Users_reset(void);
+void   Users_add_bot  (const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *dll);
+void   Users_cleanup  (void);
+void   Users_del      (User *);
+void   Users_del_bot  (const char *name);
+User * Users_find     (const char username[]) __attribute__((pure));
+User * Users_get_next (void);
+User * Users_new      (uint32_t id, const char *name);
+void   Users_reset    (void);
 
 extern User g_my_user;
 

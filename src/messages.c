@@ -180,7 +180,7 @@ static void
 accepted(void)
 {
 	copy_next_word(g_my_user.name);
-	strcpy(g_my_user.alias, UNTAGGED_NAME(g_my_user.name));
+	g_my_user.alias = g_my_user.name;
 }
 
 
