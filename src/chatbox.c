@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -367,7 +366,7 @@ on_escape_command(char *command, WindowData *data, HWND window)
 	code = strsep(&command, " ");
 
 	if (!strcmp(code, "me")) {
-		data->on_say(command, true, data->dst);
+		data->on_say(command, 1, data->dst);
 		return;
 	}
 
@@ -393,7 +392,7 @@ on_escape_command(char *command, WindowData *data, HWND window)
 
 		username = strsep(&command, " ");
 		if ((user = Users_find(username))) {
-			TasServer_send_say_private(command, false, user->name);
+			TasServer_send_say_private(command, 0, user->name);
 			return;
 		}
 		sprintf(buf, "Could not send message: %s is not logged in.", username);
@@ -532,7 +531,7 @@ input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 		if (text_a[0] == '/') {
 			on_escape_command(text_a + 1, data, window);
 		} else {
-			data->on_say(text_a, false, data->dst);
+			data->on_say(text_a, 0, data->dst);
 		}
 
 		data->last_scroll_time = 0;

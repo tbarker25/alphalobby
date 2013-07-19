@@ -18,7 +18,6 @@
 
 #include <inttypes.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>

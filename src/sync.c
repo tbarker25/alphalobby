@@ -20,7 +20,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <zlib.h>
 
 #include <Shlobj.h>
@@ -415,7 +414,7 @@ create_mod_file(const char *mod_name)
 			int n;
 			int sidepic_fd;
 
-			is_bmp = false;
+			is_bmp = 0;
 			n = sprintf(vfs_path, "SidePics/%s.png", side_names[i]);
 			sidepic_fd = OpenFileVFS(vfs_path);
 
@@ -423,7 +422,7 @@ create_mod_file(const char *mod_name)
 				vfs_path[n - 3] = 'b';
 				vfs_path[n - 2] = 'm';
 				vfs_path[n - 1] = 'p';
-				is_bmp = true;
+				is_bmp = 1;
 				sidepic_fd = OpenFileVFS(vfs_path);
 			}
 

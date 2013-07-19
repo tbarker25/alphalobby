@@ -1,6 +1,5 @@
 #include <inttypes.h>
 #include <stdio.h>
-#include <stdbool.h>
 
 #include <windows.h>
 

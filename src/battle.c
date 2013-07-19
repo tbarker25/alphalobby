@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <malloc.h>
-#include <stdbool.h>
 #include <unistd.h>
 
 #include <windows.h>

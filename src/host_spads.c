@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -119,6 +118,6 @@ relay_command(const char *format, ...)
 	vsprintf(buf, format, args);
 	va_end(args);
 
-	TasServer_send_say_private(buf, false, g_my_battle->founder->name);
+	TasServer_send_say_private(buf, 0, g_my_battle->founder->name);
 	g_last_auto_message = GetTickCount();
 }

@@ -18,7 +18,6 @@
 
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -554,13 +553,13 @@ autologin(void)
 	char username[MAX_NAME_LENGTH_NUL], password[1024];
 
 	if (Settings_load_str2(username, "username"))
-		return false;
+		return 0;
 
 	if (Settings_load_str2(password, "password"))
-		return false;
+		return 0;
 
 	TasServer_send_login(username, password);
-	return true;
+	return 1;
 }
 
 static void __attribute__((constructor))

@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -52,14 +51,14 @@ RelayHost_on_private_message(const char *username, char *command)
 	// Get list of relayhost managers
 	if (!strcmp(username, "RelayHostManagerList")) {
 		handle_manager_list(command);
-		return true;
+		return 1;
 	}
 
 	// If we are starting a relayhost game, then manager sends the name of the host to join:
 	if (!strcmp(username, s_relay_manager)){
 		strcpy(s_relay_hoster, command);
 		*s_relay_manager = '\0';
-		return true;
+		return 1;
 
 	}
 
@@ -73,10 +72,10 @@ RelayHost_on_private_message(const char *username, char *command)
 			/* free(u->script_password); */
 			/* u->script_password = _strdup(get_next_word()); */
 		/* } */
-		return true;
+		return 1;
 	}
 
-	return false;
+	return 0;
 }
 
 static void
@@ -105,7 +104,7 @@ RelayHost_open_battle(const char *title, const char *password, const char *mod_n
 	sprintf(s_relay_cmd, "!OPENBATTLE 0 0 %s 0 16 %d 0 %d %s\t%s\t%s", *password ? password : "*", Sync_mod_hash(mod_name), Sync_map_hash(map_name), map_name, title, mod_name);
 	strcpy(s_relay_password, password ?: "*");
 	strcpy(s_relay_manager, manager);
-	TasServer_send_say_private("!spawn", false, s_relay_manager);
+	TasServer_send_say_private("!spawn", 0, s_relay_manager);
 }
 
 void
@@ -242,5 +241,5 @@ relay_command(const char *format, ...)
 	vsprintf(buf, format, args);
 	va_end(args);
 
-	TasServer_send_say_private(buf, false, s_relay_hoster);
+	TasServer_send_say_private(buf, 0, s_relay_hoster);
 }

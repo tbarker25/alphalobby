@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 
 #include <windows.h>
@@ -689,6 +688,9 @@ said_battle_ex(void)
 	if (g_my_battle && u == g_my_battle->founder
 	    && GetTickCount() - s_time_battle_joined < 10000) {
 		int chance_of_autohost = 0;
+		bool said_spads;
+		bool said_springie;
+
 		chance_of_autohost += GetTickCount() - s_time_battle_joined < 2000;
 		chance_of_autohost += text[0] == '*' && text[1] == ' ';
 		chance_of_autohost += StrStrIA(text, "hi ") != NULL;
@@ -697,8 +699,8 @@ said_battle_ex(void)
 		chance_of_autohost += strstr(text, u->name) != NULL;
 		chance_of_autohost += strstr(text, "!help") != NULL;
 
-		bool said_spads = strstr(text, "SPADS") != NULL;
-		bool said_springie = strstr(text, "Springie") != NULL;
+		said_spads = strstr(text, "SPADS") != NULL;
+		said_springie = strstr(text, "Springie") != NULL;
 		chance_of_autohost += said_spads;
 		chance_of_autohost += said_springie;
 
@@ -711,8 +713,8 @@ said_battle_ex(void)
 
 			} else {
 				g_last_auto_message = GetTickCount();
-				TasServer_send_say_private("!version", false, u->name);
-				TasServer_send_say_private("!springie", false, u->name);
+				TasServer_send_say_private("!version", 0, u->name);
+				TasServer_send_say_private("!springie", 0, u->name);
 			}
 		}
 	}
