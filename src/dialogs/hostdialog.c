@@ -45,10 +45,10 @@ HostDialog_create(void)
 static void
 on_host_init(HWND window)
 {
-	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(Settings_load_str("last_host_description")));
 	const char *def;
 	int defIndex;
 
+	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(Settings_load_str("last_host_description")));
 	def = Settings_load_str("last_host_mod"); defIndex=0;
 	for (int i=0; i<g_mod_len; ++i) {
 		if (def && !strcmp(def, g_mods[i]))

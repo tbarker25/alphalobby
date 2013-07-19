@@ -34,8 +34,6 @@
 #include "chattab.h"
 #include "tasserver.h"
 #include "common.h"
-#include "downloader.h"
-#include "downloadtab.h"
 #include "iconlist.h"
 #include "layoutmetrics.h"
 #include "mainwindow.h"
@@ -66,8 +64,8 @@ enum {
 	DLG_BATTLELIST,
 	DLG_BATTLEROOM,
 	DLG_CHAT,
-	DLG_DOWNLOADTAB,
-	DLG_LAST = DLG_DOWNLOADTAB,
+	/* DLG_DOWNLOADTAB, */
+	DLG_LAST = DLG_CHAT,
 };
 
 enum DialogId {
@@ -117,8 +115,8 @@ static const DialogItem DIALOG_ITEMS[] = {
 	}, [DLG_CHAT] = {
 		.name = L"Chat Window",
 		.class = WC_CHATTAB,
-	}, [DLG_DOWNLOADTAB] = {
-		.class = WC_DOWNLOADTAB,
+	/* }, [DLG_DOWNLOADTAB] = { */
+		/* .class = WC_DOWNLOADTAB, */
 	}
 };
 
@@ -152,16 +150,17 @@ set_current_tab_checked(char enable)
 {
 	int dialog_id;
 	int tab_index;
+	uintptr_t state;
 
 	dialog_id = GetDlgCtrlID(s_current_tab);
 
 	tab_index = dialog_id == DLG_BATTLELIST  ? ID_BATTLELIST
 	          : dialog_id == DLG_BATTLEROOM  ? ID_BATTLEROOM
 		  : dialog_id == DLG_CHAT        ? ID_CHAT
-		  : dialog_id == DLG_DOWNLOADTAB ? ID_DOWNLOADS
+		  /* : dialog_id == DLG_DOWNLOADTAB ? ID_DOWNLOADS */
 		  : -1;
 
-	uintptr_t state = (uintptr_t)SendDlgItemMessage(g_main_window, DLG_TOOLBAR,
+	state = (uintptr_t)SendDlgItemMessage(g_main_window, DLG_TOOLBAR,
 	    TB_GETSTATE, (uintptr_t)tab_index, 0);
 
 	if (enable) {
@@ -178,6 +177,8 @@ set_current_tab_checked(char enable)
 void
 MainWindow_set_active_tab(HWND new_tab)
 {
+	RECT rect;
+
 	if (new_tab == s_current_tab)
 		return;
 
@@ -185,7 +186,6 @@ MainWindow_set_active_tab(HWND new_tab)
 	s_current_tab = new_tab;
 	set_current_tab_checked(1);
 
-	RECT rect;
 	GetClientRect(g_main_window, &rect);
 	resize_current_tab((int16_t)rect.right, (int16_t)rect.bottom);
 }
@@ -289,7 +289,7 @@ on_command(enum DialogId dialog_id)
 		return 0;
 
 	case ID_DOWNLOADS:
-		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_DOWNLOADTAB));
+		/* MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_DOWNLOADTAB)); */
 		return 0;
 
 		/* case ID_SINGLEPLAYER: */
@@ -502,12 +502,13 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 	int32_t top;
 	int32_t width;
 	int32_t height;
+	const char *window_placement;
 
 	Settings_init();
 
 	LoadLibrary(L"Riched20.dll");
 
-	const char *window_placement = Settings_load_str("window_placement");
+	window_placement = Settings_load_str("window_placement");
 	if (!window_placement
 	    || sscanf(window_placement, "%d,%d,%d,%d", &left, &top, &width, &height) != 4) {
 		left = CW_USEDEFAULT;
@@ -521,20 +522,22 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 			left, top, width, height,
 			NULL, (HMENU)0, NULL, NULL);
 
-	Downloader_init();
+	/* Downloader_init(); */
 
 	if (g_settings.flags & SETTING_AUTOCONNECT)
 		autologin();
 
 #ifndef NDEBUG
-	char *s;
-	if ((s = Settings_load_str("last_map")))
-		Sync_on_changed_map(_strdup(s));
-	if ((s = Settings_load_str("last_mod")))
-		Sync_on_changed_mod(_strdup(s));
-	g_battle_options.start_pos_type = STARTPOS_CHOOSE_INGAME;
-	g_battle_options.start_rects[0] = (StartRect){0, 0, 50, 200};
-	g_battle_options.start_rects[1] = (StartRect){150, 0, 200, 200};
+	{
+		char *s;
+		if ((s = Settings_load_str("last_map")))
+			Sync_on_changed_map(_strdup(s));
+		if ((s = Settings_load_str("last_mod")))
+			Sync_on_changed_mod(_strdup(s));
+		g_battle_options.start_pos_type = STARTPOS_CHOOSE_INGAME;
+		g_battle_options.start_rects[0] = (StartRect){0, 0, 50, 200};
+		g_battle_options.start_rects[1] = (StartRect){150, 0, 200, 200};
+	}
 #endif
 
 	for (MSG msg; GetMessage(&msg, NULL, 0, 0) > 0; ) {

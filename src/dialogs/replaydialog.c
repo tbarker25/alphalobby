@@ -45,43 +45,60 @@ ReplayDialog_create(void)
 static void
 activate_replay_list_item(HWND list_view_window, int index)
 {
-	printf("index = %d\n", index);
 	wchar_t buf[1024];
-	LVITEM item = {.pszText = buf, LENGTH(buf)};
+	LVITEM item;
+
+	item.iSubItem = 0;
+	item.pszText = buf;
+	item.cchTextMax = LENGTH(buf);
 	SendMessage(list_view_window, LVM_GETITEMTEXT, (uintptr_t)index, (intptr_t)&item);
-	wprintf(L"buf = %s\n", buf);
 	Spring_launch_replay(buf);
 }
 
 static BOOL CALLBACK
 replay_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 {
-	HWND list_window;
 	switch (msg) {
-	case WM_INITDIALOG:
+	case WM_INITDIALOG: {
+		HWND list_window;
+		LVCOLUMN info;
+
 		list_window = GetDlgItem(window, IDC_REPLAY_LIST);
-		SendMessage(list_window, LVM_INSERTCOLUMN, 0,
-				(intptr_t)&(LVCOLUMN){LVCF_TEXT, .pszText = (wchar_t *)L"filename"});
+		info.mask = LVCF_TEXT;
+		info.pszText = (wchar_t *)L"filename";
+		SendMessage(list_window, LVM_INSERTCOLUMN, 0, (intptr_t)&info);
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
 		Sync_add_replays_to_listview(list_window);
 		SendDlgItemMessage(window, IDC_REPLAY_LIST, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE_USEHEADER);
 		return 0;
+	}
 	case WM_COMMAND:
 		switch (w_param) {
-		case MAKEWPARAM(IDOK, BN_CLICKED):
+		case MAKEWPARAM(IDOK, BN_CLICKED): {
+			HWND list_window;
+			int selected_index;
+
 			list_window = GetDlgItem(window, IDC_REPLAY_LIST);
-			activate_replay_list_item(list_window, SendMessage(list_window, LVM_GETNEXTITEM, (uintptr_t)-1, LVNI_SELECTED));
+			selected_index = SendMessage(list_window, LVM_GETNEXTITEM, (uintptr_t)-1, LVNI_SELECTED);
+			activate_replay_list_item(list_window, selected_index);
 			//FALLTHROUGH:
+		}
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
 			EndDialog(window, 0);
 			return 0;
-		} break;
+
+		default:
+			return 0;
+		}
+
 	case WM_NOTIFY:
 		if (((NMHDR *)l_param)->code == LVN_ITEMACTIVATE) {
 			activate_replay_list_item(((NMITEMACTIVATE *)l_param)->hdr.hwndFrom, ((NMITEMACTIVATE *)l_param)->iItem);
 			EndDialog(window, 0);
 		}
-		break;
+		return 0;
+
+	default:
+		return 0;
 	}
-	return 0;
 }

@@ -75,27 +75,32 @@ Spring_launch(void)
 //Script is unreadably compact because it might need to be sent to relayhost.
 //This lets us send it in 1-2 packets, so it doesnt take 5 seconds like in springlobby.
 {
-	Battle *b = g_my_battle;
-	assert(b);
+	Battle *b;
+	char buf[8192];
+	char *buf_end;
+	wchar_t path[256];
+	wchar_t *script_path;
+	FILE *fp;
 
-	char buf[8192], *buffEnd=buf;
+	b = g_my_battle;
+	assert(b);
+	buf_end = buf;
 
 	#define APPEND_LINE(format, ...) \
-		(buffEnd += sprintf(buffEnd, (format), ## __VA_ARGS__))
+		(buf_end += sprintf(buf_end, (format), ## __VA_ARGS__))
 
 	APPEND_LINE("[GAME]{HostIP=%s;HostPort=%hu;MyPlayerName=%s;MyPasswd=%s;}",
 			b->ip, b->port, g_my_user.name, g_my_user.script_password ?: "");
 
-	wchar_t *script_path = Settings_get_data_dir(L"script.txt");
-	FILE *fp = _wfopen(script_path, L"w");
+	script_path = Settings_get_data_dir(L"script.txt");
+	fp = _wfopen(script_path, L"w");
 	if (!fp) {
 		MessageBox(NULL, L"Could not open script.txt for writing", L"Launch failed", MB_OK);
 		fclose(fp);
 		return;
 	}
-	fwrite(buf, 1, (size_t)(buffEnd - buf), fp);
+	fwrite(buf, 1, (size_t)(buf_end - buf), fp);
 	fclose(fp);
-	wchar_t path[256];
 	_swprintf(path, L"\"%hs\" \"%s\"", g_settings.spring_path, script_path);
 	LAUNCH_SPRING(path);
 	return;
@@ -105,6 +110,7 @@ void
 Spring_launch_replay(const wchar_t *replay_name)
 {
 	wchar_t path[256];
+
 	_swprintf(path, L"%hs demos/%s", g_settings.spring_path, replay_name);
 	LAUNCH_SPRING(path);
 }

@@ -262,13 +262,17 @@ transform(uint32_t *restrict buf, uint32_t *restrict in)
 const char *
 MD5_to_base_64(const uint8_t *s)
 {
-	const char conv[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	const char *conv = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	static char code[BASE64_MD5_LENGTH + 1];
+	uint32_t c;
+
 	for (uint8_t i=0; i<5; ++i) {
-		uint32_t c = ((uint32_t)s[i*3] << 16) + ((uint32_t)s[i*3+1] << 8) + ((uint32_t)s[i*3+2]);
-		sprintf(&code[i*4], "%c%c%c%c", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], conv[(c >> 6) % (1 << 6)], conv[(c >> 0) % (1 << 6)]);
+		uint32_t c2;
+
+		c2 = ((uint32_t)s[i*3] << 16) + ((uint32_t)s[i*3+1] << 8) + ((uint32_t)s[i*3+2]);
+		sprintf(&code[i*4], "%c2%c2%c2%c2", conv[(c2 >> 18) % (1 << 6)], conv[(c2 >> 12) % (1 << 6)], conv[(c2 >> 6) % (1 << 6)], conv[(c2 >> 0) % (1 << 6)]);
 	}
-	uint32_t c = (uint32_t)s[15] << 16;
+	c = (uint32_t)s[15] << 16;
 	sprintf(&code[20], "%c%c%s", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], "==");
 	return code;
 }

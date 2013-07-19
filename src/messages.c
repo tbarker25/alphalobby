@@ -166,9 +166,12 @@ static const Command SERVER_COMMANDS[] = {
 void
 Messages_handle(char *command)
 {
+	char *command_name;
+	Command *com;
+
 	s_command = command;
-	char *command_name = get_next_word();
-	Command *com = bsearch(command_name, SERVER_COMMANDS,
+	command_name = get_next_word();
+	com = bsearch(command_name, SERVER_COMMANDS,
 	    LENGTH(SERVER_COMMANDS), sizeof *SERVER_COMMANDS, (void *)strcmp);
 	if (com)
 		com->func();
@@ -191,33 +194,39 @@ add_bot(void)
 	} bs;
 
 	__attribute__((unused))
-	char *battle_id = get_next_word();
+	char *battle_id;
+	char *name;
+	User *owner;
+	uint32_t color;
+
+	battle_id = get_next_word();
 	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
-	char *name = get_next_word();
-	User *owner = Users_find(get_next_word());
+	name = get_next_word();
+	owner = Users_find(get_next_word());
 	assert(owner);
 	if (!owner)
 		return;
 	bs.as_int = get_next_int();
-	uint32_t color = get_next_int();
+	color= get_next_int();
 	Users_add_bot(name, owner, bs.BattleStatus, color, s_command);
 }
 
 static void
 add_user(void)
 {
-	char *name = get_next_word();
+	char *name;
+	uint8_t country;
+	uint32_t cpu;
+	User *u;
 
-	uint8_t country = Country_get_id(s_command);
+	name = get_next_word();
+	country = Country_get_id(s_command);
 	s_command += 3;
-
-	uint32_t cpu = get_next_int();
-
-	User *u = Users_new(get_next_int(), name);
+	cpu = get_next_int();
+	u = Users_new(get_next_int(), name);
 	strcpy(u->name, name);
 	u->country = country;
 	u->cpu = cpu;
-
 	RelayHost_on_add_user(u->name);
 }
 
@@ -250,13 +259,14 @@ agreement_end(void)
 static void
 battle_opened(void)
 {
-	Battle *b = Battles_new();
+	Battle *b;
+	char founder_name[MAX_NAME_LENGTH_NUL];
 
+	b           = Battles_new();
 	b->id       = get_next_int();
 	b->type     = (uint8_t)get_next_int();
 	b->nat_type = get_next_int();
 
-	char founder_name[MAX_NAME_LENGTH_NUL];
 	copy_next_word(founder_name);
 	b->founder = Users_find(founder_name);
 	assert(b->founder);
@@ -322,12 +332,12 @@ static void
 channel_topic(void)
 {
 	const char *channel;
+	char *s;
 
 	channel = get_next_word();
 	get_next_word(); /* username */
 	get_next_word(); /* unix_time */
 
-	char *s;
 	while ((s = strstr(s_command, "\\n"))) {
 		s[0] = '\r';
 		s[1] = '\n';
@@ -517,14 +527,18 @@ left(void)
 static void
 left_battle(void)
 {
-	Battle *b = Battles_find(get_next_int()); //Battle Unused
-	User *u = Users_find(get_next_word());
+	Battle *b;
+	User *u;
+	int i;
+
+	b = Battles_find(get_next_int()); //Battle Unused
+	u = Users_find(get_next_word());
 	assert(b && u && b == u->battle);
 	if (!u || !b)
 		return;
 
 	u->battle = NULL;
-	int i=1; //Start at 1, we won't remove founder here
+	i = 1; //Start at 1, we won't remove founder here
 	for (; i < b->user_len; ++i)
 		if (u == (User *)b->users[i])
 			break;
@@ -544,8 +558,9 @@ left_battle(void)
 		if (u->mode && !g_my_user.mode
 		    && g_last_auto_unspec + 5000 < GetTickCount()
 		    && BattleRoom_is_auto_unspec()) {
+			BattleStatus bs;
 			g_last_auto_unspec = GetTickCount();
-			BattleStatus bs = g_last_battle_status;
+			bs = g_last_battle_status;
 			bs.mode = 1;
 			TasServer_send_my_battle_status(bs);
 		}
@@ -840,12 +855,16 @@ set_script_tags(void)
 static void
 tas_server(void)
 {
+	const char *server_spring_version;
+	const char *my_spring_version;
+
 	get_next_word(); //= server_version
-	const char *server_spring_version = get_next_word();
-	const char *my_spring_version = Sync_spring_version();
+	server_spring_version = get_next_word();
+	my_spring_version = Sync_spring_version();
 	*strchr(server_spring_version, '.') = '\0';
 	if (strcmp(server_spring_version, my_spring_version)){
 		char buf[128];
+
 		sprintf(buf, "Server requires %s.\nYou are using %s.\n", server_spring_version, my_spring_version);
 		MainWindow_msg_box("Wrong Spring version", buf);
 		TasServer_disconnect();
@@ -857,13 +876,16 @@ tas_server(void)
 static void
 update_battle_info(void)
 {
-	Battle *b = Battles_find(get_next_int());
+	Battle *b;
+	uint32_t last_map_hash;
+
+	b = Battles_find(get_next_int());
 #ifndef UNSAFE
 	if (!b)
 		return;
 #endif
 
-	uint32_t last_map_hash = b->map_hash;
+	last_map_hash = b->map_hash;
 
 	b->spectator_len = (uint8_t)get_next_int();
 	b->locked = (uint8_t)get_next_int();

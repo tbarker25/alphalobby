@@ -28,7 +28,8 @@
 #include "../mainwindow.h"
 #include "../tasserver.h"
 
-static BOOL CALLBACK agreement_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
+static BOOL CALLBACK agreement_proc(HWND, uint32_t msg, uintptr_t w_param, intptr_t l_param);
+static uint32_t CALLBACK edit_stream_callback(FILE *, uint8_t *buf, int32_t n, int32_t *read);
 
 void
 AgreementDialog_create(FILE *agreement)
@@ -44,15 +45,12 @@ agreement_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
-		uint32_t CALLBACK edit_stream_callback(
-				__attribute__((unused)) uintptr_t dwCookie,
-				uint8_t * buff, int32_t cb, int32_t * pcb)
-		{
-			*pcb = (int32_t)fread(buff, 1, (size_t)cb, (FILE *)l_param);
-			return 0;
-		}
+		EDITSTREAM info;
 
-		SendDlgItemMessage(window, IDC_AGREEMENT_TEXT, EM_STREAMIN, SF_RTF, (intptr_t)&(EDITSTREAM){.pfnCallback = (void *)edit_stream_callback});
+		info.dwCookie = (uintptr_t)l_param;
+		info.pfnCallback = (void *)edit_stream_callback;
+		SendDlgItemMessage(window, IDC_AGREEMENT_TEXT, EM_STREAMIN,
+		    SF_RTF, (intptr_t)&info);
 		break;
 	}
 	case WM_COMMAND:
@@ -64,5 +62,12 @@ agreement_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 			EndDialog(window, 0);
 		} break;
 	}
+	return 0;
+}
+
+static uint32_t CALLBACK
+edit_stream_callback(FILE *file, uint8_t *buf, int32_t n, int32_t *read)
+{
+	*read = (int32_t)fread(buf, 1, (size_t)n, file);
 	return 0;
 }

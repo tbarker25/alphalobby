@@ -30,7 +30,6 @@
 #include "../resource.h"
 #include "../mainwindow.h"
 #include "../settings.h"
-#include "../downloader.h"
 
 static void rapidAdd_available(HWND window, char download_only);
 static void rapid_on_init(HWND window);
@@ -44,7 +43,7 @@ RapidDialog_create(void)
 }
 
 static void
-rapidAdd_available(HWND window, char download_only)
+rapidAdd_available(HWND window, char __attribute__((unused)) download_only)
 {
 #define TVGN_NEXTSELECTED       0x000B
 	HTREEITEM item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, (uintptr_t)NULL);
@@ -55,43 +54,52 @@ rapidAdd_available(HWND window, char download_only)
 	char *text_a = item_text1;
 	char *text_b = NULL;
 	while (item) {
-		TVITEMA item_info = {TVIF_HANDLE | TVIF_TEXT | TVIF_CHILDREN, item,
-			.pszText = text_a,
-			.cchTextMax = 256};
-		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (intptr_t)&item_info);
+		char *swap;
+		TVITEMA info;
+
+		info.mask = TVIF_HANDLE | TVIF_TEXT | TVIF_CHILDREN;
+		info.hItem = item;
+		info.pszText = text_a;
+		info.cchTextMax = 256;
+		SendDlgItemMessageA(window, IDC_RAPID_AVAILABLE, TVM_GETITEMA, 0, (intptr_t)&info);
 
 		if (text_b)
 			sprintf(text_a + strlen(text_a), ":%s", text_b);
-		else if (item_info.cChildren)
+		else if (info.cChildren)
 			return;
 		else
 			text_b = item_text2;
 
-		char *swap;
 		swap = text_a;
 		text_a = text_b;
 		text_b = swap;
 		item = (HTREEITEM)SendDlgItemMessage(window, IDC_RAPID_AVAILABLE, TVM_GETNEXTITEM, TVGN_PARENT, (intptr_t)item);
 	}
-	if (download_only)
-		DownloadShortMod(text_b);
-	else
-		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)text_b);
+	/* if (download_only) */
+		/* DownloadShortMod(text_b); */
+	/* else */
+		/* SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)text_b); */
 }
 
 static void
 rapid_on_init(HWND window)
 {
+	char path[MAX_PATH];
+	WIN32_FIND_DATAA find_file_data;
+	char *path_end;
+	HANDLE find;
+
 #ifdef NDEBUG
 	ShowWindow(GetDlgItem(window, IDC_RAPID_ERRORCHECK), 0);
 	ShowWindow(GetDlgItem(window, IDC_RAPID_CLEANUP), 0);
 #endif
-
 	if (g_settings.selected_packages) {
 		size_t len = strlen(g_settings.selected_packages);
 		char buf[len + 1];
+		char *start;
+
 		buf[len] = '\0';
-		char *start = buf;
+		start = buf;
 		for (size_t i=0; i<len; ++i) {
 			buf[i] = g_settings.selected_packages[i];
 			if (buf[i] != ';')
@@ -103,27 +111,27 @@ rapid_on_init(HWND window)
 		SendDlgItemMessageA(window, IDC_RAPID_SELECTED, LB_ADDSTRING, 0, (intptr_t)start);
 	}
 
-	char path[MAX_PATH];
-	WIN32_FIND_DATAA find_file_data;
-	char *pathEnd = path + sprintf(path, "%lsrepos\\*", g_data_dir) - 1;
+	path_end = path + sprintf(path, "%lsrepos\\*", g_data_dir) - 1;
 
-	HANDLE find = FindFirstFileA(path, &find_file_data);
+	find = FindFirstFileA(path, &find_file_data);
 	do {
+		gzFile file;
+		char buf[1024];
+		char root[1024] = {0};
+		HTREEITEM root_items[5] = {0};
+
 		if (find_file_data.cFileName[0] == '.')
 			continue;
-		sprintf(pathEnd, "%s\\versions.gz", find_file_data.cFileName);
-		gzFile file = gzopen(path, "rb");
-
-		char buf[1024];
-		char root[1024] = {};
-		HTREEITEM root_items[5] = {};
+		sprintf(path_end, "%s\\versions.gz", find_file_data.cFileName);
+		file = gzopen(path, "rb");
 
 		while (gzgets(file, buf, sizeof buf)) {
+			size_t root_level = 0;
+			int start         = 0;
+			int i             = 0;
+
 			*strchr(buf, ',') = '\0';
 
-			size_t root_level = 0;
-			int start = 0;
-			int i=0;
 			for (; buf[i]; ++i) {
 				if (root[i] != buf[i])
 					break;
@@ -134,12 +142,12 @@ rapid_on_init(HWND window)
 			}
 
 			for ( ; ; ++i) {
+				TVINSERTSTRUCTA info;
+
 				root[i] = buf[i];
 				if (buf[i] && buf[i] != ':')
 					continue;
 				root[i] = '\0';
-
-				TVINSERTSTRUCTA info;
 				info.hParent = root_items[root_level];
 				info.hInsertAfter = buf[i] ? TVI_SORT : 0;
 				info.item.mask = TVIF_TEXT | TVIF_CHILDREN;
@@ -190,7 +198,7 @@ rapid_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 				s += SendMessageA(list_box, LB_GETTEXT, i, (intptr_t)s);
 			}
 			g_settings.selected_packages = _strdup(text + 1);
-			Downloader_get_selected_packages();
+			/* Downloader_get_selected_packages(); */
 		}
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):

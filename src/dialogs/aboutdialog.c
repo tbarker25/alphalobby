@@ -43,10 +43,12 @@ about_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
-		HWND edit_box = GetDlgItem(window, IDC_ABOUT_EDIT);
+		HWND edit_box;
+		SETTEXTEX set_text_info = {0};
+
+		edit_box = GetDlgItem(window, IDC_ABOUT_EDIT);
 		SendMessage(edit_box, EM_AUTOURLDETECT, 1, 0);
 		SendMessage(edit_box, EM_SETEVENTMASK, 0, ENM_LINK | ENM_MOUSEEVENTS | ENM_SCROLL);
-		SETTEXTEX set_text_info = {0, 0};
 		SendMessage(edit_box, EM_SETTEXTEX, (uintptr_t)&set_text_info,
 				(intptr_t)"{\\rtf {\\b Alphalobby} {\\i " STRINGIFY(VERSION) "}\\par\\par "
 				"{\\b Author:}\\par Thomas Barker (Axiomatic)\\par \\par "
@@ -57,12 +59,17 @@ about_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 	case WM_NOTIFY:
 	{
 		ENLINK *s = (void *)l_param;
+
 		if (s->nmhdr.idFrom == IDC_ABOUT_EDIT && s->nmhdr.code == EN_LINK && s->msg == WM_LBUTTONUP) {
-			SendMessage(s->nmhdr.hwndFrom, EM_EXSETSEL, 0, (intptr_t)&s->chrg);
 			wchar_t url[256];
-			SendMessage(s->nmhdr.hwndFrom, EM_GETTEXTEX,
-					(uintptr_t)&(GETTEXTEX){.cb = sizeof url, .flags = GT_SELECTION, .codepage = 1200},
-					(intptr_t)url);
+			GETTEXTEX info;
+
+			info.cb = sizeof url;
+			info.flags = GT_SELECTION;
+			info.codepage = 1200;
+
+			SendMessage(s->nmhdr.hwndFrom, EM_EXSETSEL, 0, (intptr_t)&s->chrg);
+			SendMessage(s->nmhdr.hwndFrom, EM_GETTEXTEX, (uintptr_t)&info, (intptr_t)url);
 			ShellExecute(NULL, NULL, url, NULL, NULL, SW_SHOWNORMAL);
 		}
 		return 0;

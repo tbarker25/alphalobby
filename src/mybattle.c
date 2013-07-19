@@ -212,8 +212,10 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 	if (!bs.mode && !g_my_user.mode && u != &g_my_user.UserBot
 	    && g_last_auto_unspec + 5000 < GetTickCount()
 	    && BattleRoom_is_auto_unspec()) {
+		BattleStatus new_bs;
+
 		g_last_auto_unspec = GetTickCount();
-		BattleStatus new_bs = g_last_battle_status;
+		new_bs = g_last_battle_status;
 		new_bs.mode = 1;
 		TasServer_send_my_battle_status(new_bs);
 	}
@@ -246,17 +248,17 @@ MyBattle_change_option(Option *restrict opt)
 	case opt_list: {
 		int clicked;
 		HMENU menu;
+		POINT point;
+		void func(int *i) {
+			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x,
+			    point.y, g_main_window, NULL);
+		}
 
 		menu = CreatePopupMenu();
 		for (int j=0; j < opt->list_item_len; ++j)
 			AppendMenuA(menu, 0, (uintptr_t)j + 1, opt->list_items[j].name);
 		SetLastError(0);
-		POINT point;
 		GetCursorPos(&point);
-		void func(int *i) {
-			*i = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x,
-			    point.y, g_main_window, NULL);
-		}
 		SendMessage(g_main_window, WM_EXECFUNCPARAM, (uintptr_t)func, (intptr_t)&clicked);
 		DestroyMenu(menu);
 		if (!clicked)

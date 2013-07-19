@@ -444,18 +444,20 @@ on_command(uintptr_t w_param)
 	HMENU menu;
 
 	switch (w_param) {
-	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED):
+	case MAKEWPARAM(DLG_CHANGE_MAP, BN_CLICKED): {
+		POINT point;
+		int map_index;
+
 		menu = CreatePopupMenu();
 		for (int i=0; i<g_map_len; ++i)
 			AppendMenuA(menu, MF_CHECKED * !strcmp(g_my_battle->map_name,  g_maps[i]), (uintptr_t)i + 1, g_maps[i]);
-		POINT pt;
-		GetCursorPos(&pt);
-		int map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, pt.x, pt.y, s_minimap, NULL);
+		GetCursorPos(&point);
+		map_index = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y, s_minimap, NULL);
 		if (map_index > 0)
 			TasServer_send_change_map(g_maps[map_index - 1]);
 		DestroyMenu(menu);
 		return 0;
-
+	}
 	case MAKEWPARAM(DLG_MAPMODE_MINIMAP, BN_CLICKED) ... MAKEWPARAM(DLG_MAPMODE_ELEVATION, BN_CLICKED):
 		Minimap_set_type(LOWORD(w_param) - DLG_MAPMODE_MINIMAP);
 		return 0;
