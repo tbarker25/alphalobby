@@ -131,10 +131,12 @@ static void
 write_file(wchar_t *path, const void *buf, size_t len)
 {
 	wchar_t tmp_path[MAX_PATH];
+	HANDLE file;
+	uint32_t unused;
+
 	GetTempPath(LENGTH(tmp_path), tmp_path);
 	GetTempFileName(tmp_path, NULL, 0, tmp_path);
-	HANDLE file = CreateFile(tmp_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
-	uint32_t unused;
+	file = CreateFile(tmp_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
 	WriteFile(file, buf, len, (void *)&unused, NULL);
 	CloseHandle(file);
 	MoveFileEx(tmp_path, path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED);
@@ -143,12 +145,12 @@ write_file(wchar_t *path, const void *buf, size_t len)
 static uint32_t WINAPI
 execute_on_finish_helper(HINTERNET request_handle)
 {
-	puts("execute_on_finish_helper 1");
-	RequestContext *req; uint32_t req_size = sizeof req;
+	RequestContext *req;
+	uint32_t req_size = sizeof req;
+
 	WinHttpQueryOption(request_handle, WINHTTP_OPTION_CONTEXT_VALUE, &req, (void *)&req_size);
 	((void (*)(RequestContext *))((uintptr_t)req->on_finish & ~THREAD_ONFINISH_FLAG))(req);
 	WinHttpCloseHandle(request_handle);
-	puts("execute_on_finish_helper 2");
 	return 0;
 }
 
@@ -184,10 +186,11 @@ on_read_complete(HINTERNET handle, RequestContext *req, uint32_t num_read)
 	}
 
 	if (req->ses->total_bytes) {
+		wchar_t text[128];
+
 		req->ses->fetched_bytes += num_read;
 		assert(req->ses->total_bytes);
 		/* Minimap_redraw(); */
-		wchar_t text[128];
 		_swprintf(text, L"%.1f of %.1f MB  (%.2f%%)",
 				(float)req->ses->fetched_bytes / 1000000,
 				(float)req->ses->total_bytes / 1000000,
@@ -300,9 +303,11 @@ make_connect(SessionContext *ses, const wchar_t *domain)
 static void
 send_request(RequestContext *req, const wchar_t *object_name)
 {
+	HINTERNET handle;
+
 	++req->con->requests;
 	++req->ses->requests;
-	HINTERNET handle = WinHttpOpenRequest(req->con->handle, NULL,
+	handle = WinHttpOpenRequest(req->con->handle, NULL,
 			object_name, NULL, WINHTTP_NO_REFERER, NULL, 0);
 	WinHttpSendRequest(handle, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 			NULL, 0, 0, (uintptr_t)req);
@@ -323,32 +328,37 @@ static void
 handle_map_sources(RequestContext *req)
 	//NB: this function is stupidly dangerous
 {
+	char *s;
+
 	req->ses->error = "Couldn't find a download source.";
-
 	req->buf[req->content_len - 1] = 0;
-
 	req->ses->status = (req->ses->status & ~DL_DONT_ALLOW_MASK) | DL_ONLY_ALLOW_ONE_REQUEST;
-	char *s = strstr((char *)req->buf, "<links>");
+	s = strstr((char *)req->buf, "<links>");
 	if (!s)
 		return;
 	*strstr(s, "</links>") = 0;
 
 	while ((s = strstr(s, "<string>"))) {
-		s += sizeof "<string>" - 1;
-		char *end = strchr(s, '<');
-		*end = 0;
+		char *end;
 		wchar_t path[256], host[256];
+		wchar_t *name;
+		size_t size;
+		RequestContext *req2;
 		URL_COMPONENTS url_components = {
 					.dwStructSize = sizeof url_components,
 					.lpszHostName = host, .dwHostNameLength = LENGTH(host),
 					.lpszUrlPath = path, .dwUrlPathLength = LENGTH(path)
 		};
+
+		s += sizeof "<string>" - 1;
+		end = strchr(s, '<');
+		*end = 0;
 		if (!WinHttpCrackUrl(utf8to16(s), 0, ICU_DECODE, &url_components))
 			continue;
-		wchar_t *name = wcsrchr(path, '/');
-		size_t size = (wcslen(name) + wcslen(g_data_dir) + LENGTH(L"maps")) * sizeof *name;
+		name = wcsrchr(path, '/');
+		size = (wcslen(name) + wcslen(g_data_dir) + LENGTH(L"maps")) * sizeof *name;
 
-		RequestContext *req2 = calloc(1, sizeof *req2 + size);
+		req2 = calloc(1, sizeof *req2 + size);
 		_swprintf(req2->wchar_param, L"%s%s%s",
 				g_data_dir, req->ses->status & DL_MAP ? L"maps" : L"mods", name);
 		req2->ses = req->ses;
@@ -366,6 +376,10 @@ handle_map_sources(RequestContext *req)
 void
 Downloader_init(void)
 {
+	SessionContext *ses;
+	RequestContext *req;
+	HINTERNET handle;
+
 	CreateDirectory(Settings_get_data_dir(L"maps"), NULL);
 	CreateDirectory(Settings_get_data_dir(L"mods"), NULL);
 	CreateDirectory(Settings_get_data_dir(L"packages"), NULL);
@@ -378,11 +392,11 @@ Downloader_init(void)
 		CreateDirectory(path, NULL);
 	}
 
-	HINTERNET handle = WinHttpOpen(NULL,
+	handle = WinHttpOpen(NULL,
 			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
 			WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS,
 			WINHTTP_FLAG_ASYNC);
-	SessionContext *ses = &s_sessions[0];
+	ses = &s_sessions[0];
 
 	*ses = (SessionContext){
 		.status = DL_ACTIVE,
@@ -395,31 +409,30 @@ Downloader_init(void)
 			WINHTTP_CALLBACK_FLAG_HANDLES |
 			WINHTTP_CALLBACK_FLAG_ALL_NOTIFICATIONS, 0);
 
-	RequestContext *req = malloc(sizeof *req);
+	req = calloc(1, sizeof *req);
+	req->ses = ses;
+	req->con = make_connect(ses, L"repos.caspring.org");
+	req->on_finish = handle_repo_list;
 
-	*req = (RequestContext){
-		.ses = ses,
-			.con = make_connect(ses, L"repos.caspring.org"),
-			.on_finish = handle_repo_list,
-	};
 	send_request(req, L"repos.gz");
 }
 
 static void
 download_package(SessionContext *ses)
 {
+	WIN32_FIND_DATA  find_file_data;
+	wchar_t          path[MAX_PATH];
+	wchar_t         *path_end;
+	HANDLE           find;
+
+	path_end = path + _swprintf(path, L"%srepos\\*", g_data_dir) - 1;
 	ses->error = "Couldn't retreive list of repositories from \"repos.caspring.org\".";
+	find = FindFirstFile(path, &find_file_data);
 
-	WIN32_FIND_DATA find_file_data;
-	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + _swprintf(path, L"%srepos\\*",
-			g_data_dir) - 1;
-
-	HANDLE find = FindFirstFile(path, &find_file_data);
 	do {
 		if (find_file_data.cFileName[0] == L'.')
 			continue;
-		_swprintf(pathEnd, L"%s\\versions.gz", find_file_data.cFileName);
+		_swprintf(path_end, L"%s\\versions.gz", find_file_data.cFileName);
 		handle_repo(path, ses);
 	} while (FindNextFile(find, &find_file_data));
 	FindClose(find);
@@ -428,6 +441,11 @@ download_package(SessionContext *ses)
 void
 Downloader_get_selected_packages(void)
 {
+	WIN32_FIND_DATA find_file_data;
+	wchar_t path[MAX_PATH];
+	wchar_t *path_end;
+	HANDLE find;
+
 	for (size_t i=0; g_mod_len == 0 && i<10; ++i) {
 		if (i==9) {
 			assert(0);
@@ -435,16 +453,14 @@ Downloader_get_selected_packages(void)
 		}
 		Sleep(1000); //hack, instead of waiting for unitsync to init.
 	}
-	WIN32_FIND_DATA find_file_data;
-	wchar_t path[MAX_PATH];
-	wchar_t *pathEnd = path + _swprintf(path, L"%srepos\\*",
+	path_end = path + _swprintf(path, L"%srepos\\*",
 			g_data_dir) - 1;
 
-	HANDLE find = FindFirstFile(path, &find_file_data);
+	find = FindFirstFile(path, &find_file_data);
 	do {
 		if (find_file_data.cFileName[0] == L'.')
 			continue;
-		_swprintf(pathEnd, L"%s\\versions.gz", find_file_data.cFileName);
+		_swprintf(path_end, L"%s\\versions.gz", find_file_data.cFileName);
 		handle_repo_2(path);
 	} while (FindNextFile(find, &find_file_data));
 	FindClose(find);
@@ -455,18 +471,18 @@ handle_repo_2(const wchar_t *path)
 {
 	HANDLE file = CreateFile(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0,
 			NULL);
+	uint32_t file_size = GetFileSize(file, NULL);
+	uint8_t gzipped_buf[file_size];
 
 	if (file == INVALID_HANDLE_VALUE)
 		return;
 
-	uint32_t file_size = GetFileSize(file, NULL);
 	if (file_size == INVALID_FILE_SIZE) {
 		assert(0);
 		CloseHandle(file);
 		return;
 	}
 
-	uint8_t gzipped_buf[file_size];
 	if (!ReadFile(file, gzipped_buf, sizeof gzipped_buf, (void *)&file_size, NULL)
 			|| file_size != sizeof gzipped_buf) {
 		assert(0);

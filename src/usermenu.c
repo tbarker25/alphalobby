@@ -26,13 +26,14 @@
 #include "battle.h"
 #include "chatbox.h"
 #include "chattab.h"
-#include "tasserver.h"
 #include "common.h"
+#include "dialogs/colordialog.h"
+#include "dialogs/gettextdialog.h"
 #include "mybattle.h"
 #include "sync.h"
+#include "tasserver.h"
 #include "user.h"
-#include "dialogs/gettextdialog.h"
-#include "dialogs/colordialog.h"
+#include "usermenu.h"
 
 void
 UserMenu_spawn(UserBot *s, HWND window)

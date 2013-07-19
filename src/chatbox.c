@@ -298,7 +298,6 @@ chat_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 		if (data->on_close)
 			data->on_close(data->dst);
 		free(data);
-		/* ChatWindow_remove_tab(window); */
 		return 0;
 	}
 	case WM_SIZE:
@@ -537,7 +536,7 @@ input_box_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 		}
 
 		data->last_scroll_time = 0;
-		data->buf_end += len+1;
+		data->buf_end += len + 1;
 		data->input_hint = data->buf_end;
 	}	return 0;
 

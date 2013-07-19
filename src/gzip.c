@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <zlib.h>
 
+#include "gzip.h"
+
 void
 Gzip_inflate(void *restrict src, size_t src_len, void *restrict dst, size_t dst_len)
 {

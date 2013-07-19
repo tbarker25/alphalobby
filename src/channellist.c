@@ -24,6 +24,7 @@
 #include <commctrl.h>
 
 #include "chattab.h"
+#include "channellist.h"
 #include "chatbox.h"
 #include "tasserver.h"
 #include "common.h"
@@ -37,6 +38,32 @@ static BOOL CALLBACK channel_list_proc(HWND window, uint32_t msg, uintptr_t w_pa
 static void on_init(HWND window);
 
 static HWND s_channel_list;
+
+void
+ChannelList_add_channel(const char *name, const char *user_len, const char *desc)
+{
+	int item_index;
+	LVITEM item;
+
+	item.mask = LVIF_TEXT;
+	item.iSubItem = 0;
+	item.pszText = utf8to16(name);
+	item_index = ListView_InsertItem(s_channel_list, &item);
+
+	assert(item_index != -1);
+
+	ListView_SetItemText(s_channel_list, item_index, 1, utf8to16(user_len));
+	ListView_SetItemText(s_channel_list, item_index, 2, utf8to16(desc));
+}
+
+void
+ChannelList_show(void)
+{
+	/* DestroyWindow(GetParent(s_channel_list)); */
+	assert(s_channel_list == NULL);
+	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)channel_list_proc);
+	TasServer_send_get_channels();
+}
 
 static void
 activate(int item_index)
@@ -117,30 +144,4 @@ channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param
 	default:
 		return 0;
 	}
-}
-
-void
-ChannelList_add_channel(const char *name, const char *user_len, const char *desc)
-{
-	int item_index;
-	LVITEM item;
-
-	item.mask = LVIF_TEXT;
-	item.iSubItem = 0;
-	item.pszText = utf8to16(name);
-	item_index = ListView_InsertItem(s_channel_list, &item);
-
-	assert(item_index != -1);
-
-	ListView_SetItemText(s_channel_list, item_index, 1, utf8to16(user_len));
-	ListView_SetItemText(s_channel_list, item_index, 2, utf8to16(desc));
-}
-
-void
-ChannelList_show(void)
-{
-	/* DestroyWindow(GetParent(s_channel_list)); */
-	assert(s_channel_list == NULL);
-	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL, (DLGPROC)channel_list_proc);
-	TasServer_send_get_channels();
 }
