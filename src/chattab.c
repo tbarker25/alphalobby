@@ -194,7 +194,7 @@ get_channel_window(const char *channel)
 	*tab_item = calloc(1, strlen(channel) + 1 + sizeof **tab_item);
 
 	(*tab_item)->chat_window = CreateWindow(WC_CHATBOX,
-	    utf8to16(channel), WS_CHILD,
+	    NULL, WS_CHILD,
 	    0, 0, 0, 0,
 	    s_tab_control, 0, NULL, NULL);
 
@@ -243,16 +243,13 @@ resize_active_tab(void)
 static int
 add_tab(const TabItem *item)
 {
-	wchar_t window_title[MAX_NAME_LENGTH_NUL];
-	TCITEM  info;
-
-	GetWindowText(item->chat_window, window_title, MAX_NAME_LENGTH_NUL);
+	TCITEMA  info;
 
 	info.mask = TCIF_TEXT | TCIF_PARAM;
-	info.pszText = window_title;
+	info.pszText = (char *)item->name;
 	info.lParam = (intptr_t)item;
 
-	return SendMessage(s_tab_control, TCM_INSERTITEM, INT_MAX, (intptr_t)&info);
+	return SendMessage(s_tab_control, TCM_INSERTITEMA, INT_MAX, (intptr_t)&info);
 }
 
 static int
@@ -395,7 +392,7 @@ get_private_window(const User *user)
 	*tab_item = calloc(1, sizeof **tab_item);
 
 	(*tab_item)->chat_window = CreateWindow(WC_CHATBOX,
-	    utf8to16(user->name), WS_CHILD,
+	    NULL, WS_CHILD,
 	    0, 0, 0, 0,
 	    s_tab_control, 0, NULL, NULL);
 

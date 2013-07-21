@@ -65,7 +65,7 @@ typedef struct UserBot {
 typedef struct User {
 	UserBot;
 
-	uint32_t cpu, id;
+	uint32_t cpu;
 	char *script_password;
 	uint8_t trueskill;
 	char *alias;
@@ -86,7 +86,7 @@ typedef struct Bot {
 
 void   Users_add_bot  (const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *dll);
 void   Users_cleanup  (void);
-void   Users_del      (User *);
+void   Users_del      (const char *username);
 void   Users_del_bot  (const char *name);
 User * Users_find     (const char username[]) __attribute__((pure));
 User * Users_get_next (void);
