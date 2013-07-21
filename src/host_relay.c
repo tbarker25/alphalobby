@@ -108,9 +108,9 @@ RelayHost_open_battle(const char *title, const char *password, const char *mod_n
 }
 
 void
-RelayHost_on_add_user(const char *username)
+RelayHost_on_add_user(const User *user)
 {
-	if (!strcmp(username, s_relay_hoster) && *s_relay_cmd) {
+	if (!strcmp(user->name, s_relay_hoster) && *s_relay_cmd) {
 		/* TODO */
 		/* TasServer_send(s_relay_cmd); */
 		*s_relay_cmd = '\0';

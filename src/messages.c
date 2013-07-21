@@ -223,10 +223,9 @@ add_user(void)
 	s_command += 3;
 	cpu = get_next_int();
 	u = Users_new(get_next_int(), name);
-	strcpy(u->name, name);
 	u->country = country;
 	u->cpu = cpu;
-	RelayHost_on_add_user(u->name);
+	RelayHost_on_add_user(u);
 }
 
 static void
@@ -617,6 +616,10 @@ remove_start_rect(void)
 static void
 remove_user(void)
 {
+	char *username;
+
+	username = get_next_word();
+	Users_del(username);
 }
 
 static void
