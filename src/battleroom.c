@@ -212,11 +212,9 @@ update_group(uint8_t group_id)
 		return;
 
 	players_on_team = 0;
-	for (uint8_t i = 0; i < g_my_battle->user_len; ++i) {
-		if (g_my_battle->users[i]->mode
-		    && g_my_battle->users[i]->ally == group_id)
+	Battles_for_each_user(u, g_my_battle)
+		if (u->mode && u->ally == group_id)
 			++players_on_team;
-	}
 
 	_swprintf(buf, L"Team %d :: %hu Player%c", group_id + 1,
 			players_on_team, players_on_team > 1 ? 's' : '\0');
@@ -348,17 +346,14 @@ refresh_playerlist(void)
 {
 	int team_sizes[16] = {0};
 
-	for (uint8_t i = 0; i < g_my_battle->user_len; ++i)
-		team_sizes[g_my_battle->users[i]->team]
-			+= (g_my_battle->users[i]->mode) != 0;
+	Battles_for_each_user(u, g_my_battle)
+		team_sizes[u->team] += u->mode != 0;
 
-	for (uint8_t i = 0; i < g_my_battle->user_len - g_my_battle->bot_len; ++i) {
+	Battles_for_each_human(u, g_my_battle) {
 		LVITEM item;
-		User *u;
 		wchar_t buf[128], *buf_end;
 
 		buf_end = buf;
-		u = (User *)g_my_battle->users[i];
 
 		if (u->mode && team_sizes[u->team] > 1)
 			buf_end += _swprintf(buf_end, L"%d: ", u->team+1);

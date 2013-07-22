@@ -113,12 +113,12 @@ MyBattle_new_battle_status(void)
 	team_bit_field = 0;
 	ally_diff = 0;
 
-	for (uint8_t i = 0; i < g_my_battle->user_len; ++i) {
-		if (!g_my_battle->users[i]->mode)
+	Battles_for_each_user(u, g_my_battle) {
+		if (!u->mode)
 			break;
-		ally_diff += g_my_battle->users[i]->ally == 0;
-		ally_diff -= g_my_battle->users[i]->ally == 1;
-		team_bit_field |= (uint16_t)(1 << g_my_battle->users[i]->team);
+		ally_diff += u->ally == 0;
+		ally_diff -= u->ally == 1;
+		team_bit_field |= (uint16_t)(1 << u->team);
 	}
 
 	ret.ally = ally_diff < 0;
@@ -165,8 +165,8 @@ MyBattle_left_battle(void)
 
 	BattleRoom_on_set_mod_details();
 
-	while (g_my_battle->bot_len)
-		Users_del_bot(g_my_battle->users[g_my_battle->user_len - 1]->name);
+	while (g_my_battle->first_bot)
+		Users_del_bot(g_my_battle->first_bot->name);
 
 	g_my_user.BattleStatus = (BattleStatus){0};
 	g_last_battle_status = (BattleStatus){0};
@@ -220,10 +220,9 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 	}
 
 	g_my_battle->spectator_len = 0;
-	for (uint8_t i=0; i < g_my_battle->user_len; ++i) {
-		if (!g_my_battle->users[i]->mode)
+	Battles_for_each_user(u2, g_my_battle)
+		if (!u->mode)
 			++g_my_battle->spectator_len;
-	}
 	BattleList_update_battle(g_my_battle);
 }
 
@@ -325,11 +324,9 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 			printf("unrecognized player option %s=%s\n", key, val);
 			return;
 		}
-		for (uint8_t i=0; i<g_my_battle->user_len; ++i) {
-			User *u;
+		Battles_for_each_human(u, g_my_battle) {
 			int skill;
 
-			u = (User *)g_my_battle->users[i];
 			if (_stricmp(u->name, username))
 				continue;
 

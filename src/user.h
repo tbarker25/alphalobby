@@ -54,6 +54,7 @@ typedef struct UserBot {
 	bool ai;
 	BattleStatus;
 	struct Battle *battle;
+	struct User *next_in_battle;
 	union {
 		uint32_t color;
 		struct {
@@ -97,6 +98,5 @@ extern User g_my_user;
 
 _Static_assert(sizeof(BattleStatus) == 4, "BattleStatus should be 4 bytes");
 _Static_assert(sizeof(ClientStatus) == 1, "ClientStatus should be 1 byte");
-void Users_done(void);
 
 #endif /* end of include guard: USER_H */

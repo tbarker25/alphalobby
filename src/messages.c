@@ -102,10 +102,9 @@ static void tas_server            (void);
 static void update_battle_info    (void);
 static void update_bot            (void);
 
-static void     copy_next_sentence          (char *buf);
-static void     copy_next_word              (char *buf);
 static uint32_t get_next_int                (void);
 static char *   get_next_word               (void);
+static char *   get_next_sentence           (void);
 static void     strip_irc_control_sequences (char *text);
 
 static FILE *s_agreement_file;
@@ -179,7 +178,7 @@ Messages_handle(char *command)
 static void
 accepted(void)
 {
-	copy_next_word(g_my_user.name);
+	strcpy(g_my_user.name, s_command);
 	g_my_user.alias = g_my_user.name;
 }
 
@@ -189,49 +188,64 @@ static void
 add_bot(void)
 {
 	union {
-		BattleStatus; uint32_t as_int;
-	} bs;
+		BattleStatus;
+		uint32_t as_int;
+	} status;
 
-	__attribute__((unused))
-	char *battle_id;
-	char *name;
-	User *owner;
-	uint32_t color;
+	char     *ai_dll;
+	char     *name;
+	char     *owner_name;
+	uint32_t  battle_id;
+	uint32_t  color;
+	User     *owner;
 
-	battle_id = get_next_word();
-	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
-	name = get_next_word();
-	owner = Users_find(get_next_word());
-	assert(owner);
-	if (!owner)
+	battle_id     = get_next_int();
+	name          = get_next_word();
+	owner_name    = get_next_word();
+	owner         = Users_find(owner_name);
+	status.as_int = get_next_int();
+	color         = get_next_int();
+	ai_dll        = s_command;
+
+	if (!owner) {
+		assert(0);
 		return;
-	bs.as_int = get_next_int();
-	color= get_next_int();
-	Users_add_bot(name, owner, bs.BattleStatus, color, s_command);
+	}
+
+	if (battle_id != g_my_battle->id) {
+		assert(0);
+		return;
+	}
+
+	Users_add_bot(name, owner, status.BattleStatus, color, ai_dll);
 }
 
 static void
 add_user(void)
 {
-	char *name;
-	uint8_t country;
-	uint32_t cpu;
-	User *u;
+	char     *name;
+	char     *country_code;
+	User     *u;
+	uint32_t  cpu;
+	uint32_t  id;
 
-	name = get_next_word();
-	country = Country_get_id(s_command);
-	s_command += 3;
-	cpu = get_next_int();
-	u = Users_new(get_next_int(), name);
-	u->country = country;
-	u->cpu = cpu;
+	name         = get_next_word();
+	country_code = get_next_word();
+	cpu          = get_next_int();
+	id           = get_next_int();
+	u            = Users_new(id, name);
+	u->country   = Country_get_id(country_code);
+	u->cpu       = cpu;
 	RelayHost_on_add_user(u);
 }
 
 static void
 add_start_rect(void)
 {
-	StartRect *rect = &g_battle_options.start_rects[get_next_int()];
+	StartRect *rect;
+	uint8_t ally_number = (uint8_t)get_next_int();
+
+	rect = &g_battle_options.start_rects[ally_number];
 	rect->left   = (uint16_t)get_next_int();
 	rect->top    = (uint16_t)get_next_int();
 	rect->right  = (uint16_t)get_next_int();
@@ -250,7 +264,8 @@ static void
 agreement_end(void)
 {
 	rewind(s_agreement_file);
-	SendMessage(g_main_window, WM_EXECFUNCPARAM, (uintptr_t)AgreementDialog_create, (intptr_t)s_agreement_file);
+	SendMessage(g_main_window, WM_EXECFUNCPARAM,
+	    (uintptr_t)AgreementDialog_create, (intptr_t)s_agreement_file);
 	s_agreement_file = NULL;
 }
 
@@ -258,31 +273,43 @@ static void
 battle_opened(void)
 {
 	Battle *b;
-	char founder_name[MAX_NAME_LENGTH_NUL];
+	User   *founder;
 
-	b           = Battles_new(get_next_int());
-	b->type     = (uint8_t)get_next_int();
-	b->nat_type = get_next_int();
+	uint32_t    id           = get_next_int();
+	BattleType  battle_type  = get_next_int();
+	NatType     nat_type     = get_next_int();
+	char       *founder_name = get_next_word();
+	char       *ip           = get_next_word();
+	uint16_t    port         = (uint16_t)get_next_int();
+	uint8_t     max_players  = (uint8_t)get_next_int();
+	bool        passworded   = get_next_int();
+	uint8_t     rank         = (uint8_t)get_next_int();
+	uint32_t    map_hash     = get_next_int();
+	char       *map_name     = get_next_sentence();
+	char       *title        = get_next_sentence();
+	char       *mod_name     = get_next_sentence();
 
-	copy_next_word(founder_name);
-	b->founder = Users_find(founder_name);
-	assert(b->founder);
-	if (!b->founder) {
-		Battles_del(b);
+	assert(strlen(ip) < sizeof(b->ip));
+	founder = Users_find(founder_name);
+	assert(founder);
+	if (!founder)
 		return;
-	}
-	b->user_len = 1;
-	b->founder->battle = b;
 
-	copy_next_word(b->ip);
-	b->port        = (uint16_t)get_next_int();
-	b->max_players = (uint8_t)get_next_int();
-	b->passworded  = (uint8_t)get_next_int();
-	b->rank        = (uint8_t)get_next_int();
-	b->map_hash    = get_next_int();
-	copy_next_sentence(b->map_name);
-	copy_next_sentence(b->title);
-	copy_next_sentence(b->mod_name);
+	b              = Battles_new(id, title, mod_name);
+	b->type        = battle_type;
+	b->nat_type    = nat_type;
+	b->founder     = founder;
+	b->port        = port;
+	b->max_players = max_players;
+	b->passworded  = passworded;
+	b->rank        = rank;
+	b->map_hash    = map_hash;
+	b->map_name    = _strdup(map_name);
+	b->user_len    = 1;
+	strcpy(b->ip, ip);
+
+	founder->battle = b;
+	founder->next_in_battle = NULL;
 
 	RelayHost_on_battle_opened(b);
 
@@ -292,21 +319,27 @@ battle_opened(void)
 static void
 battle_closed(void)
 {
-	Battle *b = Battles_find(get_next_int());
-	assert(b);
-	if (!b)
-		return;
+	uint32_t  id;
+	Battle   *b;
 
+	id = get_next_int();
+	b  = Battles_find(id);
+	if (!b) {
+		assert(0);
+		return;
+	}
 	if (b == g_my_battle){
 		if (g_my_battle->founder != &g_my_user)
-			MainWindow_msg_box("Leaving Battle", "The battle was closed by the host.");
+			MainWindow_msg_box("Leaving Battle",
+			    "The battle was closed by the host.");
 		MyBattle_left_battle();
 	}
 
-	for (int i=0; i<b->user_len; ++i)
-		b->users[i]->battle = NULL;
+	Battles_for_each_user(u, b)
+		u->battle = NULL;
 
 	BattleList_close_battle(b);
+	free(b->map_name);
 	Battles_del(b);
 }
 
@@ -322,6 +355,7 @@ channel(void)
 	const char *channame = get_next_word();
 	const char *usercount = get_next_word();
 	const char *description = s_command;
+
 	ChannelList_add_channel(channame, usercount, description);
 }
 
@@ -329,13 +363,12 @@ static void
 channel_topic(void)
 {
 	const char *channel;
-	char *s;
 
 	channel = get_next_word();
 	get_next_word(); /* username */
 	get_next_word(); /* unix_time */
 
-	while ((s = strstr(s_command, "\\n"))) {
+	for (char *s; (s = strstr(s_command, "\\n")); ) {
 		s[0] = '\r';
 		s[1] = '\n';
 	}
@@ -345,18 +378,24 @@ channel_topic(void)
 static void
 client_battle_status(void)
 {
-	User *u;
 	union {
-		BattleStatus; uint32_t as_int;
-	} bs;
+		BattleStatus;
+		uint32_t as_int;
+	} status;
+	User       *u;
+	const char *username;
+	uint32_t    color;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
+	username      = get_next_word();
+	u             = Users_find(username);
+	status.as_int = get_next_int();
+	color         = get_next_int();
+
+	if (!u) {
+		assert(0);
 		return;
-	bs.as_int = get_next_int();
-
-	MyBattle_update_battle_status(u, bs.BattleStatus, get_next_int());
+	}
+	MyBattle_update_battle_status(u, status.BattleStatus, color);
 }
 
 static void
@@ -366,9 +405,11 @@ clients(void)
 
 	channel_name = get_next_word();
 	while (*s_command) {
-		User *u;
+		User       *u;
+		const char *username;
 
-		u = Users_find(get_next_word());
+		username = get_next_word();
+		u = Users_find(username);
 		assert(u);
 		if (u)
 			ChatTab_add_user_to_channel(channel_name, u);
@@ -383,15 +424,19 @@ client_status(void)
 		uint8_t as_int;
 	} status;
 
-	ClientStatus previous;
-	User *u;
+	User         *u;
+	const char   *username;
+	ClientStatus  previous;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
-		return;
-
+	username      = get_next_word();
+	u             = Users_find(username);
 	status.as_int = (uint8_t)get_next_int();
+
+	if (!u) {
+		assert(0);
+		return;
+	}
+
 	previous = u->ClientStatus;
 	u->ClientStatus = status.ClientStatus;
 
@@ -406,7 +451,6 @@ client_status(void)
 
 	if (previous.ingame != u->ingame && u == u->battle->founder) {
 		BattleList_update_battle(u->battle);
-
 		if (g_my_battle == u->battle && u->ingame && u != &g_my_user)
 			Spring_launch();
 	}
@@ -422,7 +466,7 @@ denied(void)
 static void
 force_quit_battle(void)
 {
-	static char buf[sizeof " has kicked you from the current battle" + MAX_TITLE];
+	char buf[sizeof " has kicked you from the current battle." + MAX_NAME_LENGTH];
 	sprintf(buf, "%s has kicked you from the current battle.", g_my_battle->founder->name);
 	MainWindow_msg_box("Leaving battle", buf);
 }
@@ -430,15 +474,21 @@ force_quit_battle(void)
 static void
 join(void)
 {
-	const char *channel= get_next_word();
+	const char *channel = get_next_word();
 	ChatTab_focus_channel(channel);
 }
 
 static void
 join_battle(void)
 {
-	Battle *b = Battles_find(get_next_int());
-	MyBattle_joined_battle(b, get_next_int());
+	uint32_t  id;
+	Battle   *b;
+	uint32_t  mod_hash;
+
+	id       = get_next_int();
+	mod_hash = get_next_int();
+	b        = Battles_find(id);
+	MyBattle_joined_battle(b, mod_hash);
 	s_time_battle_joined = GetTickCount();
 }
 
@@ -452,44 +502,48 @@ join_battle_failed(void)
 static void
 joined(void)
 {
+	User       *user;
 	const char *channel;
-	User *user;
+	const char *username;
 
-	channel = get_next_word();
-	user = Users_find(get_next_word());
-	assert(user);
-	if (user)
-		ChatTab_on_said_channel(channel, user,
-		    "Has joined the channel", CHAT_SYSTEM);
+	channel  = get_next_word();
+	username = get_next_word();
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
+		return;
+	}
+	ChatTab_on_said_channel(channel, user, "Has joined the channel",
+	    CHAT_SYSTEM);
 }
 
 static void
 joined_battle(void)
 /* JOINEDBATTLE battle_id username [script_password] */
 {
-	Battle *b;
-	User *u;
-	int i;
+	User       *u;
+	Battle     *b;
+	uint32_t    id;
+	const char *username;
+	const char *password;
 
-	b = Battles_find(get_next_int());
-	u = Users_find(get_next_word());
-	assert(u && b);
-	if (!u || !b)
+	id       = get_next_int();
+	username = get_next_word();
+	password = get_next_word();
+	b        = Battles_find(id);
+	u        = Users_find(username);
+
+	if (!u || !b) {
+		assert(0);
 		return;
-	u->battle = b;
+	}
 	free(u->script_password);
-	u->script_password = _strdup(get_next_word());
-
-	i=1; //Start at 1 so founder is first
-	while (i<b->user_len - b->bot_len && _stricmp(b->users[i]->name, u->name) < 0)
-		++i;
-
-	for (int j=b->user_len; j>i; --j)
-		b->users[j] = b->users[j-1];
-
-	b->users[i] = (void *)u;
+	u->battle                  = b;
+	u->script_password         = _strdup(password);
+	u->next_in_battle          = b->founder->next_in_battle;
+	b->founder->next_in_battle = u;
+	u->BattleStatus            = (BattleStatus){0};
 	++b->user_len;
-	u->BattleStatus = (BattleStatus){0};
 
 	BattleList_update_battle(b);
 
@@ -507,14 +561,17 @@ join_failed(void)
 static void
 left(void)
 {
+	User       *user;
 	const char *channel;
-	User *user;
+	const char *username;
 
-	channel = get_next_word();
-	user = Users_find(get_next_word());
-	assert(user);
-	if (!user)
+	channel  = get_next_word();
+	username = get_next_word();
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
 		return;
+	}
 
 	ChatTab_on_said_channel(channel, user, "has left the channel",
 	    CHAT_SYSTEM);
@@ -524,27 +581,33 @@ left(void)
 static void
 left_battle(void)
 {
-	Battle *b;
-	User *u;
-	int i;
+	Battle     *b;
+	User       *u;
+	const char *username;
+	uint32_t    id;
 
-	b = Battles_find(get_next_int()); //Battle Unused
-	u = Users_find(get_next_word());
-	assert(b && u && b == u->battle);
-	if (!u || !b)
+	id       = get_next_int();
+	username = get_next_word();
+	b        = Battles_find(id);     // Battle Unused
+	u        = Users_find(username);
+	if (!u || !b) {
+		assert(0);
 		return;
+	}
 
 	u->battle = NULL;
-	i = 1; //Start at 1, we won't remove founder here
-	for (; i < b->user_len; ++i)
-		if (u == (User *)b->users[i])
-			break;
-	assert(i < b->user_len);
-	if (i >= b->user_len)
-		return;
+	assert(b->founder);
+	assert(u != b->founder);
+	for (User **u2 = &b->founder->next_in_battle; *u2; *u2 = (*u2)->next_in_battle) {
+		if (*u2 == u) {
+			*u2 = u->next_in_battle;
+			goto done;
+		}
+	}
+	assert(0);
+	done:
+
 	--b->user_len;
-	for (;i < b->user_len; ++i)
-		b->users[i] = b->users[i + 1];
 
 	if (u == &g_my_user)
 		MyBattle_left_battle();
@@ -583,8 +646,11 @@ message_of_the_day(void)
 static void
 open_battle(void)
 {
-	// OPENBATTLE BATTLE_ID
-	Battle *b = Battles_find(get_next_int());
+	Battle   *b;
+	uint32_t  id;
+
+	id = get_next_int();
+	b  = Battles_find(id);
 	MyBattle_joined_battle(b, 0);
 }
 
@@ -598,17 +664,24 @@ registration_accepted(void)
 static void
 remove_bot(void)
 {
-	// REMOVEBOT BATTLE_ID name
-	__attribute__((unused))
-	char *battle_id = get_next_word();
-	assert(strtoul(battle_id, NULL, 10) == g_my_battle->id);
-	Users_del_bot(get_next_word());
+	uint32_t    id;
+	const char *bot_name;
+	/* REMOVEBOT BATTLE_ID name */
+	id = get_next_int();
+	bot_name = get_next_word();
+	if (id != g_my_battle->id) {
+		assert(0);
+		return;
+	}
+	Users_del_bot(bot_name);
 }
 
 static void
 remove_start_rect(void)
 {
-	g_battle_options.start_rects[get_next_int()] = (StartRect){0};
+	uint8_t ally_number = (uint8_t)get_next_int();
+
+	g_battle_options.start_rects[ally_number] = (StartRect){0};
 	Minimap_on_start_position_change();
 }
 
@@ -639,49 +712,55 @@ ring(void)
 static void
 said(void)
 {
+	User       *user;
+	char       *text;
 	const char *channel;
-	User *user;
-	char *text;
+	const char *username;
 
-	channel = get_next_word();
-	user = Users_find(get_next_word());
-	assert(user);
-	if (!user)
+	channel  = get_next_word();
+	username = get_next_word();
+	text     = s_command;
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
 		return;
-	text = s_command;
+	}
 	strip_irc_control_sequences(text);
-
 	ChatTab_on_said_channel(channel, user, text, CHAT_NORMAL);
 }
 
 static void
 said_battle(void)
 {
-	User *u;
-	char *text;
+	User       *u;
+	char       *text;
+	const char *username;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
+	username = get_next_word();
+	text     = s_command;
+	u        = Users_find(username);
+	if (!u) {
+		assert(0);
 		return;
-	text = s_command;
+	}
 	strip_irc_control_sequences(text);
-
 	MyBattle_said_battle(u, text, CHAT_NORMAL);
 }
 
 static void
 said_battle_ex(void)
 {
-	User * u;
-	char *text;
+	User       *u;
+	char       *text;
+	const char *username;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
+	username = get_next_word();
+	text     = s_command;
+	u        = Users_find(username);
+	if (!u) {
+		assert(0);
 		return;
-
-	text = s_command;
+	}
 	strip_irc_control_sequences(text);
 
 	// Check for autohost
@@ -727,18 +806,20 @@ said_battle_ex(void)
 static void
 said_ex(void)
 {
+	User       *user;
+	char       *text;
 	const char *channel;
-	User *user;
-	char *text;
+	const char *username;
 
-	channel = get_next_word();
-	user = Users_find(get_next_word());
-	assert(user);
-	if (!user)
+	channel  = get_next_word();
+	username = get_next_word();
+	text     = s_command;
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
 		return;
-	text = s_command;
+	}
 	strip_irc_control_sequences(text);
-
 	ChatTab_on_said_channel(channel, user, text, CHAT_EX);
 }
 
@@ -747,14 +828,19 @@ said_private(void)
 {
 	User *user;
 	char *text;
+	const char *username;
 
-	user = Users_find(get_next_word());
-	assert(user);
-	if (!user || user->ignore)
+	username = get_next_word();
+	text     = s_command;
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
 		return;
-	text = s_command;
-	strip_irc_control_sequences(text);
+	}
+	if (user->ignore)
+		return;
 
+	strip_irc_control_sequences(text);
 	if (RelayHost_on_private_message(user->name, text))
 		return;
 
@@ -795,46 +881,54 @@ said_private(void)
 static void
 said_private_ex(void)
 {
-	User *user;
-	char *text;
+	User       *user;
+	char       *text;
+	const char *username;
 
-	user = Users_find(get_next_word());
-	assert(user);
-	if (!user || user->ignore)
+	username = get_next_word();
+	text     = s_command;
+	user     = Users_find(username);
+	if (!user) {
+		assert(0);
 		return;
-	text = s_command;
+	}
+	if (user->ignore)
+		return;
 	strip_irc_control_sequences(text);
-
 	ChatTab_on_said_private(user, text, CHAT_EX);
 }
 
 static void
 say_private(void)
 {
-	User *u;
-	char *text;
+	User       *u;
+	char       *text;
+	const char *username;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
+	username = get_next_word();
+	text     = s_command;
+	u        = Users_find(username);
+	if (!u) {
+		assert(0);
 		return;
-	text = s_command;
-
+	}
 	ChatTab_on_said_private(u, text, CHAT_SELF);
 }
 
 static void
 say_private_ex(void)
 {
-	User *u;
-	char *text;
+	User       *u;
+	char       *text;
+	const char *username;
 
-	u = Users_find(get_next_word());
-	assert(u);
-	if (!u)
+	username = get_next_word();
+	text     = s_command;
+	u        = Users_find(username);
+	if (!u) {
+		assert(0);
 		return;
-	text = s_command;
-
+	}
 	ChatTab_on_said_private(u, text, CHAT_SELFEX);
 }
 
@@ -880,21 +974,33 @@ tas_server(void)
 static void
 update_battle_info(void)
 {
-	Battle *b;
-	uint32_t last_map_hash;
+	Battle     *b;
+	const char *map_name;
+	uint32_t    last_map_hash;
+	uint32_t    id;
+	size_t      map_len;
 
-	b = Battles_find(get_next_int());
-#ifndef UNSAFE
-	if (!b)
+	id = get_next_int();
+	b  = Battles_find(id);
+	if (!b) {
+		assert(0);
 		return;
-#endif
+	}
 
 	last_map_hash = b->map_hash;
 
 	b->spectator_len = (uint8_t)get_next_int();
-	b->locked = (uint8_t)get_next_int();
-	b->map_hash = get_next_int();
-	copy_next_sentence(b->map_name);
+	b->locked        = (uint8_t)get_next_int();
+	b->map_hash      = get_next_int();
+
+	map_name = get_next_sentence();
+	map_len = (size_t)(s_command - map_name);
+	assert(map_len == strlen(map_name));
+	if (map_len > strlen(b->map_name)) {
+		free(b->map_name);
+		b->map_name = malloc(map_len + 1);
+	}
+	memcpy(b->map_name, map_name, map_len + 1);
 
 	if (b == g_my_battle && (b->map_hash != last_map_hash))
 		Sync_on_changed_map(b->map_name);
@@ -911,8 +1017,8 @@ update_bot(void)
 static void
 strip_irc_control_sequences(char *text)
 {
-	int skips = 0;
-	char *c = text;
+	int   skips = 0;
+	char *c     = text;
 
 	for (; *c; ++c) {
 		if (*c == (char)0x03) {
@@ -928,19 +1034,11 @@ strip_irc_control_sequences(char *text)
 	c[-skips] = '\0';
 }
 
-static void
-copy_next_word(char *buf) {
-	size_t len = strcspn(s_command, " ");
-	char *word = s_command;
-	s_command += len + !!s_command[len];
-	word[len] = '\0';
-	memcpy(buf, word, len + 1);
-}
-
 static char *
 get_next_word(void) {
-	size_t len = strcspn(s_command, " ");
-	char *word = s_command;
+	size_t  len  = strcspn(s_command, " ");
+	char   *word = s_command;
+
 	s_command += len + !!s_command[len];
 	word[len] = '\0';
 	return word;
@@ -951,11 +1049,12 @@ get_next_int(void) {
 	return (uint32_t)atol(get_next_word());
 }
 
-static void
-copy_next_sentence(char *buf) {
-	size_t len = strcspn(s_command, "\t");
-	char *word = s_command;
+static char *
+get_next_sentence(void) {
+	size_t  len  = strcspn(s_command, "\t");
+	char   *word = s_command;
+
 	s_command += len + !!s_command[len];
 	word[len] = '\0';
-	memcpy(buf, word, len + 1);
+	return word;
 }

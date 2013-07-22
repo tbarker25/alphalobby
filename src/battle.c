@@ -40,13 +40,19 @@ Battles_find(uint32_t id)
 }
 
 Battle *
-Battles_new(uint32_t id)
+Battles_new(uint32_t id, const char *title, const char *mod_name)
 {
 	Battle *b;
+	size_t title_len = strlen(title);
+	size_t mod_len   = strlen(mod_name);
 
-	b = _tinsert(&id, &s_battles, compare_int, sizeof *b);
+	b = _tinsert(&id, &s_battles, compare_int,
+	    title_len + mod_len + 2 + sizeof *b);
 	assert(!b->id);
 	b->id = id;
+	memcpy(b->mod_name, mod_name, mod_len);
+	b->title = b->mod_name + mod_len + 1;
+	memcpy(b->title, title, title_len);
 	return b;
 }
 
