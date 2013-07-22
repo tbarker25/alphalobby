@@ -23,62 +23,47 @@
 
 #include <windows.h>
 
-#include "common.h"
-#include "user.h"
 #include "battle.h"
+#include "common.h"
 #include "mybattle.h"
+#include "tsearch.h"
+#include "user.h"
 
-#define ALLOC_STEP 10
+static int compare_int(const void *a, const void *b);
 
-static int s_battles_len;
-static Battle **s_battles;
+static void *s_battles;
 
 Battle *
 Battles_find(uint32_t id)
 {
-	for (int i=0; i<s_battles_len; ++i)
-		if (s_battles[i] && s_battles[i]->id == id)
-			return s_battles[i];
-	return NULL;
+	return _tfind(&id, s_battles, compare_int);
 }
 
 Battle *
-Battles_new(void)
+Battles_new(uint32_t id)
 {
-	int i=0;
+	Battle *b;
 
-	for (; i<s_battles_len; ++i) {
-		if (s_battles[i] == NULL)
-			goto done;
-	}
-
-	if (s_battles_len % ALLOC_STEP == 0)
-		s_battles = realloc(s_battles, (size_t)(s_battles_len + ALLOC_STEP) * sizeof *s_battles);
-	++s_battles_len;
-done:
-	s_battles[i] = calloc(1, sizeof **s_battles);
-	return s_battles[i];
+	b = _tinsert(&id, &s_battles, compare_int, sizeof *b);
+	assert(!b->id);
+	b->id = id;
+	return b;
 }
 
 void
 Battles_del(Battle *b)
 {
-	free(b);
-	for (int i=0; i<s_battles_len; ++i) {
-		if (s_battles[i] == b) {
-			s_battles[i] = NULL;
-			return;
-		}
-	}
-	assert(0);
+	_tdelete(b, &s_battles, compare_int);
 }
 
 void
 Battles_reset(void)
 {
-	for (int i=0; i<s_battles_len; ++i)
-		free(s_battles[i]);
-	s_battles_len = 0;
-	free(s_battles);
-	s_battles = NULL;
+	_tdestroy(&s_battles);
+}
+
+static int
+compare_int(const void *a, const void *b)
+{
+	return *(int32_t *)a - *(int32_t *)b;
 }

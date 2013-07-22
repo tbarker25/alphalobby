@@ -28,20 +28,23 @@ delta(struct node *n)
 }
 
 static void
-updateheight(struct node *n)
+updateheight(struct node *restrict n)
 {
+	struct node *restrict l = n->left;
+	struct node *restrict r = n->right;
+
 	n->height = 0;
-	if (n->left && n->left->height > n->height)
-		n->height = n->left->height;
-	if (n->right && n->right->height > n->height)
-		n->height = n->right->height;
+	if (l && l->height > n->height)
+		n->height = l->height;
+	if (r && r->height > n->height)
+		n->height = r->height;
 	++n->height;
 }
 
 static struct node *
-rotl(struct node *n)
+rotl(struct node *restrict n)
 {
-	struct node *r = n->right;
+	struct node *restrict r = n->right;
 
 	n->right = r->left;
 	r->left = n;
@@ -51,9 +54,9 @@ rotl(struct node *n)
 }
 
 static struct node *
-rotr(struct node *n)
+rotr(struct node *restrict n)
 {
-	struct node *l = n->left;
+	struct node *restrict l = n->left;
 
 	n->left = l->right;
 	l->right = n;
@@ -81,7 +84,7 @@ balance(struct node *n)
 }
 
 static struct node *
-insert(const void *k, struct node **n, int (*cmp)(const void *, const void *), size_t size)
+insert(const void *restrict k, struct node **restrict n, int (*cmp)(const void *, const void *), size_t size)
 {
 	struct node *r = *n;
 	int c;
@@ -103,7 +106,7 @@ insert(const void *k, struct node **n, int (*cmp)(const void *, const void *), s
 }
 
 static struct node *
-movr(struct node *n, struct node *r)
+movr(struct node *restrict n, struct node *restrict r)
 {
 	if (!n)
 		return r;
@@ -112,7 +115,7 @@ movr(struct node *n, struct node *r)
 }
 
 static struct node *
-remove(struct node **n, const void *k, int (*cmp)(const void *, const void *), struct node *parent)
+remove(struct node **restrict n, const void *restrict k, int (*cmp)(const void *, const void *), struct node *restrict parent)
 {
 	int c;
 
@@ -143,7 +146,7 @@ _tdelete(const void *restrict key, void **restrict rootp, int(*compar)(const voi
 }
 
 void *
-_tfind(const void *key, void *rootp, int(*cmp)(const void *, const void *))
+_tfind(const void *restrict key, void *restrict rootp, int(*cmp)(const void *, const void *))
 {
 	struct node *n = rootp;
 
@@ -157,7 +160,7 @@ _tfind(const void *key, void *rootp, int(*cmp)(const void *, const void *))
 }
 
 void *
-_tinsert(const void *key, void **rootp, int (*compar)(const void *, const void *), size_t size)
+_tinsert(const void *restrict key, void **restrict rootp, int (*compar)(const void *, const void *), size_t size)
 {
 	return insert(key, (struct node **)rootp, compar, size)->key;
 }
@@ -186,13 +189,25 @@ _twalk(const void *root, void (*action)(const void *))
 }
 
 void
-_tdestroy(void *root)
+_tdestroy(void **rootp)
 {
-	struct node *r = root;
+	struct node *n = *rootp;
+	struct node *parents[n->height];
+	struct node **top = parents;
 
-	if (!r)
-		return;
-	_tdestroy(r->left);
-	_tdestroy(r->right);
-	free(r);
+	*rootp = NULL;
+	while (1) {
+		if (n) {
+			*(top++) = n;
+			n = n->left;
+
+		} else if (top != parents) {
+			struct node *tmp = *--top;
+			n = tmp->right;
+			free(tmp);
+
+		} else {
+			return;
+		}
+	}
 }
