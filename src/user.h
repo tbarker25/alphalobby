@@ -89,7 +89,7 @@ void   Users_cleanup  (void);
 void   Users_del      (const char *username);
 void   Users_del_bot  (const char *name);
 User * Users_find     (const char username[]) __attribute__((pure));
-User * Users_get_next (void);
+void   Users_for_each (void (*action)(const struct User *));
 User * Users_new      (uint32_t id, const char *name);
 void   Users_reset    (void);
 
@@ -97,5 +97,6 @@ extern User g_my_user;
 
 _Static_assert(sizeof(BattleStatus) == 4, "BattleStatus should be 4 bytes");
 _Static_assert(sizeof(ClientStatus) == 1, "ClientStatus should be 1 byte");
+void Users_done(void);
 
 #endif /* end of include guard: USER_H */

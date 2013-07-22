@@ -68,14 +68,15 @@ Users_find(const char *name)
 	if (!strcmp(name, g_my_user.name))
 		return &g_my_user;
 
-	u = _tfind(name, &s_users, (void *)strcmp);
+	u = _tfind(name, s_users, (void *)strcmp);
 	return u;
 }
 
-User *
-Users_get_next(void)
+void
+Users_for_each(void (*action)(const User *))
 {
-	return NULL;
+	action(&g_my_user);
+	_twalk(s_users, (void (*)(const void *))action);
 }
 
 User *

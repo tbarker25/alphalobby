@@ -162,26 +162,27 @@ _tinsert(const void *key, void **rootp, int (*compar)(const void *, const void *
 	return insert(key, (struct node **)rootp, compar, size)->key;
 }
 
-static void
-walk(const struct node *r, void (*action)(const void *, VISIT, int), int d)
-{
-	if (r == 0)
-		return;
-	if (r->left == 0 && r->right == 0)
-		action(r, leaf, d);
-	else {
-		action(r, preorder, d);
-		walk(r->left, action, d+1);
-		action(r, postorder, d);
-		walk(r->right, action, d+1);
-		action(r, endorder, d);
-	}
-}
-
 void
-_twalk(const void *root, void (*action)(const void *, VISIT, int))
+_twalk(const void *root, void (*action)(const void *))
 {
-	walk(root, action, 0);
+	const struct node *n = root;
+	const struct node *parents[n->height];
+	const struct node **top = parents;
+
+	while (1) {
+		if (n) {
+			*(top++) = n;
+			n = n->left;
+
+		} else if (top != parents) {
+			n = *--top;
+			action(n->key);
+			n = n->right;
+
+		} else {
+			return;
+		}
+	}
 }
 
 void
@@ -189,7 +190,7 @@ _tdestroy(void *root)
 {
 	struct node *r = root;
 
-	if (r == 0)
+	if (!r)
 		return;
 	_tdestroy(r->left);
 	_tdestroy(r->right);
