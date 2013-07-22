@@ -184,9 +184,8 @@ on_item_right_click(POINT point)
 	if (!Sync_mod_hash(b->mod_name))
 		AppendMenu(menu, 0, DL_MOD, L"Download mod");
 
-	for (uint8_t i = 0; i < b->user_len - b->bot_len; ++i)
-		AppendMenuA(user_menu, 0, (uintptr_t)b->users[i],
-				b->users[i]->name);
+	Battles_for_each_human(u, b)
+		AppendMenuA(user_menu, 0, (uintptr_t)u, u->name);
 
 	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 

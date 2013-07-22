@@ -140,8 +140,6 @@ remove(struct node **restrict n, const void *restrict k, int (*cmp)(const void *
 void
 _tdelete(const void *restrict key, void **restrict rootp, int(*compar)(const void *, const void *))
 {
-	/* last argument is arbitrary non-null pointer
-	   which is returned when the root node is deleted */
 	remove((void*)rootp, key, compar, *rootp);
 }
 

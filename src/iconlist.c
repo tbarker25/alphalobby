@@ -69,9 +69,8 @@ get_player_color_index(const UserBot *u)
 	}
 
 	for (uint8_t i=0; i < LENGTH(player_colors); ++i) {
-		for (size_t j = 0; j < g_my_battle->user_len; ++j) {
-			if (g_my_battle->users[j]->mode
-					&& g_my_battle->users[j] == player_colors[i])
+		Battles_for_each_user(u2, g_my_battle) {
+			if (u2->mode && u2 == player_colors[i])
 				goto color_already_used;
 		}
 		player_colors[i] = u;

@@ -23,35 +23,47 @@
 #define MAX_TITLE 128
 
 #define GetNumPlayers(_b)\
-	((uint8_t)((_b)->user_len - (_b)->spectator_len - (_b)->bot_len))
+	((uint8_t)((_b)->user_len - (_b)->spectator_len))
 
-
-enum BattleType {
+typedef enum BattleType {
 	BATTLE_NORMAL = 0,
 	BATTLE_REPLAY = 1,
-};
+} BattleType;
 
-enum NatType {
+typedef enum NatType {
 	NAT_NONE  = 0,
 	NAT_OTHER,
-};
+} NatType;
 
 typedef struct Battle {
-	uint32_t id;
-	uint32_t map_hash;
-	char map_name[MAX_TITLE+1], mod_name[MAX_TITLE+1], title[MAX_TITLE+1], ip[16];
-	uint16_t port;
-	uint8_t passworded, locked, type, max_players, rank, user_len, spectator_len, bot_len;
-	enum NatType nat_type;
-	union {
-		struct UserBot *users[128];
-		struct User *founder;
-	};
+	uint32_t         id;
+	uint32_t         map_hash;
+	char            *map_name;
+	char            *title;
+	struct User     *founder;
+	struct Bot      *first_bot;
+	uint16_t         port;
+	char             ip[16];
+	uint8_t          max_players;
+	uint8_t          rank;
+	uint8_t          user_len;
+	uint8_t          spectator_len;
+	bool             passworded;
+	bool             locked;
+	enum BattleType  type;
+	enum NatType     nat_type;
+	char             mod_name[];
 } Battle;
 
 void     Battles_del(Battle *);
 Battle * Battles_find(uint32_t id) __attribute__((pure));
-Battle * Battles_new(uint32_t id);
+Battle * Battles_new(uint32_t id, const char *title, const char *mod_name);
 void     Battles_reset(void);
+
+#define Battles_for_each_human(__u, __b) \
+	for (User *__u = __b->founder; __u != (User *)__b->first_bot; __u = __u->next_in_battle)
+
+#define Battles_for_each_user(__u, __b) \
+	for (UserBot *__u = __b->founder; __u; __u = __u->next_in_battle)
 
 #endif /* end of include guard: BATTLE_H */
