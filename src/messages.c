@@ -260,8 +260,7 @@ battle_opened(void)
 	Battle *b;
 	char founder_name[MAX_NAME_LENGTH_NUL];
 
-	b           = Battles_new();
-	b->id       = get_next_int();
+	b           = Battles_new(get_next_int());
 	b->type     = (uint8_t)get_next_int();
 	b->nat_type = get_next_int();
 

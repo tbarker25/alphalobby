@@ -51,7 +51,7 @@ typedef struct Battle {
 
 void     Battles_del(Battle *);
 Battle * Battles_find(uint32_t id) __attribute__((pure));
-Battle * Battles_new(void);
+Battle * Battles_new(uint32_t id);
 void     Battles_reset(void);
 
 #endif /* end of include guard: BATTLE_H */

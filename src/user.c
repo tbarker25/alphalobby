@@ -163,8 +163,7 @@ Users_del_bot(const char *name)
 void
 Users_reset(void)
 {
-	_tdestroy(s_users);
-	s_users = NULL;
+	_tdestroy(&s_users);
 }
 
 void
