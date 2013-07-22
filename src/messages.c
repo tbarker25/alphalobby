@@ -50,8 +50,8 @@
 #define LENGTH(x) (sizeof x / sizeof *x)
 
 typedef struct Command {
-	char name[20];
-	void (*func)(void);
+	const char name[20];
+	void (*const func)(void);
 } Command;
 
 static void accepted              (void);
@@ -105,11 +105,11 @@ static void update_bot            (void);
 static uint32_t get_next_int                (void);
 static char *   get_next_word               (void);
 static char *   get_next_sentence           (void);
-static void     strip_irc_control_sequences (char *text);
+static void     strip_irc_control_sequences (char *);
 
-static FILE *s_agreement_file;
-static uint32_t s_time_battle_joined;
-static char *s_command;
+static FILE     *s_agreement_file;
+static uint32_t  s_time_battle_joined;
+static char     *s_command;
 
 static const Command SERVER_COMMANDS[] = {
 	{"ACCEPTED",             accepted},
@@ -162,17 +162,17 @@ static const Command SERVER_COMMANDS[] = {
 };
 
 void
-Messages_handle(char *command)
+Messages_handle(char *message)
 {
-	char *command_name;
-	Command *com;
+	const char *command_name;
+	Command    *command;
 
-	s_command = command;
+	s_command = message;
 	command_name = get_next_word();
-	com = bsearch(command_name, SERVER_COMMANDS,
+	command = bsearch(command_name, SERVER_COMMANDS,
 	    LENGTH(SERVER_COMMANDS), sizeof *SERVER_COMMANDS, (void *)strcmp);
-	if (com)
-		com->func();
+	if (command)
+		command->func();
 }
 
 static void
@@ -191,21 +191,17 @@ add_bot(void)
 		BattleStatus;
 		uint32_t as_int;
 	} status;
+	User       *owner;
 
-	char     *ai_dll;
-	char     *name;
-	char     *owner_name;
-	uint32_t  battle_id;
-	uint32_t  color;
-	User     *owner;
+	uint32_t    battle_id  = get_next_int();
+	const char *name       = get_next_word();
+	const char *owner_name = get_next_word();
+	uint32_t    int_status = get_next_int();
+	uint32_t    color      = get_next_int();
+	const char *ai_dll     = s_command;
 
-	battle_id     = get_next_int();
-	name          = get_next_word();
-	owner_name    = get_next_word();
 	owner         = Users_find(owner_name);
-	status.as_int = get_next_int();
-	color         = get_next_int();
-	ai_dll        = s_command;
+	status.as_int = int_status;
 
 	if (!owner) {
 		assert(0);
@@ -223,33 +219,29 @@ add_bot(void)
 static void
 add_user(void)
 {
-	char     *name;
-	char     *country_code;
-	User     *u;
-	uint32_t  cpu;
-	uint32_t  id;
+	User       *u;
+	const char *name         = get_next_word();
+	const char *country_code = get_next_word();
+	uint32_t   cpu           = get_next_int();
+	uint32_t   id            = get_next_int();
 
-	name         = get_next_word();
-	country_code = get_next_word();
-	cpu          = get_next_int();
-	id           = get_next_int();
-	u            = Users_new(id, name);
-	u->country   = Country_get_id(country_code);
-	u->cpu       = cpu;
+	u          = Users_new(id, name);
+	u->country = Country_get_id(country_code);
+	u->cpu     = cpu;
 	RelayHost_on_add_user(u);
 }
 
 static void
 add_start_rect(void)
 {
-	StartRect *rect;
-	uint8_t ally_number = (uint8_t)get_next_int();
+	uint8_t  ally_number = (uint8_t )get_next_int();
+	uint16_t left        = (uint16_t)get_next_int();
+	uint16_t top         = (uint16_t)get_next_int();
+	uint16_t right       = (uint16_t)get_next_int();
+	uint16_t bottom      = (uint16_t)get_next_int();
 
-	rect = &g_battle_options.start_rects[ally_number];
-	rect->left   = (uint16_t)get_next_int();
-	rect->top    = (uint16_t)get_next_int();
-	rect->right  = (uint16_t)get_next_int();
-	rect->bottom = (uint16_t)get_next_int();
+	g_battle_options.start_rects[ally_number]
+		= (StartRect){left, top, right, bottom};
 	Minimap_on_start_position_change();
 }
 
@@ -278,22 +270,23 @@ battle_opened(void)
 	uint32_t    id           = get_next_int();
 	BattleType  battle_type  = get_next_int();
 	NatType     nat_type     = get_next_int();
-	char       *founder_name = get_next_word();
-	char       *ip           = get_next_word();
+	const char *founder_name = get_next_word();
+	const char *ip           = get_next_word();
 	uint16_t    port         = (uint16_t)get_next_int();
 	uint8_t     max_players  = (uint8_t)get_next_int();
 	bool        passworded   = get_next_int();
 	uint8_t     rank         = (uint8_t)get_next_int();
 	uint32_t    map_hash     = get_next_int();
-	char       *map_name     = get_next_sentence();
-	char       *title        = get_next_sentence();
-	char       *mod_name     = get_next_sentence();
+	const char *map_name     = get_next_sentence();
+	const char *title        = get_next_sentence();
+	const char *mod_name     = get_next_sentence();
 
-	assert(strlen(ip) < sizeof(b->ip));
 	founder = Users_find(founder_name);
-	assert(founder);
-	if (!founder)
+
+	if (!founder || strlen(ip) >= sizeof(b->ip)) {
+		assert(0);
 		return;
+	}
 
 	b              = Battles_new(id, title, mod_name);
 	b->type        = battle_type;
@@ -352,8 +345,8 @@ broadcast(void)
 static void
 channel(void)
 {
-	const char *channame = get_next_word();
-	const char *usercount = get_next_word();
+	const char *channame    = get_next_word();
+	const char *usercount   = get_next_word();
 	const char *description = s_command;
 
 	ChannelList_add_channel(channame, usercount, description);
@@ -387,10 +380,10 @@ client_battle_status(void)
 	uint32_t    color;
 
 	username      = get_next_word();
-	u             = Users_find(username);
 	status.as_int = get_next_int();
 	color         = get_next_int();
 
+	u = Users_find(username);
 	if (!u) {
 		assert(0);
 		return;
@@ -588,7 +581,7 @@ left_battle(void)
 
 	id       = get_next_int();
 	username = get_next_word();
-	b        = Battles_find(id);     // Battle Unused
+	b        = Battles_find(id);
 	u        = Users_find(username);
 	if (!u || !b) {
 		assert(0);
@@ -596,10 +589,8 @@ left_battle(void)
 	}
 
 	u->battle = NULL;
-	assert(b->founder);
-	assert(u != b->founder);
-	for (User **u2 = &b->founder->next_in_battle; *u2; *u2 = (*u2)->next_in_battle) {
-		if (*u2 == u) {
+	for (UserBot **u2 = &b->founder->next_in_battle; *u2; u2 = &(*u2)->next_in_battle) {
+		if (*u2 == (UserBot *)u) {
 			*u2 = u->next_in_battle;
 			goto done;
 		}
@@ -608,7 +599,6 @@ left_battle(void)
 	done:
 
 	--b->user_len;
-
 	if (u == &g_my_user)
 		MyBattle_left_battle();
 
@@ -666,8 +656,8 @@ remove_bot(void)
 {
 	uint32_t    id;
 	const char *bot_name;
-	/* REMOVEBOT BATTLE_ID name */
-	id = get_next_int();
+
+	id       = get_next_int();
 	bot_name = get_next_word();
 	if (id != g_my_battle->id) {
 		assert(0);
@@ -679,8 +669,9 @@ remove_bot(void)
 static void
 remove_start_rect(void)
 {
-	uint8_t ally_number = (uint8_t)get_next_int();
+	uint8_t ally_number;
 
+	ally_number = (uint8_t)get_next_int();
 	g_battle_options.start_rects[ally_number] = (StartRect){0};
 	Minimap_on_start_position_change();
 }
@@ -763,9 +754,9 @@ said_battle_ex(void)
 	}
 	strip_irc_control_sequences(text);
 
-	// Check for autohost
-	// welcome message is configurable, but chance_of_autohost should usually be between 5 and 8.
-	// a host saying "hi johnny" in the first 2 seconds will only give score of 3.
+	/* Check for autohost */
+	/* welcome message is configurable, but chance_of_autohost should usually be between 5 and 8. */
+	/* a host saying "hi johnny" in the first 2 seconds will only give score of 3. */
 	if (g_my_battle && u == g_my_battle->founder
 	    && GetTickCount() - s_time_battle_joined < 10000) {
 		int chance_of_autohost = 0;
@@ -844,7 +835,7 @@ said_private(void)
 	if (RelayHost_on_private_message(user->name, text))
 		return;
 
-	// Zero-K juggler sends matchmaking text "!join <host>"
+	/* Zero-K juggler sends matchmaking text "!join <host>" */
 	if (g_my_battle
 			&& user == g_my_battle->founder
 			&& !memcmp(text, "!join ", sizeof "!join " - 1)) {
@@ -854,27 +845,26 @@ said_private(void)
 		return;
 	}
 
-	// Check for pms that identify an autohost
+	/* Check for pms that identify an autohost */
 	if (g_my_battle && user == g_my_battle->founder
 			&& strstr(text, user->name)
 			&& strstr(text, "running")) {
 
-		// Response to "!springie":
-		// "PlanetWars (Springie 2.2.0) running for 10.00:57:00"
+		/* Response to "!springie": */
+		/* "PlanetWars (Springie 2.2.0) running for 10.00:57:00" */
 		if (strstr(text, "Springie")) {
 			Springie_set_as_host();
 			return;
 		}
 
-		// Response to "!version":
-		// "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:"
+		/* Response to "!version": */
+		/* "[TERA]DSDHost2 is running SPADS v0.9.10c (auto-update: testing), with following components:" */
 		if (strstr(text, "SPADS")) {
 			Spads_set_as_host();
 			return;
 		}
 	}
 
-	// Normal chat message:
 	ChatTab_on_said_private(user, text, 0);
 }
 
@@ -956,7 +946,7 @@ tas_server(void)
 	const char *server_spring_version;
 	const char *my_spring_version;
 
-	get_next_word(); //= server_version
+	get_next_word(); /* server_version */
 	server_spring_version = get_next_word();
 	my_spring_version = Sync_spring_version();
 	*strchr(server_spring_version, '.') = '\0';
@@ -987,15 +977,13 @@ update_battle_info(void)
 		return;
 	}
 
-	last_map_hash = b->map_hash;
-
 	b->spectator_len = (uint8_t)get_next_int();
 	b->locked        = (uint8_t)get_next_int();
+	last_map_hash    = b->map_hash;
 	b->map_hash      = get_next_int();
+	map_name         = s_command;
+	map_len          = strlen(s_command);
 
-	map_name = get_next_sentence();
-	map_len = (size_t)(s_command - map_name);
-	assert(map_len == strlen(map_name));
 	if (map_len > strlen(b->map_name)) {
 		free(b->map_name);
 		b->map_name = malloc(map_len + 1);
@@ -1011,7 +999,7 @@ update_battle_info(void)
 static void
 update_bot(void)
 {
-	// UPDATEBOT BATTLE_ID name battlestatus teamcolor
+	/* UPDATEBOT BATTLE_ID name battlestatus teamcolor */
 }
 
 static void
@@ -1021,6 +1009,7 @@ strip_irc_control_sequences(char *text)
 	char *c     = text;
 
 	for (; *c; ++c) {
+		/* 0x03 changes color (next two chars specify which color) */
 		if (*c == (char)0x03) {
 			++c;
 			skips += 2;

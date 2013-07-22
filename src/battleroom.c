@@ -250,7 +250,7 @@ add_user_to_playerlist(const UserBot *u)
 	buf_end = buf + _swprintf(buf, L"%hs", u->name);
 	if (u->ai)
 		_snwprintf(buf_end, LENGTH(buf) - (size_t)(buf_end - buf),
-				L" (%hs)", ((Bot *)u)->dll);
+				L" (%hs)", ((Bot *)u)->ai_dll);
 	else
 		_snwprintf(buf_end, LENGTH(buf) - (size_t)(buf_end - buf),
 				L" (%hs)", ((User *)u)->alias);

@@ -165,8 +165,8 @@ MyBattle_left_battle(void)
 
 	BattleRoom_on_set_mod_details();
 
-	while (g_my_battle->first_bot)
-		Users_del_bot(g_my_battle->first_bot->name);
+	/* while (g_my_battle->first_bot) */
+		/* Users_del_bot(g_my_battle->first_bot->name); */
 
 	g_my_user.BattleStatus = (BattleStatus){0};
 	g_last_battle_status = (BattleStatus){0};
