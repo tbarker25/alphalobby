@@ -54,6 +54,43 @@ activate(int item_index)
 }
 
 static void
+add_user(const User *u)
+{
+	LVITEM item;
+	wchar_t name[MAX_NAME_LENGTH * 2 + 4];
+	int state_icon;
+
+	item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
+	item.iItem = INT_MAX;
+	item.iSubItem = 0;
+	item.lParam = (intptr_t)u;
+
+	_swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
+	    ? L"%hs (%hs)" : L"%hs",
+	    u->name, u->alias);
+	item.pszText = name;
+
+	item.iImage = u->ingame ? ICON_INGAME
+		: u->battle ? ICONMASK_INGAME
+		: -1;
+
+	state_icon = ICONMASK_USER;
+	if (u->away)
+		state_icon |= ICONMASK_AWAY;
+	if (u->ignore)
+		state_icon |= ICONMASK_IGNORE;
+	item.state = INDEXTOOVERLAYMASK(state_icon);
+	item.stateMask = LVIS_OVERLAYMASK;
+
+	item.iItem = ListView_InsertItem(s_user_list, &item);
+
+	item.mask = LVIF_IMAGE;
+	item.iImage = ICON_FIRST_FLAG + u->country;
+	item.iSubItem = 1;
+	ListView_SetItem(s_user_list, &item);
+}
+
+static void
 on_init(HWND window)
 {
 	RECT rect;
@@ -81,42 +118,7 @@ on_init(HWND window)
 	column_info.iSubItem = 1;
 	ListView_InsertColumn(s_user_list, 1, (uintptr_t)&column_info);
 
-	for (const User *u; (u = Users_get_next());) {
-		LVITEM item;
-		wchar_t name[MAX_NAME_LENGTH * 2 + 4];
-		int state_icon;
-
-		if (!*u->name)
-			continue;
-		item.mask = LVIF_PARAM | LVIF_TEXT | LVIF_STATE | LVIF_IMAGE;
-		item.iItem = INT_MAX;
-		item.iSubItem = 0;
-		item.lParam = (intptr_t)u;
-
-		_swprintf(name, strcmp(UNTAGGED_NAME(u->name), u->alias)
-				? L"%hs (%hs)" : L"%hs",
-				u->name, u->alias);
-		item.pszText = name;
-
-		item.iImage = u->ingame ? ICON_INGAME
-			: u->battle ? ICONMASK_INGAME
-			: -1;
-
-		state_icon = ICONMASK_USER;
-		if (u->away)
-		state_icon |= ICONMASK_AWAY;
-		if (u->ignore)
-		state_icon |= ICONMASK_IGNORE;
-		item.state = INDEXTOOVERLAYMASK(state_icon);
-		item.stateMask = LVIS_OVERLAYMASK;
-
-		item.iItem = ListView_InsertItem(s_user_list, &item);
-
-		item.mask = LVIF_IMAGE;
-		item.iImage = ICON_FIRST_FLAG + u->country;
-		item.iSubItem = 1;
-		ListView_SetItem(s_user_list, &item);
-	}
+	Users_for_each(add_user);
 }
 
 static BOOL CALLBACK
