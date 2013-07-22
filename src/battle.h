@@ -40,8 +40,10 @@ typedef struct Battle {
 	uint32_t         map_hash;
 	char            *map_name;
 	char            *title;
-	struct User     *founder;
-	struct Bot      *first_bot;
+	union {
+		struct User     *founder;
+		struct UserBot  *users;
+	};
 	uint16_t         port;
 	char             ip[16];
 	uint8_t          max_players;
@@ -61,7 +63,7 @@ Battle * Battles_new(uint32_t id, const char *title, const char *mod_name);
 void     Battles_reset(void);
 
 #define Battles_for_each_human(__u, __b) \
-	for (User *__u = __b->founder; __u != (User *)__b->first_bot; __u = __u->next_in_battle)
+	for (User *__u = __b->founder; __u && !__u->ai; __u = (User *)__u->next_in_battle)
 
 #define Battles_for_each_user(__u, __b) \
 	for (UserBot *__u = __b->founder; __u; __u = __u->next_in_battle)

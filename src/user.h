@@ -54,7 +54,7 @@ typedef struct UserBot {
 	bool ai;
 	BattleStatus;
 	struct Battle *battle;
-	struct User *next_in_battle;
+	struct UserBot *next_in_battle;
 	union {
 		uint32_t color;
 		struct {
@@ -78,11 +78,10 @@ typedef struct User {
 typedef struct Bot {
 	UserBot;
 
-	char *dll;
 	int option_len;
 	struct Option2 *options;
 	User *owner;
-	struct Bot *next;
+	char ai_dll[];
 } Bot;
 
 void   Users_add_bot  (const char *name, User *owner, BattleStatus battle_status, uint32_t color, const char *dll);
