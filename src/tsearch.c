@@ -170,7 +170,7 @@ _twalk(const void *root, void (*action)(const void *))
 	const struct node *parents[n->height];
 	const struct node **top = parents;
 
-	while (1) {
+	for (;;) {
 		if (n) {
 			*(top++) = n;
 			n = n->left;
@@ -194,7 +194,7 @@ _tdestroy(void **rootp)
 	struct node **top = parents;
 
 	*rootp = NULL;
-	while (1) {
+	for (;;) {
 		if (n) {
 			*(top++) = n;
 			n = n->left;

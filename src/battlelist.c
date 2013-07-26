@@ -229,7 +229,7 @@ on_get_info_tip(NMLVGETINFOTIP *info)
 			L"%hs\n%hs\n%hs\n%s\n%d/%d players - %d spectators",
 			b->founder->name, b->mod_name, b->map_name,
 			utf8to16(b->title), GetNumPlayers(b), b->max_players,
-			b->user_len);
+			b->spectator_len);
 }
 
 static void
