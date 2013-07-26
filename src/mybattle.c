@@ -202,7 +202,7 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 		g_last_battle_status = bs;
 
 	if (last_bs.mode != bs.mode
-			|| (last_bs.ally != bs.ally && u == &g_my_user.UserBot))
+	    || (last_bs.ally != bs.ally && u == &g_my_user.UserBot))
 		Minimap_on_start_position_change();
 
 	if (last_bs.mode == bs.mode)
@@ -219,10 +219,6 @@ MyBattle_update_battle_status(UserBot *restrict u, BattleStatus bs, uint32_t col
 		TasServer_send_my_battle_status(new_bs);
 	}
 
-	g_my_battle->spectator_len = 0;
-	Battles_for_each_user(u2, g_my_battle)
-		if (!u->mode)
-			++g_my_battle->spectator_len;
 	BattleList_update_battle(g_my_battle);
 }
 
