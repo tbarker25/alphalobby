@@ -302,7 +302,7 @@ set_player_icon(const UserBot *u, int list_index)
 		rank_icon = user->rank + ICON_FIRST_RANK;
 
 	} else if (user->trueskill) {
-		rank_icon = user->trueskill / 5 - 2 + ICON_FIRST_RANK;
+		rank_icon = (user->trueskill - 14) / 4 + ICON_FIRST_RANK;
 		rank_icon = rank_icon < ICON_FIRST_RANK ? ICON_FIRST_RANK
 		          : rank_icon > ICON_LAST_RANK  ? ICON_LAST_RANK
 		          : rank_icon;
