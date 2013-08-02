@@ -39,18 +39,18 @@ static void _init                  (void);
 static int  get_player_color_index (const UserBot *u);
 static void set_icon_as_color      (int index, uint32_t color);
 
-static HIMAGELIST s_icon_list;
+static HIMAGELIST icon_list;
 
 void
 IconList_replace_icon(IconIndex index, HBITMAP bitmap)
 {
-	ImageList_Replace(s_icon_list, index, bitmap, NULL);
+	ImageList_Replace(icon_list, index, bitmap, NULL);
 }
 
 HICON
 IconList_get_icon(IconIndex icon_index)
 {
-	return ImageList_GetIcon(s_icon_list, icon_index, 0);
+	return ImageList_GetIcon(icon_list, icon_index, 0);
 }
 
 static int
@@ -98,7 +98,7 @@ set_icon_as_color(int index, uint32_t color)
 
 	DeleteDC(bitmap_dc);
 
-	ImageList_Replace(s_icon_list, index, bitmap, NULL);
+	ImageList_Replace(icon_list, index, bitmap, NULL);
 	DeleteObject(bitmap);
 }
 
@@ -121,20 +121,20 @@ IconList_set_window_image(HWND window, IconIndex icon_index)
 {
 	HICON icon;
 
-	icon = ImageList_GetIcon(s_icon_list, icon_index, 0);
+	icon = ImageList_GetIcon(icon_list, icon_index, 0);
 	SendMessage(window, BM_SETIMAGE, IMAGE_ICON, (intptr_t)icon);
 }
 
 void
 IconList_enable_for_listview(HWND window)
 {
-	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (intptr_t)s_icon_list);
+	SendMessage(window, LVM_SETIMAGELIST, LVSIL_SMALL, (intptr_t)icon_list);
 }
 
 void
 IconList_enable_for_toolbar(HWND window)
 {
-	SendMessage(window, TB_SETIMAGELIST, 0, (intptr_t)s_icon_list);
+	SendMessage(window, TB_SETIMAGELIST, 0, (intptr_t)icon_list);
 }
 
 static void __attribute__((constructor))
@@ -142,12 +142,12 @@ _init(void)
 {
 	HBITMAP icons_bitmap;
 
-	s_icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
+	icon_list = ImageList_Create(16, 16, ILC_COLOR32 | ILC_MASK, 0, ICON_LAST+1);
 	icons_bitmap = CreateBitmap(ICON_WIDTH, ICON_HEIGHT, 1, ICON_BBP*8, icon_data);
-	ImageList_Add(s_icon_list, icons_bitmap, NULL);
+	ImageList_Add(icon_list, icons_bitmap, NULL);
 	DeleteObject(icons_bitmap);
 
 	for (IconIndex i=1; i<=ICON_MASK; ++i)
 		if (i & ~ ICONMASK_USER)
-			ImageList_SetOverlayImage(s_icon_list, i, i);
+			ImageList_SetOverlayImage(icon_list, i, i);
 }

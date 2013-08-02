@@ -80,7 +80,7 @@ static const DialogItem DIALOG_ITEMS[] = {
 };
 
 static const wchar_t *const COLUMN_TITLES[] = {L"host", L"description", L"mod", L"map", L"Players"};
-static HWND s_battle_list;
+static HWND battle_list;
 
 static int CALLBACK
 compare_battle(const Battle *b1, const Battle *b2, int sort_order)
@@ -113,7 +113,7 @@ sort_listview(int new_order)
 	if (new_order)
 		sort_order = new_order == sort_order ? -sort_order : new_order;
 
-	ListView_SortItems(GetDlgItem(s_battle_list, DLG_LIST), compare_battle, sort_order);
+	ListView_SortItems(GetDlgItem(battle_list, DLG_LIST), compare_battle, sort_order);
 }
 
 static void
@@ -124,7 +124,7 @@ resize_columns(void)
 	int32_t column_rem;
 	int32_t column_width;
 
-	list = GetDlgItem(s_battle_list, DLG_LIST);
+	list = GetDlgItem(battle_list, DLG_LIST);
 	GetClientRect(list, &rect);
 
 	column_rem = rect.right % (int32_t)LENGTH(COLUMN_TITLES);
@@ -143,7 +143,7 @@ get_battle_from_index(int index)
 	info.iItem = index;
 	info.iSubItem = 0;
 
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_GETITEM, 0, (intptr_t)&info);
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_GETITEM, 0, (intptr_t)&info);
 	return (Battle *)info.lParam;
 }
 
@@ -163,7 +163,7 @@ on_item_right_click(POINT point)
 
 	hit_test.pt = point;
 
-	index = SendDlgItemMessage(s_battle_list, DLG_LIST,
+	index = SendDlgItemMessage(battle_list, DLG_LIST,
 			LVM_SUBITEMHITTEST, 0, (intptr_t)&hit_test);
 
 	if (index < 0)
@@ -189,10 +189,10 @@ on_item_right_click(POINT point)
 
 	InsertMenu(user_menu, 1, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
 
-	ClientToScreen(s_battle_list, &point);
+	ClientToScreen(battle_list, &point);
 
 	item_clicked = TrackPopupMenuEx(menu, TPM_RETURNCMD, point.x, point.y,
-			s_battle_list, NULL);
+			battle_list, NULL);
 
 	DestroyMenu(user_menu);
 	DestroyMenu(menu);
@@ -237,9 +237,9 @@ on_create(HWND window)
 {
 	HWND list;
 
-	s_battle_list = window;
+	battle_list = window;
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
-	list = GetDlgItem(s_battle_list, DLG_LIST);
+	list = GetDlgItem(battle_list, DLG_LIST);
 
 	for (int i=0, n=sizeof COLUMN_TITLES / sizeof *COLUMN_TITLES; i < n; ++i) {
 		LVCOLUMN info;
@@ -307,14 +307,14 @@ get_index_from_battle(const Battle *b)
 	info.flags = LVFI_PARAM;
 	info.lParam = (intptr_t)b;
 
-	return SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_FINDITEM,
+	return SendDlgItemMessage(battle_list, DLG_LIST, LVM_FINDITEM,
 	    (uintptr_t)-1, (intptr_t)&info);
 }
 
 void
 BattleList_close_battle(const Battle *b)
 {
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_DELETEITEM,
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_DELETEITEM,
 			(uintptr_t)get_index_from_battle(b), 0);
 }
 
@@ -332,7 +332,7 @@ BattleList_add_battle(Battle *b)
 	item.lParam = (intptr_t)b;
 	item.pszText = utf8to16(b->founder->name);
 
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_INSERTITEM,
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_INSERTITEM,
 			0, (intptr_t)&item);
 }
 
@@ -345,7 +345,7 @@ set_item_text(int index, int column, const char *text)
 	item.iItem = index;
 	item.iSubItem = column;
 	item.pszText = utf8to16(text);
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_SETITEM, 0,
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_SETITEM, 0,
 			(intptr_t)&item);
 }
 
@@ -380,7 +380,7 @@ BattleList_update_battle(const Battle *b)
 	item.iImage = b->locked ? ICON_CLOSED : ICON_OPEN;
 	item.stateMask = LVIS_OVERLAYMASK;
 	item.state = INDEXTOOVERLAYMASK(get_icon_index(b));
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_SETITEM, 0,
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_SETITEM, 0,
 			(intptr_t)&item);
 
 	set_item_text(index, 1, b->title);
@@ -418,5 +418,5 @@ _init(void)
 void
 BattleList_reset(void)
 {
-	SendDlgItemMessage(s_battle_list, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
+	SendDlgItemMessage(battle_list, DLG_LIST, LVM_DELETEALLITEMS, 0, 0);
 }

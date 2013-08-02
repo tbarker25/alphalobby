@@ -67,7 +67,7 @@ int g_mod_len = 0;
 
 bool g_is_using_trueskill;
 
-static char *s_script;
+static char *script;
 
 void (*MyBattle_force_ally) (const User *, int ally_id);
 void (*MyBattle_force_team) (const User *, int team_id);
@@ -160,8 +160,8 @@ MyBattle_left_battle(void)
 	for (size_t i=0; i<LENGTH(g_battle_options.positions); ++i)
 		g_battle_options.positions[i] = INVALID_STARTPOS;
 
-	free(s_script);
-	s_script = NULL;
+	free(script);
+	script = NULL;
 
 	BattleRoom_on_set_mod_details();
 
@@ -272,7 +272,6 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 {
 	const char *section;
 
-	_strlwr(key);
 	if (strcmp(strsep(&key, "/"), "game")) {
 		printf("unrecognized script key ?/%s=%s\n", key, val);
 		return;
@@ -288,7 +287,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 			;// task_set_minimap = 1;
 		}
 		g_battle_options.start_pos_type = start_pos_type;
-		// PostMessage(s_battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
+		// PostMessage(battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
 
@@ -297,7 +296,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 		int team = atoi(s + sizeof "team" - 1);
 		char type = s[sizeof "team/startpos" + (team > 10)];
 		((int *)&g_battle_options.positions[team])[type != 'x'] = atoi(val);
-		// PostMessage(s_battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
+		// PostMessage(battle_room, WM_MOVESTARTPOSITIONS, 0, 0);
 		return;
 	}
 #endif
@@ -335,6 +334,7 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 			}
 			u->trueskill = (uint8_t)atoi(val);
 			g_is_using_trueskill = 1;
+			BattleRoom_update_user(u);
 			return;
 		}
 		return;
@@ -376,7 +376,7 @@ set_options_from_script(void)
 	char *to_free;
 	char *key, *val;
 
-	script = _strdup(s_script);
+	script = _strdup(script);
 	to_free = script;
 
 	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
@@ -388,16 +388,16 @@ set_options_from_script(void)
 void
 MyBattle_append_script(char *restrict s)
 {
-	if (!s_script) {
-		s_script = _strdup(s);
+	if (!script) {
+		script = _strdup(s);
 
 	} else {
-		size_t current_len = strlen(s_script) + 1;
+		size_t current_len = strlen(script) + 1;
 		size_t extra_len = strlen(s) + 1;
-		s_script = realloc(s_script,
+		script = realloc(script,
 				current_len + extra_len);
-		s_script[current_len - 1] = '\t';
-		memcpy(s_script + current_len, s, extra_len);
+		script[current_len - 1] = '\t';
+		memcpy(script + current_len, s, extra_len);
 	}
 
 	if (g_mod_hash)
@@ -409,7 +409,7 @@ MyBattle_update_mod_options(void)
 {
 	BattleRoom_on_set_mod_details();
 
-	if (!s_script)
+	if (!script)
 		return;
 
 	set_options_from_script();

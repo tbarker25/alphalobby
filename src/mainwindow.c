@@ -100,7 +100,7 @@ static void     set_current_tab_checked(char enable);
 static void     resize_current_tab (int16_t width, int16_t height);
 
 HWND g_main_window;
-static HWND s_current_tab;
+static HWND current_tab;
 
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_TOOLBAR] {
@@ -141,7 +141,7 @@ resize_current_tab(int16_t width, int16_t height)
 	RECT toolbar_rect;
 
 	GetClientRect(GetDlgItem(g_main_window, DLG_TOOLBAR), &toolbar_rect);
-	SetWindowPos(s_current_tab, NULL, 0, toolbar_rect.bottom, width, height - toolbar_rect.bottom, 0);
+	SetWindowPos(current_tab, NULL, 0, toolbar_rect.bottom, width, height - toolbar_rect.bottom, 0);
 }
 
 static void
@@ -151,7 +151,7 @@ set_current_tab_checked(char enable)
 	int tab_index;
 	uintptr_t state;
 
-	dialog_id = GetDlgCtrlID(s_current_tab);
+	dialog_id = GetDlgCtrlID(current_tab);
 
 	tab_index = dialog_id == DLG_BATTLELIST  ? ID_BATTLELIST
 	          : dialog_id == DLG_BATTLEROOM  ? ID_BATTLEROOM
@@ -170,7 +170,7 @@ set_current_tab_checked(char enable)
 
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE,
 	    (uintptr_t)tab_index, (intptr_t)state);
-	ShowWindow(s_current_tab, enable);
+	ShowWindow(current_tab, enable);
 }
 
 void
@@ -178,11 +178,11 @@ MainWindow_set_active_tab(HWND new_tab)
 {
 	RECT rect;
 
-	if (new_tab == s_current_tab)
+	if (new_tab == current_tab)
 		return;
 
 	set_current_tab_checked(0);
-	s_current_tab = new_tab;
+	current_tab = new_tab;
 	set_current_tab_checked(1);
 
 	GetClientRect(g_main_window, &rect);
@@ -206,7 +206,7 @@ MainWindow_ring(void)
 void
 MainWindow_disable_battleroom_button(void)
 {
-	if (GetDlgCtrlID(s_current_tab) == DLG_BATTLEROOM)
+	if (GetDlgCtrlID(current_tab) == DLG_BATTLEROOM)
 		MainWindow_set_active_tab(GetDlgItem(g_main_window, DLG_BATTLELIST));
 
 	SendDlgItemMessage(g_main_window, DLG_TOOLBAR, TB_SETSTATE,
