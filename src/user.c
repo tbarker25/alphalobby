@@ -164,6 +164,8 @@ void
 Users_reset(void)
 {
 	_tdestroy(&s_users);
+	s_aliases = NULL;
+	Users_cleanup();
 }
 
 void
@@ -205,12 +207,19 @@ get_alias(uint32_t id)
 		if (file->magic_number == MAGIC_NUMBER)
 			s_aliases_len = file->len;
 		s_aliases = file->aliases;
+
+		/* TODO: remove this */
+		for (size_t i = 0; i + 1 < s_aliases_len; ++i) {
+			assert(s_aliases[i].id < s_aliases[i+1].id);
+		}
 	}
 
-	result = bsearch(&id, s_aliases, s_aliases_len, sizeof *s_aliases, compare_int);
+	result = bsearch(&id, s_aliases, s_aliases_len, sizeof *s_aliases,
+	    compare_int);
 	if (result)
 		return result->alias;
-	result = &s_aliases[s_aliases_len + s_extra_len++];
+	result = _lsearch(&id, s_aliases + s_aliases_len, &s_extra_len, sizeof
+	    *s_aliases,  compare_int);
 	result->id = id;
 	*result->alias = '\0';
 	return result->alias;
