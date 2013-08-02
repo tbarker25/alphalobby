@@ -221,6 +221,7 @@ wchar_t *
 Settings_get_data_dir(const wchar_t *file)
 {
 	static __thread wchar_t buf[MAX_PATH];
+	assert(*g_data_dir);
 	wsprintf(buf, L"%s%s", g_data_dir, file);
 	return buf;
 }
