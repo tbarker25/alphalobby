@@ -97,10 +97,10 @@ static int CALLBACK     sort_listview(const UserBot *u1, const UserBot *u2, uint
 static intptr_t CALLBACK tooltip_subclass(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param, uintptr_t uIdSubclass, uintptr_t dwRefData);
 static void             update_group(uint8_t group_id);
 
-static HWND s_battle_room;
+static HWND battle_room;
 
 /* If the cursor moves outside this area, then remove it */
-static RECT s_tooltip_bounding_rect;
+static RECT tooltip_bounding_rect;
 
 static const DialogItem DIALOG_ITEMS[] = {
 	[DLG_CHAT] = {
@@ -155,15 +155,15 @@ BattleRoom_show(void)
 {
 	RECT rect;
 
-	GetClientRect(s_battle_room, &rect);
-	SendMessage(s_battle_room, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
+	GetClientRect(battle_room, &rect);
+	SendMessage(battle_room, WM_SIZE, 0, MAKELPARAM(rect.right, rect.bottom));
 	MainWindow_enable_battleroom_button();
 }
 
 void
 BattleRoom_hide(void)
 {
-	ListView_DeleteAllItems(GetDlgItem(s_battle_room, DLG_PLAYERLIST));
+	ListView_DeleteAllItems(GetDlgItem(battle_room, DLG_PLAYERLIST));
 	MainWindow_disable_battleroom_button();
 }
 
@@ -174,14 +174,14 @@ find_user(const void *u)
 
 	find_info.flags = LVFI_PARAM;
 	find_info.lParam = (intptr_t)u;
-	return SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_FINDITEM,
+	return SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_FINDITEM,
 			(uintptr_t)-1, (intptr_t)&find_info);
 }
 
 void
 BattleRoom_on_left_battle(const UserBot *u)
 {
-	SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_DELETEITEM,
+	SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_DELETEITEM,
 	    (uintptr_t)find_user(u), 0);
 }
 
@@ -222,14 +222,14 @@ update_group(uint8_t group_id)
 	group_info.cbSize = sizeof group_info;
 	group_info.mask = LVGF_HEADER;
 	group_info.pszHeader = buf;
-	SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_SETGROUPINFO,
+	SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_SETGROUPINFO,
 			group_id, (intptr_t)&group_info);
 }
 
 bool
 BattleRoom_is_auto_unspec(void)
 {
-	return SendDlgItemMessage(s_battle_room, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
+	return SendDlgItemMessage(battle_room, DLG_AUTO_UNSPEC, BM_GETCHECK, 0, 0);
 }
 
 static int
@@ -255,7 +255,7 @@ add_user_to_playerlist(const UserBot *u)
 		_snwprintf(buf_end, LENGTH(buf) - (size_t)(buf_end - buf),
 				L" (%hs)", ((User *)u)->alias);
 
-	return SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_INSERTITEM, 0,
+	return SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_INSERTITEM, 0,
 			(intptr_t)&item);
 }
 
@@ -271,7 +271,7 @@ set_icon(int list_index, int column_index, IconIndex icon, IconIndex state_icon)
 	item.state = state_icon ? INDEXTOOVERLAYMASK(state_icon) : 0;
 	item.stateMask = state_icon ? LVIS_OVERLAYMASK : 0;
 
-	SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_SETITEM,
+	SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_SETITEM,
 			0, (intptr_t)&item);
 }
 
@@ -320,7 +320,7 @@ set_player_icon(const UserBot *u, int list_index)
 		item.iSubItem = 0;
 		item.mask = LVIF_GROUPID;
 		item.iGroupId = u->mode ? u->ally : 16;
-		SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_SETITEM,
+		SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_SETITEM,
 				0, (intptr_t)&item);
 	}
 
@@ -368,11 +368,11 @@ refresh_playerlist(void)
 		item.iSubItem = COLUMN_NAME;
 		item.pszText = buf;
 
-		SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_SETITEM,
+		SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_SETITEM,
 				0, (intptr_t)&item);
 	}
 
-	SendDlgItemMessage(s_battle_room, DLG_PLAYERLIST, LVM_SORTITEMS, 0, (intptr_t)sort_listview);
+	SendDlgItemMessage(battle_room, DLG_PLAYERLIST, LVM_SORTITEMS, 0, (intptr_t)sort_listview);
 
 	for (uint8_t i=0; i<16; ++i)
 		update_group(i);
@@ -393,24 +393,24 @@ BattleRoom_update_user(const UserBot *u)
 	refresh_playerlist();
 
 	if ((User *)u == &g_my_user) {
-		SendDlgItemMessage(s_battle_room, DLG_SPECTATE, BM_SETCHECK,
+		SendDlgItemMessage(battle_room, DLG_SPECTATE, BM_SETCHECK,
 				!u->mode, 0);
 
-		EnableWindow(GetDlgItem(s_battle_room, DLG_AUTO_UNSPEC),
+		EnableWindow(GetDlgItem(battle_room, DLG_AUTO_UNSPEC),
 				!u->mode);
 
 		for (enum DialogId i=0; i<=NUM_SIDE_BUTTONS; ++i)
-			SendDlgItemMessage(s_battle_room, DLG_SIDE_FIRST + i,
+			SendDlgItemMessage(battle_room, DLG_SIDE_FIRST + i,
 					BM_SETCHECK, u->side == i, 0);
 
-		SendDlgItemMessage(s_battle_room, DLG_ALLY, CB_SETCURSEL,
+		SendDlgItemMessage(battle_room, DLG_ALLY, CB_SETCURSEL,
 				u->ally, 0);
 	}
 
 	if ((User *)u == u->battle->founder) {
 		HWND start_button;
 
-		start_button = GetDlgItem(s_battle_room, DLG_START);
+		start_button = GetDlgItem(battle_room, DLG_START);
 		EnableWindow(start_button, !g_my_user.ingame);
 	}
 }
@@ -422,7 +422,7 @@ BattleRoom_resize_columns(void)
 	HWND player_list;
 	int total_width = 0;
 
-	player_list = GetDlgItem(s_battle_room, DLG_PLAYERLIST);
+	player_list = GetDlgItem(battle_room, DLG_PLAYERLIST);
 
 	for (enum PlayerListColumn i=0; i <= COLUMN_LAST; ++i) {
 		if (i != COLUMN_NAME) {
@@ -463,7 +463,7 @@ on_size(intptr_t l_param)
 	dwp = BeginDeferWindowPos(DLG_LAST + 1);
 
 #define MOVE_ID(id, x, y, cx, cy)\
-	(DeferWindowPos(dwp, (GetDlgItem(s_battle_room, (id))), NULL, (x), (y), (cx), (cy), 0))
+	(DeferWindowPos(dwp, (GetDlgItem(battle_room, (id))), NULL, (x), (y), (cx), (cy), 0))
 
 
 	MOVE_ID(DLG_INFOLIST, XS, YS, INFO_WIDTH, INFO_HEIGHT);
@@ -495,10 +495,10 @@ tooltip_subclass(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param,
 		__attribute__((unused)) uintptr_t uIdSubclass, uintptr_t dwRefData)
 {
 	if (msg == WM_MOUSEMOVE
-			&& (GET_X_LPARAM(l_param) < s_tooltip_bounding_rect.left
-				|| GET_X_LPARAM(l_param) > s_tooltip_bounding_rect.right
-				|| GET_Y_LPARAM(l_param) < s_tooltip_bounding_rect.top
-				|| GET_Y_LPARAM(l_param) > s_tooltip_bounding_rect.bottom))
+			&& (GET_X_LPARAM(l_param) < tooltip_bounding_rect.left
+				|| GET_X_LPARAM(l_param) > tooltip_bounding_rect.right
+				|| GET_Y_LPARAM(l_param) < tooltip_bounding_rect.top
+				|| GET_Y_LPARAM(l_param) > tooltip_bounding_rect.bottom))
 		SendMessage((HWND)dwRefData, TTM_POP, 0, 0);
 
 	return DefSubclassProc(window, msg, w_param, l_param);
@@ -512,8 +512,8 @@ on_create(HWND window)
 	HWND info_list;
 	HWND tooltip;
 
-	assert(!s_battle_room);
-	s_battle_room = window;
+	assert(!battle_room);
+	battle_room = window;
 	CreateDlgItems(window, DIALOG_ITEMS, DLG_LAST + 1);
 	for (int i=0; i<16; ++i) {
 		wchar_t buf[LENGTH("Team 16")];
@@ -648,9 +648,9 @@ on_notify(uintptr_t w_param, NMHDR *note)
 		if (item.iItem == -1)
 			return 0;
 
-		s_tooltip_bounding_rect.left = LVIR_BOUNDS;
+		tooltip_bounding_rect.left = LVIR_BOUNDS;
 		SendMessage((HWND)note->idFrom, LVM_GETITEMRECT, (uintptr_t)item.iItem,
-				(intptr_t)&s_tooltip_bounding_rect);
+				(intptr_t)&tooltip_bounding_rect);
 
 		SendMessage((HWND)note->idFrom, LVM_GETITEM, 0, (intptr_t)&item);
 		if (!item.lParam)
@@ -683,10 +683,10 @@ on_notify(uintptr_t w_param, NMHDR *note)
 			return 0;
 
 		SendMessage(note->hwndFrom, LVM_GETITEM, 0, (intptr_t)&item);
-		UserMenu_spawn((UserBot *)item.lParam, s_battle_room);
+		UserMenu_spawn((UserBot *)item.lParam, battle_room);
 		return 1;
 	}
-	return DefWindowProc(s_battle_room, WM_NOTIFY, w_param, (intptr_t)note);
+	return DefWindowProc(battle_room, WM_NOTIFY, w_param, (intptr_t)note);
 }
 
 static intptr_t
@@ -701,13 +701,13 @@ on_command(uintptr_t w_param, HWND window)
 		return 0;
 
 	case MAKEWPARAM(DLG_LEAVE, BN_CLICKED):
-		SendMessage(s_battle_room, WM_CLOSE, 0, 0);
+		SendMessage(battle_room, WM_CLOSE, 0, 0);
 		return 0;
 
 	case MAKEWPARAM(DLG_SPECTATE, BN_CLICKED):
 		button_state = Button_GetCheck(window);
 		if (!button_state)
-			SendDlgItemMessage(s_battle_room, DLG_AUTO_UNSPEC,
+			SendDlgItemMessage(battle_room, DLG_AUTO_UNSPEC,
 					BM_SETCHECK, BST_UNCHECKED, 0);
 
 		new_battle_status = g_last_battle_status;
@@ -739,7 +739,7 @@ set_details(const Option *options, int option_len)
 	LVGROUP group;
 	HWND info_list;
 
-	info_list = GetDlgItem(s_battle_room, DLG_INFOLIST);
+	info_list = GetDlgItem(battle_room, DLG_INFOLIST);
 
 	group.cbSize = sizeof group;
 	group.mask = LVGF_HEADER | LVGF_GROUPID;
@@ -774,7 +774,7 @@ BattleRoom_on_set_mod_details(void)
 {
 	HWND info_list;
 
-	info_list = GetDlgItem(s_battle_room, DLG_INFOLIST);
+	info_list = GetDlgItem(battle_room, DLG_INFOLIST);
 	SendMessage(info_list, LVM_REMOVEALLGROUPS, 0, 0);
 	ListView_DeleteAllItems(info_list);
 
@@ -792,7 +792,7 @@ BattleRoom_on_set_option(Option *opt)
 	LVFINDINFO find_info;
 	LVITEMA item;
 
-	info_list = GetDlgItem(s_battle_room, DLG_INFOLIST);
+	info_list = GetDlgItem(battle_room, DLG_INFOLIST);
 
 	find_info.flags = LVFI_PARAM;
 	find_info.lParam = (intptr_t)opt;
@@ -809,7 +809,7 @@ static void
 set_side_icons(void)
 {
 	for (enum DialogId i=0; i<=DLG_SIDE_LAST - DLG_SIDE_FIRST; ++i) {
-		HWND side_button = GetDlgItem(s_battle_room, DLG_SIDE_FIRST + i);
+		HWND side_button = GetDlgItem(battle_room, DLG_SIDE_FIRST + i);
 		IconList_set_window_image(side_button, ICON_FIRST_SIDE + i);
 		ShowWindow(side_button, i < g_side_len);
 	}
@@ -823,7 +823,7 @@ BattleRoom_on_change_mod(void)
 
 	set_side_icons();
 
-	player_list = GetDlgItem(s_battle_room, DLG_PLAYERLIST);
+	player_list = GetDlgItem(battle_room, DLG_PLAYERLIST);
 	item.mask = LVIF_PARAM;
 
 	for (item.iItem = -1; (item.iItem = SendMessage(player_list, LVM_GETNEXTITEM, (uintptr_t)item.iItem, 0)) >= 0;) {
@@ -857,7 +857,7 @@ battle_room_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param)
 		return on_notify(w_param, (NMHDR *)l_param);
 
 	case WM_DESTROY:
-		s_battle_room = NULL;
+		battle_room = NULL;
 		return 0;
 
 	case WM_CLOSE:
@@ -890,6 +890,6 @@ _init (void)
 void
 BattleRoom_said_battle(const char *name, const char *text, ChatType chat_type)
 {
-	ChatBox_append(GetDlgItem(s_battle_room, DLG_CHAT), name, chat_type,
+	ChatBox_append(GetDlgItem(battle_room, DLG_CHAT), name, chat_type,
 	    text);
 }

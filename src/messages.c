@@ -107,9 +107,9 @@ static char *   get_next_word               (void);
 static char *   get_next_sentence           (void);
 static void     strip_irc_control_sequences (char *);
 
-static FILE     *s_agreement_file;
-static uint32_t  s_time_battle_joined;
-static char     *s_command;
+static FILE     *agreement_file;
+static uint32_t  time_battle_joined;
+static char     *command;
 
 static const Command SERVER_COMMANDS[] = {
 	{"ACCEPTED",             accepted},
@@ -167,7 +167,7 @@ Messages_handle(char *message)
 	const char *command_name;
 	Command    *command;
 
-	s_command = message;
+	command = message;
 	command_name = get_next_word();
 	command = bsearch(command_name, SERVER_COMMANDS,
 	    LENGTH(SERVER_COMMANDS), sizeof *SERVER_COMMANDS, (void *)strcmp);
@@ -178,7 +178,7 @@ Messages_handle(char *message)
 static void
 accepted(void)
 {
-	strcpy(g_my_user.name, s_command);
+	strcpy(g_my_user.name, command);
 	g_my_user.alias = g_my_user.name;
 }
 
@@ -198,7 +198,7 @@ add_bot(void)
 	const char *owner_name = get_next_word();
 	uint32_t    int_status = get_next_int();
 	uint32_t    color      = get_next_int();
-	const char *ai_dll     = s_command;
+	const char *ai_dll     = command;
 
 	owner         = Users_find(owner_name);
 	status.as_int = int_status;
@@ -248,17 +248,17 @@ add_start_rect(void)
 static void
 agreement(void)
 {
-	s_agreement_file = s_agreement_file ?: tmpfile();
-	fputs(s_command, s_agreement_file);
+	agreement_file = agreement_file ?: tmpfile();
+	fputs(command, agreement_file);
 }
 
 static void
 agreement_end(void)
 {
-	rewind(s_agreement_file);
+	rewind(agreement_file);
 	SendMessage(g_main_window, WM_EXECFUNCPARAM,
-	    (uintptr_t)AgreementDialog_create, (intptr_t)s_agreement_file);
-	s_agreement_file = NULL;
+	    (uintptr_t)AgreementDialog_create, (intptr_t)agreement_file);
+	agreement_file = NULL;
 }
 
 static void
@@ -347,7 +347,7 @@ channel(void)
 {
 	const char *channame    = get_next_word();
 	const char *usercount   = get_next_word();
-	const char *description = s_command;
+	const char *description = command;
 
 	ChannelList_add_channel(channame, usercount, description);
 }
@@ -361,11 +361,11 @@ channel_topic(void)
 	get_next_word(); /* username */
 	get_next_word(); /* unix_time */
 
-	for (char *s; (s = strstr(s_command, "\\n")); ) {
+	for (char *s; (s = strstr(command, "\\n")); ) {
 		s[0] = '\r';
 		s[1] = '\n';
 	}
-	ChatTab_on_said_channel(channel, NULL, s_command, CHAT_TOPIC);
+	ChatTab_on_said_channel(channel, NULL, command, CHAT_TOPIC);
 }
 
 static void
@@ -397,7 +397,7 @@ clients(void)
 	const char *channel_name;
 
 	channel_name = get_next_word();
-	while (*s_command) {
+	while (*command) {
 		User       *u;
 		const char *username;
 
@@ -453,7 +453,7 @@ static void
 denied(void)
 {
 	TasServer_disconnect();
-	MainWindow_msg_box("Connection denied", s_command);
+	MainWindow_msg_box("Connection denied", command);
 }
 
 static void
@@ -482,14 +482,14 @@ join_battle(void)
 	mod_hash = get_next_int();
 	b        = Battles_find(id);
 	MyBattle_joined_battle(b, mod_hash);
-	s_time_battle_joined = GetTickCount();
+	time_battle_joined = GetTickCount();
 }
 
 static void
 join_battle_failed(void)
 {
 	BattleRoom_hide();
-	MainWindow_msg_box("Failed to join battle", s_command);
+	MainWindow_msg_box("Failed to join battle", command);
 }
 
 static void
@@ -710,7 +710,7 @@ said(void)
 
 	channel  = get_next_word();
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	user     = Users_find(username);
 	if (!user) {
 		assert(0);
@@ -728,7 +728,7 @@ said_battle(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	u        = Users_find(username);
 	if (!u) {
 		assert(0);
@@ -746,7 +746,7 @@ said_battle_ex(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	u        = Users_find(username);
 	if (!u) {
 		assert(0);
@@ -758,12 +758,12 @@ said_battle_ex(void)
 	/* welcome message is configurable, but chance_of_autohost should usually be between 5 and 8. */
 	/* a host saying "hi johnny" in the first 2 seconds will only give score of 3. */
 	if (g_my_battle && u == g_my_battle->founder
-	    && GetTickCount() - s_time_battle_joined < 10000) {
+	    && GetTickCount() - time_battle_joined < 10000) {
 		int chance_of_autohost = 0;
 		bool said_spads;
 		bool said_springie;
 
-		chance_of_autohost += GetTickCount() - s_time_battle_joined < 2000;
+		chance_of_autohost += GetTickCount() - time_battle_joined < 2000;
 		chance_of_autohost += text[0] == '*' && text[1] == ' ';
 		chance_of_autohost += StrStrIA(text, "hi ") != NULL;
 		chance_of_autohost += StrStrIA(text, "welcome ") != NULL;
@@ -791,7 +791,7 @@ said_battle_ex(void)
 		}
 	}
 
-	MyBattle_said_battle(u, s_command, CHAT_EX);
+	MyBattle_said_battle(u, command, CHAT_EX);
 }
 
 static void
@@ -804,7 +804,7 @@ said_ex(void)
 
 	channel  = get_next_word();
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	user     = Users_find(username);
 	if (!user) {
 		assert(0);
@@ -822,7 +822,7 @@ said_private(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	user     = Users_find(username);
 	if (!user) {
 		assert(0);
@@ -876,7 +876,7 @@ said_private_ex(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	user     = Users_find(username);
 	if (!user) {
 		assert(0);
@@ -896,7 +896,7 @@ say_private(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	u        = Users_find(username);
 	if (!u) {
 		assert(0);
@@ -913,7 +913,7 @@ say_private_ex(void)
 	const char *username;
 
 	username = get_next_word();
-	text     = s_command;
+	text     = command;
 	u        = Users_find(username);
 	if (!u) {
 		assert(0);
@@ -931,13 +931,13 @@ server_msg(void)
 static void
 server_message_box(void)
 {
-	MainWindow_msg_box("Message from the server", s_command);
+	MainWindow_msg_box("Message from the server", command);
 }
 
 static void
 set_script_tags(void)
 {
-	MyBattle_append_script(s_command);
+	MyBattle_append_script(command);
 }
 
 static void
@@ -981,8 +981,8 @@ update_battle_info(void)
 	b->locked        = (uint8_t)get_next_int();
 	last_map_hash    = b->map_hash;
 	b->map_hash      = get_next_int();
-	map_name         = s_command;
-	map_len          = strlen(s_command);
+	map_name         = command;
+	map_len          = strlen(command);
 
 	if (map_len > strlen(b->map_name)) {
 		free(b->map_name);
@@ -1025,10 +1025,10 @@ strip_irc_control_sequences(char *text)
 
 static char *
 get_next_word(void) {
-	size_t  len  = strcspn(s_command, " ");
-	char   *word = s_command;
+	size_t  len  = strcspn(command, " ");
+	char   *word = command;
 
-	s_command += len + !!s_command[len];
+	command += len + !!command[len];
 	word[len] = '\0';
 	return word;
 }
@@ -1040,10 +1040,10 @@ get_next_int(void) {
 
 static char *
 get_next_sentence(void) {
-	size_t  len  = strcspn(s_command, "\t");
-	char   *word = s_command;
+	size_t  len  = strcspn(command, "\t");
+	char   *word = command;
 
-	s_command += len + !!s_command[len];
+	command += len + !!command[len];
 	word[len] = '\0';
 	return word;
 }

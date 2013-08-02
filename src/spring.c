@@ -38,7 +38,7 @@
 
 static uint32_t WINAPI spring_proc(void * path);
 
-static bool s_ingame;
+static bool ingame;
 
 static uint32_t WINAPI
 spring_proc(void * path)
@@ -49,12 +49,12 @@ spring_proc(void * path)
 
 	if (CreateProcess(NULL, path, NULL, NULL, 0, 0, NULL, NULL,
 				&startup_info, &process_info)) {
-		s_ingame = 1;
+		ingame = 1;
 		TasServer_send_my_client_status(g_last_client_status);
 		#ifdef NDEBUG
 		WaitForSingleObject(process_info.hProcess, INFINITE);
 		#endif
-		s_ingame = 0;
+		ingame = 0;
 		TasServer_send_my_client_status(g_last_client_status);
 	} else
 		MainWindow_msg_box("Failed to launch spring", "Check that the path is correct in 'Options>Lobby Preferences'.");
@@ -66,7 +66,7 @@ spring_proc(void * path)
 bool
 Spring_is_ingame(void)
 {
-	return s_ingame;
+	return ingame;
 }
 
 void

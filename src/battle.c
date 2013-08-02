@@ -31,12 +31,12 @@
 
 static int compare_int(const void *a, const void *b);
 
-static void *s_battles;
+static void *battles;
 
 Battle *
 Battles_find(uint32_t id)
 {
-	return _tfind(&id, s_battles, compare_int);
+	return _tfind(&id, battles, compare_int);
 }
 
 Battle *
@@ -46,7 +46,7 @@ Battles_new(uint32_t id, const char *title, const char *mod_name)
 	size_t title_len = strlen(title);
 	size_t mod_len   = strlen(mod_name);
 
-	b = _tinsert(&id, &s_battles, compare_int,
+	b = _tinsert(&id, &battles, compare_int,
 	    title_len + mod_len + 2 + sizeof *b);
 	assert(!b->id);
 	b->id = id;
@@ -59,13 +59,13 @@ Battles_new(uint32_t id, const char *title, const char *mod_name)
 void
 Battles_del(Battle *b)
 {
-	_tdelete(b, &s_battles, compare_int);
+	_tdelete(b, &battles, compare_int);
 }
 
 void
 Battles_reset(void)
 {
-	_tdestroy(&s_battles);
+	_tdestroy(&battles);
 }
 
 static int

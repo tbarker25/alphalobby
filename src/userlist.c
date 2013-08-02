@@ -39,7 +39,7 @@ static void activate(int item_index);
 static BOOL CALLBACK user_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_init(HWND window);
 
-static HWND s_user_list;
+static HWND user_list;
 
 static void
 activate(int item_index)
@@ -49,7 +49,7 @@ activate(int item_index)
 	info.mask = LVIF_PARAM;
 	info.iItem = item_index;
 	info.iSubItem = 2;
-	ListView_GetItem(s_user_list, &info);
+	ListView_GetItem(user_list, &info);
 	ChatTab_focus_private((User *)info.lParam);
 }
 
@@ -82,12 +82,12 @@ add_user(const User *u)
 	item.state = INDEXTOOVERLAYMASK(state_icon);
 	item.stateMask = LVIS_OVERLAYMASK;
 
-	item.iItem = ListView_InsertItem(s_user_list, &item);
+	item.iItem = ListView_InsertItem(user_list, &item);
 
 	item.mask = LVIF_IMAGE;
 	item.iImage = ICON_FIRST_FLAG + u->country;
 	item.iSubItem = 1;
-	ListView_SetItem(s_user_list, &item);
+	ListView_SetItem(user_list, &item);
 }
 
 static void
@@ -96,27 +96,27 @@ on_init(HWND window)
 	RECT rect;
 	LVCOLUMN column_info;
 
-	DestroyWindow(GetParent(s_user_list));
-	s_user_list = GetDlgItem(window, IDC_USERLIST_LIST);
+	DestroyWindow(GetParent(user_list));
+	user_list = GetDlgItem(window, IDC_USERLIST_LIST);
 
-	SetWindowLongPtr(s_user_list, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
+	SetWindowLongPtr(user_list, GWL_STYLE, WS_VISIBLE | LVS_SHAREIMAGELISTS
 			| LVS_SINGLESEL | LVS_REPORT | LVS_SORTASCENDING |
 			LVS_NOCOLUMNHEADER);
 
-	ListView_SetExtendedListViewStyle(s_user_list,
+	ListView_SetExtendedListViewStyle(user_list,
 	    LVS_EX_DOUBLEBUFFER | LVS_EX_SUBITEMIMAGES | LVS_EX_FULLROWSELECT);
-	IconList_enable_for_listview(s_user_list);
+	IconList_enable_for_listview(user_list);
 
-	GetClientRect(s_user_list, &rect);
+	GetClientRect(user_list, &rect);
 	column_info.mask = LVCF_SUBITEM | LVCF_WIDTH;
 
 	column_info.cx = rect.right - (int)ICON_SIZE - (int)g_scroll_width;
 	column_info.iSubItem = 0;
-	ListView_InsertColumn(s_user_list, 0, (uintptr_t)&column_info);
+	ListView_InsertColumn(user_list, 0, (uintptr_t)&column_info);
 
 	column_info.cx = ICON_SIZE;
 	column_info.iSubItem = 1;
-	ListView_InsertColumn(s_user_list, 1, (uintptr_t)&column_info);
+	ListView_InsertColumn(user_list, 1, (uintptr_t)&column_info);
 
 	Users_for_each(add_user);
 }
@@ -134,7 +134,7 @@ user_list_proc(HWND window, uint32_t msg, uintptr_t w_param,
 	case WM_COMMAND:
 		switch (w_param) {
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(s_user_list, -1,
+			activate(ListView_GetNextItem(user_list, -1,
 				LVNI_SELECTED));
 			/* Fallthrough */
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -151,7 +151,7 @@ user_list_proc(HWND window, uint32_t msg, uintptr_t w_param,
 		return 0;
 
 	case WM_DESTROY:
-		s_user_list = NULL;
+		user_list = NULL;
 		return 0;
 
 	default:

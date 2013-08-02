@@ -36,7 +36,7 @@ static void activate(int item_index);
 static BOOL CALLBACK channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param);
 static void on_init(HWND window);
 
-static HWND s_channel_list;
+static HWND channel_list;
 
 void
 ChannelList_add_channel(const char *name, const char *user_len, const char *desc)
@@ -47,18 +47,18 @@ ChannelList_add_channel(const char *name, const char *user_len, const char *desc
 	item.mask = LVIF_TEXT;
 	item.iSubItem = 0;
 	item.pszText = utf8to16(name);
-	index = ListView_InsertItem(s_channel_list, &item);
+	index = ListView_InsertItem(channel_list, &item);
 
 	assert(index != -1);
 
-	ListView_SetItemText(s_channel_list, index, 1, utf8to16(user_len));
-	ListView_SetItemText(s_channel_list, index, 2, utf8to16(desc));
+	ListView_SetItemText(channel_list, index, 1, utf8to16(user_len));
+	ListView_SetItemText(channel_list, index, 2, utf8to16(desc));
 }
 
 void
 ChannelList_show(void)
 {
-	assert(s_channel_list == NULL);
+	assert(channel_list == NULL);
 	CreateDialog(NULL, MAKEINTRESOURCE(IDD_USERLIST), NULL,
 	    (DLGPROC)channel_list_proc);
 	TasServer_send_get_channels();
@@ -73,7 +73,7 @@ activate(int item_index)
 	info.iSubItem = 0;
 	info.pszText = name;
 	info.cchTextMax = sizeof name;
-	SendMessage(s_channel_list, LVM_GETITEMTEXTA, (uintptr_t)item_index,
+	SendMessage(channel_list, LVM_GETITEMTEXTA, (uintptr_t)item_index,
 	    (intptr_t)&info);
 	ChatTab_join_channel(name);
 }
@@ -84,26 +84,26 @@ on_init(HWND window)
 	RECT rect;
 	LVCOLUMN column_info;
 
-	s_channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
-	GetClientRect(s_channel_list, &rect);
+	channel_list = GetDlgItem(window, IDC_USERLIST_LIST);
+	GetClientRect(channel_list, &rect);
 	column_info .mask = LVCF_TEXT | LVCF_SUBITEM | LVCF_WIDTH;
 
 	column_info.pszText = (wchar_t *)L"name";
 	column_info.cx = MAP_X(50);
 	column_info.iSubItem = 0;
-	ListView_InsertColumn(s_channel_list, 0, (uintptr_t)&column_info);
+	ListView_InsertColumn(channel_list, 0, (uintptr_t)&column_info);
 
 	column_info.pszText = (wchar_t *)L"users";
 	column_info.cx = MAP_X(20);
 	column_info.iSubItem = 1;
-	ListView_InsertColumn(s_channel_list, 1, (uintptr_t)&column_info);
+	ListView_InsertColumn(channel_list, 1, (uintptr_t)&column_info);
 
 	column_info.pszText = (wchar_t *)L"description";
 	column_info.cx = (int32_t)rect.right - (int32_t)MAP_X(70) - (int32_t)g_scroll_width;
 	column_info.iSubItem = 2;
-	ListView_InsertColumn(s_channel_list, 2, (uintptr_t)&column_info);
+	ListView_InsertColumn(channel_list, 2, (uintptr_t)&column_info);
 
-	ListView_SetExtendedListViewStyleEx(s_channel_list,
+	ListView_SetExtendedListViewStyleEx(channel_list,
 			LVS_EX_DOUBLEBUFFER, LVS_EX_DOUBLEBUFFER);
 }
 
@@ -120,7 +120,7 @@ channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param
 		switch (w_param) {
 
 		case MAKEWPARAM(IDOK, BN_CLICKED):
-			activate(ListView_GetNextItem(s_channel_list, -1, LVNI_SELECTED));
+			activate(ListView_GetNextItem(channel_list, -1, LVNI_SELECTED));
 			/* Fallthrough */
 
 		case MAKEWPARAM(IDCANCEL, BN_CLICKED):
@@ -139,7 +139,7 @@ channel_list_proc(HWND window, uint32_t msg, uintptr_t w_param, intptr_t l_param
 		return 0;
 
 	case WM_DESTROY:
-		s_channel_list = NULL;
+		channel_list = NULL;
 		return 0;
 
 	default:

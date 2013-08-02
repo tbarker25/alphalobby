@@ -73,16 +73,16 @@ static uint32_t WINAPI syncProc         (void *unused);
 static void            write_info_map   (const char *map_name, const char *map_type, gzFile);
 
 //Shared between threads:
-static uint8_t s_task_reload, /* task_set_minimap, */ /* task_set_info, */ s_task_set_status;
-static HANDLE s_event;
+static uint8_t task_reload, /* task_set_minimap, */ /* task_set_info, */ task_set_status;
+static HANDLE event;
 
 //malloc new value, swap atomically, and free old value:
-static const char *s_map_to_save, *s_mod_to_save;
-/* static char s_have_tried_download; */
+static const char *map_to_save, *mod_to_save;
+/* static char have_tried_download; */
 
 //Sync thread only:
-static char s_current_mod[MAX_TITLE];
-static char s_current_map[MAX_TITLE];
+static char current_mod[MAX_TITLE];
+static char current_map[MAX_TITLE];
 
 static void
 print_last_error(const wchar_t *title)
@@ -109,25 +109,25 @@ syncProc (__attribute__((unused)) void *unused)
 		assert(*x[i].proc);
 	}
 
-	s_event = CreateEvent(NULL, FALSE, 0, NULL);
-	s_task_reload=1;
+	event = CreateEvent(NULL, FALSE, 0, NULL);
+	task_reload=1;
 	while (1) {
-		if (s_task_reload) {
+		if (task_reload) {
 			reload();
-			s_task_reload = 0;
-			s_task_set_status = 1;
-			/* s_have_tried_download = 1; */
-		} else if ((s = (void *)__sync_fetch_and_and(&s_mod_to_save, NULL))) {
+			task_reload = 0;
+			task_set_status = 1;
+			/* have_tried_download = 1; */
+		} else if ((s = (void *)__sync_fetch_and_and(&mod_to_save, NULL))) {
 			create_mod_file(s);
 			free(s);
-		} else if ((s = (void *)__sync_fetch_and_and(&s_map_to_save, NULL))) {
+		} else if ((s = (void *)__sync_fetch_and_and(&map_to_save, NULL))) {
 			create_map_file(s);
 			free(s);
-		} else if (s_task_set_status) {
+		} else if (task_set_status) {
 			TasServer_send_my_battle_status(g_last_battle_status);
-			s_task_set_status = 0;
+			task_set_status = 0;
 		} else {
-			WaitForSingleObject(s_event, INFINITE);
+			WaitForSingleObject(event, INFINITE);
 		}
 	};
 }
@@ -328,7 +328,7 @@ create_map_file(const char *map_name)
 	map_hash = GetMapChecksumFromName(map_name);
 
 	if (!map_hash) {
-		/* if (!s_have_tried_download) */
+		/* if (!have_tried_download) */
 			/* DownloadMap(map_name); */
 		return;
 	}
@@ -376,7 +376,7 @@ create_mod_file(const char *mod_name)
 	GetPrimaryModCount(); //todo investigate if we only need it on reinit
 	mod_index = GetPrimaryModIndex(mod_name);
 	if (mod_index < 0) {
-		/* if (!s_have_tried_download) */
+		/* if (!have_tried_download) */
 			/* DownloadMod(mod_name); */
 		return;
 	}
@@ -465,7 +465,7 @@ Sync_on_changed_mod(const char *mod_name)
 	OptionList mod_option_list;
 
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(g_main_window, NULL));
-	if (!_stricmp(s_current_mod, mod_name))
+	if (!_stricmp(current_mod, mod_name))
 		return;
 
 	for (int i=0; i<g_mod_option_len; ++i)
@@ -483,16 +483,16 @@ Sync_on_changed_mod(const char *mod_name)
 		fd = 0;
 	}
 	if (!fd) {
-		/* s_have_tried_download = 0; */
+		/* have_tried_download = 0; */
 		g_side_len = 0;
 		g_mod_hash = 0;
-		s_current_mod[0] = 0;
-		free(InterlockedExchangePointer(&s_mod_to_save, _strdup(mod_name)));
-		SetEvent(s_event);
+		current_mod[0] = 0;
+		free(InterlockedExchangePointer(&mod_to_save, _strdup(mod_name)));
+		SetEvent(event);
 		MyBattle_update_mod_options();
 		return;
 	}
-	strcpy(s_current_mod, mod_name);
+	strcpy(current_mod, mod_name);
 	gzread(fd, &g_mod_hash, sizeof g_mod_hash);
 	mod_option_list = load_options(fd);
 	g_mod_options = mod_option_list.xs;
@@ -513,8 +513,8 @@ Sync_on_changed_mod(const char *mod_name)
 	gzclose(fd);
 	BattleRoom_on_change_mod();
 	MyBattle_update_mod_options();
-	s_task_set_status = 1;
-	SetEvent(s_event);
+	task_set_status = 1;
+	SetEvent(event);
 }
 
 void
@@ -531,7 +531,7 @@ Sync_on_changed_map(const char *map_name)
 
 	assert(GetCurrentThreadId() == GetWindowThreadProcessId(g_main_window, NULL));
 
-	if (!_stricmp(s_current_map, map_name))
+	if (!_stricmp(current_map, map_name))
 		return;
 
 	for (int i=0; i<g_map_option_len; ++i)
@@ -558,17 +558,17 @@ Sync_on_changed_map(const char *map_name)
 	}
 
 	if (!fd) {
-		/* s_have_tried_download = 0; */
+		/* have_tried_download = 0; */
 		g_map_hash = 0;
-		s_current_map[0] = 0;
+		current_map[0] = 0;
 		Minimap_set_bitmap(NULL, 0, 0, NULL, 0, 0, NULL);
-		free(InterlockedExchangePointer(&s_map_to_save, _strdup(map_name)));
-		SetEvent(s_event);
+		free(InterlockedExchangePointer(&map_to_save, _strdup(map_name)));
+		SetEvent(event);
 		MyBattle_update_mod_options();
 		return;
 	}
 
-	strcpy(s_current_map, map_name);
+	strcpy(current_map, map_name);
 
 	gzread(fd, &g_map_hash, sizeof g_map_hash);
 	gzread(fd, &g_map_info, sizeof g_map_info);
@@ -605,19 +605,19 @@ Sync_on_changed_map(const char *map_name)
 
 	// task_set_minimap = 1;
 	MyBattle_update_mod_options();
-	s_task_set_status = 1;
-	SetEvent(s_event);
+	task_set_status = 1;
+	SetEvent(event);
 }
 
 void
 Sync_reload(void)
 {
 	g_mod_hash = 0;
-	s_current_mod[0] = 0;
+	current_mod[0] = 0;
 	g_map_hash = 0;
-	s_current_map[0] = 0;
-	s_task_reload = 1;
-	SetEvent(s_event);
+	current_map[0] = 0;
+	task_reload = 1;
+	SetEvent(event);
 }
 
 uint32_t
@@ -694,8 +694,8 @@ Sync_add_replays_to_listview(HWND list_view_window)
 void
 Sync_cleanup(void)
 {
-	if (s_current_map[0])
-		Settings_save_str("last_map", s_current_map);
-	if (s_current_mod[0])
-		Settings_save_str("last_mod", s_current_mod);
+	if (current_map[0])
+		Settings_save_str("last_map", current_map);
+	if (current_mod[0])
+		Settings_save_str("last_mod", current_mod);
 }

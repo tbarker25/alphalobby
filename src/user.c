@@ -51,14 +51,14 @@ static char * get_alias   (uint32_t id);
 static int    compare_int (const void *, const void *);
 
 User                g_my_user;
-static void *s_users;
+static void *users;
 
 
-static AliasEntry  *s_aliases;
-static uint32_t     s_aliases_len;
-static HANDLE       s_alias_file_handle;
-static HANDLE       s_alias_view;
-static size_t       s_extra_len;
+static AliasEntry  *aliases;
+static uint32_t     aliases_len;
+static HANDLE       alias_file_handle;
+static HANDLE       alias_view;
+static size_t       extra_len;
 
 User *
 Users_find(const char *name)
@@ -68,7 +68,7 @@ Users_find(const char *name)
 	if (!strcmp(name, g_my_user.name))
 		return &g_my_user;
 
-	u = _tfind(name, s_users, (void *)strcmp);
+	u = _tfind(name, users, (void *)strcmp);
 	return u;
 }
 
@@ -76,7 +76,7 @@ void
 Users_for_each(void (*action)(const User *))
 {
 	action(&g_my_user);
-	_twalk(s_users, (void (*)(const void *))action);
+	_twalk(users, (void (*)(const void *))action);
 }
 
 User *
@@ -87,7 +87,7 @@ Users_new(uint32_t id, const char *name)
 	if (!strcmp(g_my_user.name, name))
 		return &g_my_user;
 
-	u = _tinsert(name, &s_users, (void *)strcmp, sizeof(*u));
+	u = _tinsert(name, &users, (void *)strcmp, sizeof(*u));
 	strncpy(u->name, name, MAX_NAME_LENGTH_NUL);
 
 	u->alias = get_alias(id);
@@ -100,7 +100,7 @@ Users_new(uint32_t id, const char *name)
 void
 Users_del(const char *username)
 {
-	_tdelete(username, (void *)&s_users, (void *)strcmp);
+	_tdelete(username, (void *)&users, (void *)strcmp);
 }
 
 void
@@ -163,8 +163,8 @@ Users_del_bot(const char *name)
 void
 Users_reset(void)
 {
-	_tdestroy(&s_users);
-	s_aliases = NULL;
+	_tdestroy(&users);
+	aliases = NULL;
 	Users_cleanup();
 }
 
@@ -172,15 +172,15 @@ void
 Users_cleanup(void)
 {
 	AliasFile *file;
-	size_t len = s_aliases_len + s_extra_len;
+	size_t len = aliases_len + extra_len;
 
-	file = (AliasFile *)((char *)s_aliases - offsetof(AliasFile, aliases));
-	qsort(s_aliases, len, sizeof *s_aliases, compare_int);
+	file = (AliasFile *)((char *)aliases - offsetof(AliasFile, aliases));
+	qsort(aliases, len, sizeof *aliases, compare_int);
 	file->len = len;
 	file->magic_number = MAGIC_NUMBER;
 	UnmapViewOfFile(file);
-	CloseHandle(s_alias_view);
-	CloseHandle(s_alias_file_handle);
+	CloseHandle(alias_view);
+	CloseHandle(alias_file_handle);
 }
 
 static char *
@@ -188,38 +188,38 @@ get_alias(uint32_t id)
 {
 	AliasEntry *result;
 
-	if (!s_aliases) {
+	if (!aliases) {
 		AliasFile *file;
 
-		s_alias_file_handle = CreateFile(Settings_get_data_dir(L"aliases.conf"),
+		alias_file_handle = CreateFile(Settings_get_data_dir(L"aliases.conf"),
 		    GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_ALWAYS,
 		    FILE_ATTRIBUTE_NORMAL, NULL);
 		/* TODO: Real error handling */
-		assert(s_alias_file_handle);
+		assert(alias_file_handle);
 
-		s_alias_view = CreateFileMapping(s_alias_file_handle, NULL,
+		alias_view = CreateFileMapping(alias_file_handle, NULL,
 		    PAGE_READWRITE, 0, 1 << 20, NULL);
-		assert(s_alias_view);
+		assert(alias_view);
 
-		file = MapViewOfFile(s_alias_view, FILE_MAP_WRITE, 0, 0, 0);
+		file = MapViewOfFile(alias_view, FILE_MAP_WRITE, 0, 0, 0);
 		assert(file);
 
 		if (file->magic_number == MAGIC_NUMBER)
-			s_aliases_len = file->len;
-		s_aliases = file->aliases;
+			aliases_len = file->len;
+		aliases = file->aliases;
 
 		/* TODO: remove this */
-		for (size_t i = 0; i + 1 < s_aliases_len; ++i) {
-			assert(s_aliases[i].id < s_aliases[i+1].id);
+		for (size_t i = 0; i + 1 < aliases_len; ++i) {
+			assert(aliases[i].id < aliases[i+1].id);
 		}
 	}
 
-	result = bsearch(&id, s_aliases, s_aliases_len, sizeof *s_aliases,
+	result = bsearch(&id, aliases, aliases_len, sizeof *aliases,
 	    compare_int);
 	if (result)
 		return result->alias;
-	result = _lsearch(&id, s_aliases + s_aliases_len, &s_extra_len, sizeof
-	    *s_aliases,  compare_int);
+	result = _lsearch(&id, aliases + aliases_len, &extra_len, sizeof
+	    *aliases,  compare_int);
 	result->id = id;
 	*result->alias = '\0';
 	return result->alias;
