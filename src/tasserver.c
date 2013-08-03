@@ -58,7 +58,7 @@ static void CALLBACK ping(HWND, uint32_t, uintptr_t, uint32_t);
 uint32_t g_last_auto_message;
 BattleStatus g_last_battle_status;
 ClientStatus g_last_client_status;
-static SOCKET socket = INVALID_SOCKET;
+static SOCKET sock = INVALID_SOCKET;
 static char my_password[BASE16_MD5_LENGTH];
 static char my_username[MAX_NAME_LENGTH+1];
 
@@ -72,7 +72,7 @@ TasServer_poll(void)
 	int bytes_received;
 	char *s;
 
-	bytes_received = recv(socket, buf + buf_len, RECV_SIZE, 0);
+	bytes_received = recv(sock, buf + buf_len, RECV_SIZE, 0);
 	if (bytes_received <= 0) {
 		printf("bytes recv = %d, err = %d\n",
 		    bytes_received, WSAGetLastError());
@@ -109,7 +109,7 @@ send_to_server(const char *format, ...)
 	va_list args;
 	int len;
 
-	if (socket == INVALID_SOCKET)
+	if (sock == INVALID_SOCKET)
 		return;
 
 	va_start (args, format);
@@ -123,7 +123,7 @@ send_to_server(const char *format, ...)
 
 	buf[len++] = '\n';
 
-	if (send(socket, buf, len, 0) == SOCKET_ERROR) {
+	if (send(sock, buf, len, 0) == SOCKET_ERROR) {
 		assert(0);
 		TasServer_disconnect();
 		MainWindow_msg_box("Connection to server interupted",
@@ -135,9 +135,9 @@ void
 TasServer_disconnect(void)
 {
 	KillTimer(g_main_window, 1);
-	shutdown(socket, SD_BOTH);
-	closesocket(socket);
-	socket = INVALID_SOCKET;
+	shutdown(sock, SD_BOTH);
+	closesocket(sock);
+	sock = INVALID_SOCKET;
 	WSACleanup();
 	MainWindow_change_connect(CONNECTION_OFFLINE);
 
@@ -164,7 +164,7 @@ connect_proc(void (*on_finish)(void))
 	struct hostent *host;
 	struct sockaddr_in server;
 
-	if (socket != INVALID_SOCKET)
+	if (sock != INVALID_SOCKET)
 		TasServer_disconnect();
 	MainWindow_change_connect(CONNECTION_CONNECTING);
 
@@ -185,21 +185,21 @@ connect_proc(void (*on_finish)(void))
 
 	server = (struct sockaddr_in){
 		.sin_family = AF_INET,
-		.sin_addr.addr = *((unsigned long*)host->h_addr),
+		.sin_addr.s_addr = *((unsigned long*)host->h_addr),
 		.sin_port = HTONS((uint16_t)8200),
 	};
 
-	socket = socket(PF_INET, SOCK_STREAM, 0);
+	sock = socket(PF_INET, SOCK_STREAM, 0);
 
-	if (connect(socket, (struct sockaddr *)&server, sizeof server) == SOCKET_ERROR) {
+	if (connect(sock, (struct sockaddr *)&server, sizeof server) == SOCKET_ERROR) {
 		MainWindow_msg_box("Could not connect to server.",
 		    "Could not finalize connection.\n"
 		    "Please check your internet connection.");
-		closesocket(socket);
-		socket = INVALID_SOCKET;
+		closesocket(sock);
+		sock = INVALID_SOCKET;
 	}
 
-	WSAAsyncSelect(socket, g_main_window, WM_POLL_SERVER,
+	WSAAsyncSelect(sock, g_main_window, WM_POLL_SERVER,
 	    FD_READ|FD_CLOSE);
 	on_finish();
 
@@ -210,7 +210,7 @@ connect_proc(void (*on_finish)(void))
 enum ServerStatus
 TasServer_status(void)
 {
-	return socket != INVALID_SOCKET;
+	return sock != INVALID_SOCKET;
 }
 
 void

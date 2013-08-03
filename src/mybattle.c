@@ -372,17 +372,17 @@ set_option_from_tag(char *restrict key, const char *restrict val)
 static void
 set_options_from_script(void)
 {
-	char *script;
-	char *to_free;
+	char *tmp_script;
+	char *s;
 	char *key, *val;
 
-	script = _strdup(script);
-	to_free = script;
+	tmp_script = _strdup(script);
+	s = tmp_script;
 
-	while ((key = strsep(&script, "=")) && (val = strsep(&script, "\t")))
+	while ((key = strsep(&s, "=")) && (val = strsep(&s, "\t")))
 		set_option_from_tag(key, val);
 
-	free(to_free);
+	free(tmp_script);
 }
 
 void

@@ -207,11 +207,11 @@ void Minimap_set_type(enum MinimapType type)
 }
 
 void
-Minimap_set_bitmap(const uint16_t *minimap_pixels,
+Minimap_set_bitmap(const uint16_t *minimap_pixels_,
 		uint16_t metal_map_width, uint16_t metal_map_height, const uint8_t *metal_map_pixels,
 		uint16_t height_map_width, uint16_t height_map_height, const uint8_t *height_map_pixels)
 {
-	minimap_pixels = minimap_pixels;
+	minimap_pixels = minimap_pixels_;
 
 	metal_mapwidth = metal_map_width;
 	metal_mapheight = metal_map_height;

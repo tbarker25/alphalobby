@@ -37,6 +37,7 @@
 #include "wincommon.h"
 
 #define LENGTH(x) (sizeof x / sizeof *x)
+#define swap(_a, _b) {typeof(_a) tmp = _a; _a = _b; _b = tmp;}
 
 enum DialogId {
 	DLG_LIST,
@@ -86,12 +87,7 @@ static int CALLBACK
 compare_battle(const Battle *b1, const Battle *b2, int sort_order)
 {
 	if (sort_order < 0) {
-		const Battle *swap;
-
-		swap = b1;
-		b1 = b2;
-		b2 = swap;
-
+		swap(b1, b2)
 		sort_order = -sort_order;
 	}
 
