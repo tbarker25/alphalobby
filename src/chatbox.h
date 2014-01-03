@@ -36,8 +36,8 @@ typedef enum ChatType {
 	CHAT_LAST = CHAT_SERVEROUT,
 }ChatType;
 
-typedef cdecl void (SayFunction)(const char *text, bool is_ex, const void *dst);
-typedef cdecl void (OnCloseFunction)(const char *dst);
+typedef __cdecl void (SayFunction)(const char *text, bool is_ex, const void *dst);
+typedef __cdecl void (OnCloseFunction)(const char *dst);
 
 void ChatBox_append(HWND window, const char *username, ChatType type, const char *text);
 void ChatBox_set_say_function(HWND window, SayFunction, OnCloseFunction, const char *dst);

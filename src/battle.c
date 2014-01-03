@@ -65,7 +65,8 @@ Battles_del(Battle *b)
 void
 Battles_reset(void)
 {
-	_tdestroy(&battles);
+    if (battles)
+        _tdestroy(&battles);
 }
 
 static int

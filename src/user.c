@@ -163,7 +163,8 @@ Users_del_bot(const char *name)
 void
 Users_reset(void)
 {
-	_tdestroy(&users);
+    if (users)
+        _tdestroy(&users);
 	aliases = NULL;
 	Users_cleanup();
 }
@@ -173,6 +174,8 @@ Users_cleanup(void)
 {
 	AliasFile *file;
 	size_t len = aliases_len + extra_len;
+    if (!aliases)
+        return;
 
 	file = (AliasFile *)((char *)aliases - offsetof(AliasFile, aliases));
 	qsort(aliases, len, sizeof *aliases, compare_int);
