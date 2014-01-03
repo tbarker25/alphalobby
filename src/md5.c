@@ -257,6 +257,7 @@ transform(uint32_t *restrict buf, uint32_t *restrict in)
 	buf[3] += d;
 }
 
+
 void
 MD5_to_base_64(char *out, const uint8_t *in)
 {
@@ -267,7 +268,7 @@ MD5_to_base_64(char *out, const uint8_t *in)
 		uint32_t c2;
 
 		c2 = ((uint32_t)in[i*3] << 16) + ((uint32_t)in[i*3+1] << 8) + ((uint32_t)in[i*3+2]);
-		sprintf(&out[i*4], "%c2%c2%c2%c2", conv[(c2 >> 18) % (1 << 6)], conv[(c2 >> 12) % (1 << 6)], conv[(c2 >> 6) % (1 << 6)], conv[(c2 >> 0) % (1 << 6)]);
+		sprintf(&out[i*4], "%c%c%c%c", conv[(c2 >> 18) % (1 << 6)], conv[(c2 >> 12) % (1 << 6)], conv[(c2 >> 6) % (1 << 6)], conv[(c2 >> 0) % (1 << 6)]);
 	}
 	c = (uint32_t)in[15] << 16;
 	sprintf(&out[20], "%c%c%s", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], "==");
@@ -292,4 +293,3 @@ MD5_from_base_16(const char *restrict in, uint8_t *restrict out)
 		out[i] = (uint8_t)(FROM_XCHR(in[2*i]) << 4 | FROM_XCHR(in[2*i+1]));
 	#undef FROM_XCHR
 }
-
