@@ -69,7 +69,7 @@ get_line(FILE *fd)
 }
 
 bool
-Settings_load_str2(char *restrict buf, const char *restrict key)
+Settings_load_str(char *restrict buf, const char *restrict key)
 {
 	FILE *fd = _wfopen(CONFIG_PATH, L"r");
 	if (!fd)
@@ -87,19 +87,13 @@ Settings_load_str2(char *restrict buf, const char *restrict key)
 	return 1;
 }
 
-char *
-Settings_load_str(const char *key)
-{
-	static __thread char buf[1024];
-    if (!Settings_load_str2(buf, key))
-        buf[0] = '\0';
-    return buf;
-}
-
 int
 Settings_load_int(const char *key)
 {
-	return atoi(Settings_load_str(key) ?: "0");
+	char buf[1024];
+
+	Settings_load_str(buf, key);
+	return atoi(buf);
 }
 
 void
