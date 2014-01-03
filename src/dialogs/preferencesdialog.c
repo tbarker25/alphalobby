@@ -42,9 +42,10 @@ preferences_proc(HWND window, uint32_t msg, uintptr_t w_param,
 	switch (msg) {
 	case WM_INITDIALOG:
 	{
+		char buf[1024];
 		HWND autoconnect = GetDlgItem(window, IDC_PREFERENCES_AUTOCONNECT);
 		SendMessage(autoconnect, BM_SETCHECK, g_settings.flags & SETTING_AUTOCONNECT, 0);
-		ShowWindow(autoconnect, !!Settings_load_str("password"));
+		ShowWindow(autoconnect, !Settings_load_str(buf, "password"));
 		SetDlgItemTextA(window, IDC_PREFERENCES_PATH, g_settings.spring_path);
 		return 0;
 	}

@@ -124,11 +124,13 @@ login_proc(HWND window, uint32_t msg, uintptr_t w_param,
 {
 	switch (msg) {
 	case WM_INITDIALOG: {
-		char *pw;
+		char pw[1024];
+		char username[MAX_NAME_LENGTH_NUL];
 
-		SetDlgItemText(window, IDC_LOGIN_USERNAME, utf8to16(Settings_load_str("username")));
-		pw = Settings_load_str("password");
-		if (pw) {
+		Settings_load_str(username, "username");
+		SetDlgItemText(window, IDC_LOGIN_USERNAME, utf8to16(username));
+
+		if (!Settings_load_str(pw, "password")) {
 			SetDlgItemText(window, IDC_LOGIN_PASSWORD, utf8to16(pw));
 			SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_SETCHECK, 1, 0);
 			SendDlgItemMessage(window, IDC_LOGIN_AUTOCONNECT,

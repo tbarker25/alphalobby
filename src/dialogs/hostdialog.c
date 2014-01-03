@@ -44,36 +44,40 @@ HostDialog_create(void)
 static void
 on_host_init(HWND window)
 {
-	const char *def;
-	int defIndex;
+	char def[1024];
+	int def_index;
 
-	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(Settings_load_str("last_host_description")));
-	def = Settings_load_str("last_host_mod"); defIndex=0;
+	Settings_load_str(def, "last_host_description");
+	SetDlgItemText(window, IDC_HOST_DESCRIPTION, utf8to16(def));
+	Settings_load_str(def, "last_host_mod");
+	def_index = 0;
 	for (int i=0; i<g_mod_len; ++i) {
-		if (def && !strcmp(def, g_mods[i]))
-			defIndex = i;
+		if (!strcmp(def, g_mods[i]))
+			def_index = i;
 		SendDlgItemMessageA(window, IDC_HOST_MOD, CB_ADDSTRING, 0, (intptr_t)g_mods[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, (uintptr_t)defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MOD, CB_SETCURSEL, (uintptr_t)def_index, 0);
 
-	def = Settings_load_str("last_host_map"); defIndex=0;
+	Settings_load_str(def, "last_host_map");
+	def_index = 0;
 	for (int i=0; i<g_map_len; ++i) {
-		if (def && !strcmp(def, g_maps[i]))
-			defIndex = i;
+		if (!strcmp(def, g_maps[i]))
+			def_index = i;
 		SendDlgItemMessageA(window, IDC_HOST_MAP, CB_ADDSTRING, 0, (intptr_t)g_maps[i]);
 	}
-	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, (uintptr_t)defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_MAP, CB_SETCURSEL, (uintptr_t)def_index, 0);
 
 	SetDlgItemInt(window, IDC_HOST_PORT, 8452, 0);
 	SendDlgItemMessage(window, IDC_HOST_USERELAY, BM_SETCHECK, 1, 0);
 
-	def = Settings_load_str("last_host_manager"); defIndex=0;
+	Settings_load_str(def, "last_host_manager");
+	def_index = 0;
 	for (int i=1; i<g_relay_manager_len; ++i) {
-		if (def && !strcmp(def, g_relay_managers[i]))
-			defIndex = i;
+		if (!strcmp(def, g_relay_managers[i]))
+			def_index = i;
 		SendDlgItemMessage(window, IDC_HOST_RELAY, CB_ADDSTRING, 0, (intptr_t)utf8to16(g_relay_managers[i]));
 	}
-	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, (uintptr_t)defIndex, 0);
+	SendDlgItemMessage(window, IDC_HOST_RELAY, CB_SETCURSEL, (uintptr_t)def_index, 0);
 }
 
 static int

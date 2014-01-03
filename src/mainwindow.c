@@ -501,14 +501,13 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 	int32_t top;
 	int32_t width;
 	int32_t height;
-	const char *window_placement;
+	char window_placement[128];
 
 	Settings_init();
 
 	LoadLibrary(L"Riched20.dll");
 
-	window_placement = Settings_load_str("window_placement");
-	if (!window_placement
+	if (!Settings_load_str(window_placement, "window_placement")
 	    || sscanf(window_placement, "%d,%d,%d,%d", &left, &top, &width, &height) != 4) {
 		left = CW_USEDEFAULT;
 		top = CW_USEDEFAULT;
@@ -528,11 +527,11 @@ WinMain(__attribute__((unused)) HINSTANCE instance,
 
 #ifndef NDEBUG
 	{
-		char *s;
-		if ((s = Settings_load_str("last_map")))
-			Sync_on_changed_map(_strdup(s));
-		if ((s = Settings_load_str("last_mod")))
-			Sync_on_changed_mod(_strdup(s));
+		char s[1024];
+		if (!Settings_load_str(s, "last_map"))
+			Sync_on_changed_map(s);
+		if (!Settings_load_str(s, "last_mod"))
+			Sync_on_changed_mod(s);
 		g_battle_options.start_pos_type = STARTPOS_CHOOSE_INGAME;
 		g_battle_options.start_rects[0] = (StartRect){0, 0, 50, 200};
 		g_battle_options.start_rects[1] = (StartRect){150, 0, 200, 200};
@@ -552,10 +551,10 @@ autologin(void)
 {
 	char username[MAX_NAME_LENGTH_NUL], password[1024];
 
-	if (Settings_load_str2(username, "username"))
+	if (Settings_load_str(username, "username"))
 		return 0;
 
-	if (Settings_load_str2(password, "password"))
+	if (Settings_load_str(password, "password"))
 		return 0;
 
 	TasServer_send_login(username, password);
