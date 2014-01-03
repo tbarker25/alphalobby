@@ -59,9 +59,9 @@ void TasServer_send_open_battle(const char *password, uint16_t port, const char 
 void TasServer_send_register(const char *username, const char *password);
 void TasServer_send_rename(const char *new_username);
 void TasServer_send_ring(const struct User *);
-cdecl void TasServer_send_say_battle (const char *text, bool is_ex);
-cdecl void TasServer_send_say_channel(const char *text, bool is_ex, const char *channel);
-cdecl void TasServer_send_say_private(const char *text, bool is_ex, const char *username);
+__cdecl void TasServer_send_say_battle (const char *text, bool is_ex);
+__cdecl void TasServer_send_say_channel(const char *text, bool is_ex, const char *channel);
+__cdecl void TasServer_send_say_private(const char *text, bool is_ex, const char *username);
 void TasServer_send_script_tags(const char *script_tags);
 void TasServer_send_set_map(const char *map_name);
 

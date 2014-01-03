@@ -53,23 +53,17 @@ is_md5(const char *hash)
 }
 
 static void
-to_md5(char *password)
+to_md5(char *md5, const char *password)
 {
-	if (strlen(password) != 24)
-		goto doit;
-	for (const char *c = password; *c; ++c)
-		if (!isalnum(*c) && *c != '+' && *c != '/' && *c != '=')
-			goto doit;
-	return;
-	doit:
-	strcpy(password, MD5_calc_checksum_base_64(password, strlen(password)));
-}
+	uint8_t md5_checksum[MD5_LENGTH];
 
-static void
-to_md5_2(char *md5, const char *password)
-{
-	memcpy(md5, is_md5(password) ? password : MD5_calc_checksum_base_64(password, strlen(password)), BASE16_MD5_LENGTH);
-	md5[BASE16_MD5_LENGTH] = 0;
+	if (is_md5(password)) {
+		memcpy(md5, password, BASE64_MD5_LENGTH + 1);
+		return;
+	}
+
+	MD5_calc_checksum(password, strlen(password), md5_checksum);
+	MD5_to_base_64(md5, md5_checksum);
 }
 
 void
@@ -83,8 +77,9 @@ static int
 on_login(HWND window, int is_registering)
 {
 	char username[MAX_NAME_LENGTH+1];
-	char password[BASE16_MD5_LENGTH+1];
-	char confirm_password[sizeof password];
+	char password[BASE64_MD5_LENGTH+1];
+	char confirm_password[128];
+	char confirm_password_md5[BASE64_MD5_LENGTH+1];
 
 	if (!GetDlgItemTextA(window, IDC_LOGIN_USERNAME, username, LENGTH(username))) {
 		MessageBox(window, L"Enter a username less than "
@@ -93,7 +88,7 @@ on_login(HWND window, int is_registering)
 		return 1;
 	}
 
-	to_md5_2(password, GetDlgItemTextA2(window, IDC_LOGIN_PASSWORD));
+	to_md5(password, GetDlgItemTextA2(window, IDC_LOGIN_PASSWORD));
 
 	if (SendDlgItemMessage(window, IDC_LOGIN_SAVE, BM_GETCHECK, 0, 0)) {
 		Settings_save_str("username", username);
@@ -113,8 +108,8 @@ retry:
 		LENGTH(confirm_password)))
 		return 1;
 
-	to_md5(confirm_password);
-	if (strcmp(password, confirm_password)) {
+	to_md5(confirm_password_md5, confirm_password);
+	if (strcmp(password, confirm_password_md5)) {
 		MessageBox(window, L"_passwords do not match.", L"Can not register new account", 0);
 		goto retry;
 	}

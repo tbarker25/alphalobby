@@ -1,6 +1,6 @@
-LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lShlwapi -lz -ldevil -lshell32 -Llib
+LDFLAGS:=-lwinhttp -lwsock32 -lcomctl32 -lgdi32 -luser32 -lkernel32 -lShlwapi -lzdll -ldevil -lshell32 -Llib
 CFLAGS:= -ffast-math -fshort-enums -std=gnu11 -march=i686 -fplan9-extensions -mno-ms-bitfields -Dbool=_Bool
-CC:=gcc
+CC:=gcc -m32
 
 WARNINGS:=-Wall -Werror -Wno-unknown-pragmas -Wclobbered -Wempty-body -Wignored-qualifiers -Wmissing-parameter-type -Woverride-init -Wtype-limits -Wuninitialized -Wsuggest-attribute=pure -Wsuggest-attribute=const -Wsuggest-attribute=noreturn -Wmissing-format-attribute -Wextra -Wconversion -Wwrite-strings -Wformat=2 -Wstrict-aliasing -Wpointer-arith -Wshadow -Wformat=2 -Wredundant-decls -Wnested-externs -Winline -Wdeclaration-after-statement
 WIN_CFLAGS:=-D_WIN32_IE=0x0600 -D_WIN32_WINNT=0x0600 -DWINVER=0x0600 -DWIN32_LEAN_AND_MEAN -DUNICODE -DSTRICT -DNO_OLDNAMES
@@ -52,7 +52,7 @@ $(BUILD_DIR)/rgba2c.exe : src/rgba2c.c
 	$(CC) -std=c99 $< -o $@
 
 $(BUILD_DIR)/res.o: src/res.rc
-	windres $< $@ $(WIN_CFLAGS)
+	windres -F pe-i386 $< $@ $(WIN_CFLAGS)
 
 $(BUILD_DIR)/%.o : src/%.c $(BUILD_DIR)/icons.h src/user.h src/battle.h Makefile
 	$(CC) -c $< -o $@ $(CFLAGS)

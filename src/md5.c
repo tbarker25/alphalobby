@@ -58,8 +58,6 @@ static void final(MD5_CTX *md_context);
 static void transform(uint32_t *restrict buf, uint32_t *restrict in);
 
 static const uint8_t PADDING[64] = {0x80};
-__thread uint8_t _md5Checksum[16];
-
 
 /* F, G and H are basic MD5 functions: selection, majority, parity */
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
@@ -259,26 +257,24 @@ transform(uint32_t *restrict buf, uint32_t *restrict in)
 	buf[3] += d;
 }
 
-const char *
-MD5_to_base_64(const uint8_t *s)
+void
+MD5_to_base_64(char *out, const uint8_t *in)
 {
 	const char *conv = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	static char code[BASE64_MD5_LENGTH + 1];
 	uint32_t c;
 
 	for (uint8_t i=0; i<5; ++i) {
 		uint32_t c2;
 
-		c2 = ((uint32_t)s[i*3] << 16) + ((uint32_t)s[i*3+1] << 8) + ((uint32_t)s[i*3+2]);
-		sprintf(&code[i*4], "%c2%c2%c2%c2", conv[(c2 >> 18) % (1 << 6)], conv[(c2 >> 12) % (1 << 6)], conv[(c2 >> 6) % (1 << 6)], conv[(c2 >> 0) % (1 << 6)]);
+		c2 = ((uint32_t)in[i*3] << 16) + ((uint32_t)in[i*3+1] << 8) + ((uint32_t)in[i*3+2]);
+		sprintf(&out[i*4], "%c2%c2%c2%c2", conv[(c2 >> 18) % (1 << 6)], conv[(c2 >> 12) % (1 << 6)], conv[(c2 >> 6) % (1 << 6)], conv[(c2 >> 0) % (1 << 6)]);
 	}
-	c = (uint32_t)s[15] << 16;
-	sprintf(&code[20], "%c%c%s", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], "==");
-	return code;
+	c = (uint32_t)in[15] << 16;
+	sprintf(&out[20], "%c%c%s", conv[(c >> 18) % (1 << 6)], conv[(c >> 12) % (1 << 6)], "==");
 }
 
 void
-MD5_calc_checksum(const void *restrict bytes, size_t len, uint8_t *restrict buf)
+MD5_calc_checksum(const void *restrict bytes, size_t len, void *restrict buf)
 {
 	MD5_CTX md_context = {
 		.buf = MD5_INITIAL_BUFF,

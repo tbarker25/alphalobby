@@ -91,7 +91,9 @@ char *
 Settings_load_str(const char *key)
 {
 	static __thread char buf[1024];
-	return Settings_load_str2(buf, key) ? NULL : buf;
+    if (!Settings_load_str2(buf, key))
+        buf[0] = '\0';
+    return buf;
 }
 
 int
